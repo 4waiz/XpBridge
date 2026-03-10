@@ -63,18 +63,15 @@ class _XPButtonState extends State<XPButton> {
         gradient: widget.tonal || isDisabled
             ? null
             : LinearGradient(
-                colors: [
-                  AppTheme.primary,
-                  AppTheme.primaryDark,
-                ],
+                colors: [AppTheme.primary, AppTheme.primaryDark],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
         color: widget.tonal
             ? backgroundColor
             : isDisabled
-                ? AppTheme.cardBackground
-                : null,
+            ? AppTheme.cardBackground
+            : null,
         borderRadius: BorderRadius.circular(AppTheme.cornerRadius),
         boxShadow: isDisabled || widget.tonal
             ? null
@@ -94,27 +91,30 @@ class _XPButtonState extends State<XPButton> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             alignment: Alignment.center,
-            child: Row(
-              mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (widget.icon != null) ...[
-                  Icon(
-                    widget.icon,
-                    size: iconSize,
-                    color: isDisabled ? AppTheme.textMuted : foregroundColor,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (widget.icon != null) ...[
+                    Icon(
+                      widget.icon,
+                      size: iconSize,
+                      color: isDisabled ? AppTheme.textMuted : foregroundColor,
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: fontSize,
+                      color: isDisabled ? AppTheme.textMuted : foregroundColor,
+                    ),
                   ),
-                  const SizedBox(width: 10),
                 ],
-                Text(
-                  widget.label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: fontSize,
-                    color: isDisabled ? AppTheme.textMuted : foregroundColor,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -173,27 +173,30 @@ class XPOutlinedButton extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             alignment: Alignment.center,
-            child: Row(
-              mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
-                  Icon(
-                    icon,
-                    size: 20,
-                    color: isDisabled ? AppTheme.textMuted : AppTheme.primary,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: 20,
+                      color: isDisabled ? AppTheme.textMuted : AppTheme.primary,
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: isDisabled ? AppTheme.textMuted : AppTheme.primary,
+                    ),
                   ),
-                  const SizedBox(width: 10),
                 ],
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: isDisabled ? AppTheme.textMuted : AppTheme.primary,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
