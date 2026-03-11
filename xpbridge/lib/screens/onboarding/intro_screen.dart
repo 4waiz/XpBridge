@@ -74,54 +74,99 @@ class _IntroScreenState extends State<IntroScreen> {
           builder: (context, constraints) {
             final isCompactWidth = constraints.maxWidth < 360;
             final isCompactHeight = constraints.maxHeight < 700;
+            final isTinyHeight = constraints.maxHeight < 580;
+            final isUltraTinyHeight = constraints.maxHeight < 350; // New threshold for extreme resize
             final horizontalPadding = isCompactWidth ? 16.0 : 20.0;
             final bottomPadding = isCompactWidth ? 16.0 : 24.0;
-            final pageIndicatorSpacing = isCompactHeight ? 16.0 : 24.0;
+            final pageIndicatorSpacing = isTinyHeight ? 12.0 : (isCompactHeight ? 16.0 : 24.0);
+
+            // Use scrollable layout for extreme constraints to avoid vertical overflow
+            if (isUltraTinyHeight) {
+              return SingleChildScrollView(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    // Fixed height for PageView in scroll mode
+                    SizedBox(
+                      height: 240, 
+                      child: PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          setState(() => _currentPage = index);
+                        },
+                        itemCount: _pages.length,
+                        itemBuilder: (context, index) {
+                          final page = _pages[index];
+                          return _buildPage(page);
+                        },
+                      ),
+                    ),
+                    _buildBottomSection(
+                      isTinyHeight: true,
+                      isCompactWidth: isCompactWidth,
+                      bottomPadding: bottomPadding,
+                      pageIndicatorSpacing: pageIndicatorSpacing,
+                    ),
+                  ],
+                ),
+              );
+            }
 
             return Column(
               children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontalPadding,
-                    vertical: isCompactHeight ? 8 : 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${_currentPage + 1} / ${_pages.length}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondary,
-                          ),
+                if (!isTinyHeight)
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: isCompactHeight ? 4 : 12,
+                    ),
+                    child: SizedBox(
+                      width: constraints.maxWidth - (horizontalPadding * 2),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.cardBackground,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${_currentPage + 1} / ${_pages.length}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: isCompactWidth ? 40 : 100),
+                            if (!isLastPage)
+                              TextButton(
+                                onPressed: _completeOnboarding,
+                                child: Text(
+                                  'Skip',
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              )
+                            else
+                              const SizedBox(width: 60),
+                          ],
                         ),
                       ),
-                      const Spacer(),
-                      if (!isLastPage)
-                        TextButton(
-                          onPressed: _completeOnboarding,
-                          child: Text(
-                            'Skip',
-                            style: TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
-                      else
-                        SizedBox(width: isCompactWidth ? 52 : 60),
-                    ],
-                  ),
-                ),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 8),
                 Expanded(
                   child: PageView.builder(
                     controller: _pageController,
@@ -135,95 +180,114 @@ class _IntroScreenState extends State<IntroScreen> {
                     },
                   ),
                 ),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(bottomPadding),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(isCompactWidth ? 24 : 32),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.text.withValues(alpha: 0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, -10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.only(bottom: pageIndicatorSpacing),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            _pages.length,
-                            (index) => AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              width: _currentPage == index ? 28 : 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                gradient: _currentPage == index
-                                    ? LinearGradient(
-                                        colors: [
-                                          AppTheme.primary,
-                                          AppTheme.primaryDark,
-                                        ],
-                                      )
-                                    : null,
-                                color: _currentPage == index
-                                    ? null
-                                    : AppTheme.cardBackground,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      XPButton(
-                        label: isLastPage ? 'Start Your Journey' : 'Next',
-                        icon: Icons.arrow_forward_rounded,
-                        onPressed: isLastPage ? _completeOnboarding : _nextPage,
-                        size: isCompactWidth
-                            ? XPButtonSize.small
-                            : XPButtonSize.medium,
-                      ),
-                      if (isLastPage) ...[
-                        SizedBox(height: isCompactHeight ? 16 : 20),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 4,
-                          runSpacing: 4,
-                          children: [
-                            Text(
-                              'Already have an account?',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: AppTheme.textSecondary),
-                            ),
-                            GestureDetector(
-                              onTap: _completeOnboarding,
-                              child: const Text(
-                                'Log In',
-                                style: TextStyle(
-                                  color: AppTheme.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
+                _buildBottomSection(
+                  isTinyHeight: isTinyHeight,
+                  isCompactWidth: isCompactWidth,
+                  bottomPadding: bottomPadding,
+                  pageIndicatorSpacing: pageIndicatorSpacing,
                 ),
               ],
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildBottomSection({
+    required bool isTinyHeight,
+    required bool isCompactWidth,
+    required double bottomPadding,
+    required double pageIndicatorSpacing,
+  }) {
+    final isLastPage = _currentPage == _pages.length - 1;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        bottomPadding,
+        isTinyHeight ? 12 : bottomPadding,
+        bottomPadding,
+        isTinyHeight ? 16 : bottomPadding,
+      ),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(isCompactWidth ? 24 : 32),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.text.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, -10),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(bottom: pageIndicatorSpacing),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  _pages.length,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: _currentPage == index ? 28 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      gradient: _currentPage == index
+                          ? LinearGradient(
+                              colors: [
+                                AppTheme.primary,
+                                AppTheme.primaryDark,
+                              ],
+                            )
+                          : null,
+                      color: _currentPage == index ? null : AppTheme.cardBackground,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          XPButton(
+            label: isLastPage ? 'Start Your Journey' : 'Next',
+            icon: Icons.arrow_forward_rounded,
+            onPressed: isLastPage ? _completeOnboarding : _nextPage,
+            size: isCompactWidth || isTinyHeight ? XPButtonSize.small : XPButtonSize.medium,
+          ),
+          if (isLastPage && !isTinyHeight) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                Text(
+                  'Already have an account?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+                GestureDetector(
+                  onTap: _completeOnboarding,
+                  child: const Text(
+                    'Log In',
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -281,26 +345,32 @@ class _IntroScreenState extends State<IntroScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (page.highlightedText != null)
-                            RichText(
-                              textAlign: TextAlign.center,
-                              text: TextSpan(
-                                style: titleStyle,
-                                children: [
-                                  TextSpan(text: '${page.title}\n'),
-                                  TextSpan(
-                                    text: page.highlightedText,
-                                    style: const TextStyle(
-                                      color: AppTheme.primary,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: RichText(
+                                textAlign: TextAlign.center,
+                                text: TextSpan(
+                                  style: titleStyle,
+                                  children: [
+                                    TextSpan(text: '${page.title}\n'),
+                                    TextSpan(
+                                      text: page.highlightedText,
+                                      style: const TextStyle(
+                                        color: AppTheme.primary,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             )
                           else
-                            Text(
-                              page.title,
-                              textAlign: TextAlign.center,
-                              style: titleStyle,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                page.title,
+                                textAlign: TextAlign.center,
+                                style: titleStyle,
+                              ),
                             ),
                           SizedBox(height: textSpacing),
                           Text(
