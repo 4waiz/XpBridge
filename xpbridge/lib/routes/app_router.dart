@@ -162,32 +162,3 @@ class AppRouter {
     );
   }
 }
-
-// Placeholder for screens not yet implemented
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.construction, size: 64, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text('Coming soon!', style: TextStyle(color: Colors.grey.shade600)),
-          ],
-        ),
-      ),
-    );
-  }
-}

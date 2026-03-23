@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
-import 'xp_card.dart';
+import 'xp_premium.dart';
 
 class XPAppBar extends StatelessWidget implements PreferredSizeWidget {
   const XPAppBar({
@@ -43,18 +43,16 @@ class XPAppBar extends StatelessWidget implements PreferredSizeWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                  Text(title, style: Theme.of(context).textTheme.headlineSmall),
                   if (subtitle != null) ...[
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
                       subtitle!,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ],
@@ -90,21 +88,15 @@ class XPHeaderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
-        child: Ink(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: backgroundColor ?? AppTheme.surface,
-            borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
-            boxShadow: AppTheme.cardShadow,
-          ),
-          child: Icon(icon, color: foregroundColor, size: 20),
-        ),
+    return XPGlassPanel(
+      onTap: onTap,
+      padding: EdgeInsets.zero,
+      borderRadius: AppTheme.cornerRadiusSmall,
+      backgroundColor: backgroundColor ?? AppTheme.glassStrong,
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: Icon(icon, color: foregroundColor, size: 20),
       ),
     );
   }
@@ -130,14 +122,25 @@ class XPDashboardAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return XPCard(
-      radius: AppTheme.cornerRadiusLarge,
+    return XPGlassPanel(
       padding: const EdgeInsets.all(AppSpacing.xl),
-      elevated: true,
+      borderRadius: 34,
+      backgroundColor: AppTheme.surface.withValues(alpha: 0.12),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppTheme.surface.withValues(alpha: 0.18),
+          AppTheme.surface.withValues(alpha: 0.08),
+        ],
+      ),
+      borderColor: AppTheme.surface.withValues(alpha: 0.2),
+      shadow: AppTheme.heroCardShadow,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               leading,
               const SizedBox(width: AppSpacing.md),
@@ -148,21 +151,23 @@ class XPDashboardAppBar extends StatelessWidget {
                     Text(
                       eyebrow.toUpperCase(),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        letterSpacing: 1.2,
-                        color: AppTheme.textSecondary,
+                        letterSpacing: 2,
+                        color: AppTheme.surface.withValues(alpha: 0.76),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xxs),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      style: Theme.of(context).textTheme.displayMedium
+                          ?.copyWith(color: AppTheme.surface, fontSize: 42),
                     ),
                     if (subtitle != null) ...[
-                      const SizedBox(height: AppSpacing.xs),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         subtitle!,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.surface.withValues(alpha: 0.82),
+                        ),
                       ),
                     ],
                   ],
@@ -198,19 +203,26 @@ class XPAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = backgroundColor ?? AppTheme.primary;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(size * 0.34),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.surface.withValues(alpha: 0.94),
+            backgroundColor ?? AppTheme.primary.withValues(alpha: 0.74),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(size * 0.38),
+        border: Border.all(color: AppTheme.surface.withValues(alpha: 0.4)),
       ),
       child: Center(
         child: Text(
           initial.toUpperCase(),
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: AppTheme.text,
+            color: AppTheme.primaryDeep,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -226,21 +238,23 @@ class XPBottomActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.page,
         AppSpacing.md,
         AppSpacing.page,
-        AppSpacing.md,
+        AppSpacing.lg,
       ),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppTheme.cornerRadiusLarge),
+      child: SafeArea(
+        top: false,
+        child: XPGlassPanel(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          borderRadius: 32,
+          backgroundColor: AppTheme.sheetBackground,
+          shadow: AppTheme.modalShadow,
+          child: child,
         ),
-        boxShadow: AppTheme.elevatedShadow,
       ),
-      child: SafeArea(top: false, child: child),
     );
   }
 }

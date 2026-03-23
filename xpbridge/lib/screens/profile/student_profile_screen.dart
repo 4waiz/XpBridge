@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_card.dart';
 import '../../widgets/xp_chip.dart';
+import '../../widgets/xp_premium.dart';
 
 class StudentProfileScreen extends StatelessWidget {
   const StudentProfileScreen({super.key});
@@ -95,321 +96,427 @@ class StudentProfileScreen extends StatelessWidget {
     final nextLevel = _nextLevelTarget(level);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: XPAppBar(
-        title: 'My Profile',
-        trailing: XPHeaderButton(
-          icon: Icons.logout_rounded,
-          foregroundColor: AppTheme.error,
-          backgroundColor: AppTheme.error.withValues(alpha: 0.1),
-          onTap: () => _handleLogout(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.page,
-          AppSpacing.md,
-          AppSpacing.page,
-          AppSpacing.page,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            XPSection(
-              child: Column(
-                children: [
-                  Container(
-                    width: 104,
-                    height: 104,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        profile?.name.isNotEmpty == true
-                            ? profile!.name[0].toUpperCase()
-                            : '?',
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(
-                              color: AppTheme.text,
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                    ),
+      backgroundColor: Colors.transparent,
+      body: XPScene(
+        compact: true,
+        child: SafeArea(
+          child: Column(
+            children: [
+              XPAppBar(
+                title: 'Profile',
+                subtitle: 'Your public career layer',
+                trailing: XPHeaderButton(
+                  icon: Icons.logout_rounded,
+                  foregroundColor: AppTheme.error,
+                  backgroundColor: AppTheme.surface.withValues(alpha: 0.72),
+                  onTap: () => _handleLogout(context),
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.page,
+                    AppSpacing.md,
+                    AppSpacing.page,
+                    AppSpacing.page,
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    profile?.name ?? 'Student',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  if (profile?.education?.isNotEmpty == true) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      profile!.education!,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.lg),
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: XPCard(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          backgroundColor: AppTheme.primaryLight,
-                          child: Column(
-                            children: [
-                              Text(
-                                'L$level',
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.w800),
+                      XPGlassPanel(
+                        backgroundColor: AppTheme.primaryDeep.withValues(
+                          alpha: 0.82,
+                        ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppTheme.primaryDeep,
+                            AppTheme.primaryDark,
+                            AppTheme.primary.withValues(alpha: 0.88),
+                          ],
+                        ),
+                        borderColor: AppTheme.surface.withValues(alpha: 0.18),
+                        shadow: AppTheme.heroCardShadow,
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 108,
+                              height: 108,
+                              decoration: BoxDecoration(
+                                color: AppTheme.surface.withValues(alpha: 0.16),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppTheme.surface.withValues(
+                                    alpha: 0.24,
+                                  ),
+                                ),
                               ),
-                              const SizedBox(height: AppSpacing.xxs),
-                              const Text('Current level'),
+                              child: Center(
+                                child: Text(
+                                  profile?.name.isNotEmpty == true
+                                      ? profile!.name[0].toUpperCase()
+                                      : '?',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .displayMedium
+                                      ?.copyWith(
+                                        color: AppTheme.surface,
+                                        fontSize: 52,
+                                      ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            Text(
+                              profile?.name ?? 'Student',
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(color: AppTheme.surface),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (profile?.education?.isNotEmpty == true) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                profile!.education!,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: AppTheme.surface.withValues(
+                                        alpha: 0.82,
+                                      ),
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
                             ],
-                          ),
+                            const SizedBox(height: AppSpacing.lg),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _HeroMetric(
+                                    label: 'Level',
+                                    value: 'L$level',
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: _HeroMetric(
+                                    label: 'XP',
+                                    value: '$xpPoints',
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: _HeroMetric(
+                                    label: 'Completed',
+                                    value:
+                                        '${profile?.missionsCompletedCount ?? 0}',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            Theme(
+                              data: Theme.of(context).copyWith(
+                                progressIndicatorTheme:
+                                    const ProgressIndicatorThemeData(
+                                      color: AppTheme.surface,
+                                      linearTrackColor: Color(0x33FFFFFF),
+                                    ),
+                              ),
+                              child: XPProgressBar(progress: levelProgress),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              nextLevel != null
+                                  ? '${nextLevel - xpPoints} XP to Level ${level + 1}'
+                                  : 'Current level cap reached',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppTheme.surface.withValues(
+                                      alpha: 0.76,
+                                    ),
+                                  ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: XPCard(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          backgroundColor: AppTheme.cardBackground,
-                          child: Column(
-                            children: [
-                              Text(
-                                '$xpPoints',
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              const SizedBox(height: AppSpacing.xxs),
-                              const Text('XP earned'),
-                            ],
+                      if (profile?.bio?.isNotEmpty == true) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        XPSection(
+                          title: 'About',
+                          child: Text(
+                            profile!.bio!,
+                            style: Theme.of(context).textTheme.bodyLarge,
                           ),
+                        ),
+                      ],
+                      if (profile?.skills.isNotEmpty == true) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        XPSection(
+                          title: 'Skills',
+                          child: Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: profile!.skills
+                                .map((skill) => XPSkillTag(label: skill))
+                                .toList(),
+                          ),
+                        ),
+                      ],
+                      if (reflections.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        XPSection(
+                          title: 'Reflections',
+                          subtitle:
+                              'Snapshots of what you shipped and learned.',
+                          child: Column(
+                            children: reflections.map((app) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.md,
+                                ),
+                                child: XPCard(
+                                  backgroundColor: AppTheme.surface.withValues(
+                                    alpha: 0.56,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${app.roleTitle ?? 'Mission'} · ${app.startupName}',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleMedium,
+                                      ),
+                                      if (app.reflectionDid?.isNotEmpty ==
+                                          true) ...[
+                                        const SizedBox(height: AppSpacing.xs),
+                                        Text(app.reflectionDid!),
+                                      ],
+                                      if (app.reflectionLearned?.isNotEmpty ==
+                                          true) ...[
+                                        const SizedBox(height: AppSpacing.xs),
+                                        Text(
+                                          app.reflectionLearned!,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                      ],
+                                      if (app.skillsPracticed.isNotEmpty) ...[
+                                        const SizedBox(height: AppSpacing.sm),
+                                        Wrap(
+                                          spacing: AppSpacing.xs,
+                                          runSpacing: AppSpacing.xs,
+                                          children: app.skillsPracticed
+                                              .map(
+                                                (skill) =>
+                                                    XPSkillTag(label: skill),
+                                              )
+                                              .toList(),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                      if (feedbackEntries.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        XPSection(
+                          title: 'Mentor feedback',
+                          child: Column(
+                            children: feedbackEntries.map((app) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.md,
+                                ),
+                                child: XPCard(
+                                  backgroundColor: AppTheme.surface.withValues(
+                                    alpha: 0.56,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${app.roleTitle ?? 'Mission'} · ${app.startupName}',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleMedium,
+                                      ),
+                                      if (app.mentorRating != null) ...[
+                                        const SizedBox(height: AppSpacing.xs),
+                                        Row(
+                                          children: List.generate(
+                                            5,
+                                            (index) => Icon(
+                                              index < app.mentorRating!
+                                                  ? Icons.star_rounded
+                                                  : Icons.star_border_rounded,
+                                              color: AppTheme.primary,
+                                              size: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      if (app.mentorFeedbackText?.isNotEmpty ==
+                                          true) ...[
+                                        const SizedBox(height: AppSpacing.sm),
+                                        Text(
+                                          app.mentorFeedbackText!,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                      ],
+                                      if (app.endorsedSkills.isNotEmpty) ...[
+                                        const SizedBox(height: AppSpacing.sm),
+                                        Wrap(
+                                          spacing: AppSpacing.xs,
+                                          runSpacing: AppSpacing.xs,
+                                          children: app.endorsedSkills
+                                              .map(
+                                                (skill) => XPSkillTag(
+                                                  label: skill,
+                                                  isMatched: true,
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                      if (portfolioItems.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        XPSection(
+                          title: 'Proof of work',
+                          child: Column(
+                            children: portfolioItems.map((app) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.md,
+                                ),
+                                child: XPCard(
+                                  backgroundColor: AppTheme.surface.withValues(
+                                    alpha: 0.56,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        app.roleTitle ?? 'Mission',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleMedium,
+                                      ),
+                                      const SizedBox(height: AppSpacing.xxs),
+                                      Text(
+                                        app.startupName,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                      XPBadge(
+                                        label: app.deliverableUrl ?? '',
+                                        icon: Icons.link_rounded,
+                                        color: AppTheme.primarySoft,
+                                      ),
+                                      const SizedBox(height: AppSpacing.xs),
+                                      Text(
+                                        'Completed ${_dateLabel(app.completedAt ?? app.appliedAt)}',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.xl),
+                      XPSection(
+                        child: SwitchListTile(
+                          value: appState.xpFeedOptOut,
+                          onChanged: (value) => appState.setFeedOptOut(value),
+                          title: Text(
+                            'Share XP updates',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          subtitle: const Text(
+                            'Show my first name in the XP community feed',
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      XPSection(
+                        title: 'Availability',
+                        child: XPBadge(
+                          label:
+                              '${profile?.availabilityHours.round() ?? 0} hours per week',
+                          icon: Icons.schedule_rounded,
+                          color: AppTheme.primarySoft,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  XPProgressBar(progress: levelProgress),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    nextLevel != null
-                        ? '${nextLevel - xpPoints} XP to Level ${level + 1}'
-                        : 'Max level unlocked',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            if (profile?.bio?.isNotEmpty == true) ...[
-              const SizedBox(height: AppSpacing.lg),
-              XPSection(
-                title: 'About me',
-                child: Text(
-                  profile!.bio!,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
                 ),
               ),
             ],
-            if (profile?.skills.isNotEmpty == true) ...[
-              const SizedBox(height: AppSpacing.lg),
-              XPSection(
-                title: 'Skills',
-                child: Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: profile!.skills
-                      .map((skill) => XPSkillTag(label: skill))
-                      .toList(),
-                ),
-              ),
-            ],
-            if (reflections.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.lg),
-              XPSection(
-                title: 'Reflections',
-                child: Column(
-                  children: reflections.map((app) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: XPCard(
-                        backgroundColor: AppTheme.cardBackground,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${app.roleTitle ?? 'Mission'} • ${app.startupName}',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            if (app.reflectionDid?.isNotEmpty == true) ...[
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(app.reflectionDid!),
-                            ],
-                            if (app.reflectionLearned?.isNotEmpty == true) ...[
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                app.reflectionLearned!,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                            if (app.skillsPracticed.isNotEmpty) ...[
-                              const SizedBox(height: AppSpacing.sm),
-                              Wrap(
-                                spacing: AppSpacing.xs,
-                                runSpacing: AppSpacing.xs,
-                                children: app.skillsPracticed
-                                    .map((skill) => XPSkillTag(label: skill))
-                                    .toList(),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-            if (feedbackEntries.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.lg),
-              XPSection(
-                title: 'Mentor feedback',
-                child: Column(
-                  children: feedbackEntries.map((app) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: XPCard(
-                        backgroundColor: AppTheme.cardBackground,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${app.roleTitle ?? 'Mission'} • ${app.startupName}',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            if (app.mentorRating != null) ...[
-                              const SizedBox(height: AppSpacing.xs),
-                              Row(
-                                children: List.generate(
-                                  5,
-                                  (index) => Icon(
-                                    index < app.mentorRating!
-                                        ? Icons.star_rounded
-                                        : Icons.star_border_rounded,
-                                    color: AppTheme.primary,
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            if (app.mentorFeedbackText?.isNotEmpty == true) ...[
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(
-                                app.mentorFeedbackText!,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                            if (app.endorsedSkills.isNotEmpty) ...[
-                              const SizedBox(height: AppSpacing.sm),
-                              Wrap(
-                                spacing: AppSpacing.xs,
-                                runSpacing: AppSpacing.xs,
-                                children: app.endorsedSkills
-                                    .map(
-                                      (skill) => XPSkillTag(
-                                        label: skill,
-                                        isMatched: true,
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-            if (portfolioItems.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.lg),
-              XPSection(
-                title: 'Portfolio proof',
-                child: Column(
-                  children: portfolioItems.map((app) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: XPCard(
-                        backgroundColor: AppTheme.cardBackground,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              app.roleTitle ?? 'Mission',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: AppSpacing.xxs),
-                            Text(
-                              app.startupName,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            XPBadge(
-                              label: app.deliverableUrl ?? '',
-                              icon: Icons.link_rounded,
-                              color: AppTheme.surface,
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'Completed ${_dateLabel(app.completedAt ?? app.appliedAt)}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-            XPSection(
-              child: SwitchListTile(
-                value: appState.xpFeedOptOut,
-                onChanged: (value) => appState.setFeedOptOut(value),
-                title: Text(
-                  'Share XP updates',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                subtitle: const Text(
-                  'Show my first name in the XP community feed',
-                ),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            XPSection(
-              title: 'Availability',
-              child: XPBadge(
-                label:
-                    '${profile?.availabilityHours.round() ?? 0} hours per week',
-                icon: Icons.schedule_rounded,
-                color: AppTheme.primaryLight,
-              ),
-            ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _HeroMetric extends StatelessWidget {
+  const _HeroMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return XPGlassPanel(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.md,
+      ),
+      backgroundColor: AppTheme.surface.withValues(alpha: 0.12),
+      borderColor: AppTheme.surface.withValues(alpha: 0.16),
+      shadow: const [],
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: AppTheme.surface),
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.surface.withValues(alpha: 0.76),
+            ),
+          ),
+        ],
       ),
     );
   }

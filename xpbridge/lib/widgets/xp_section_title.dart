@@ -25,14 +25,14 @@ class XPSectionTitle extends StatelessWidget {
       children: [
         if (icon != null) ...[
           Container(
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              gradient: AppTheme.primaryGlowGradient,
               borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
-              boxShadow: AppTheme.cardShadow,
+              boxShadow: AppTheme.softGlowShadow,
             ),
-            child: Icon(icon, size: 18, color: AppTheme.text),
+            child: Icon(icon, size: 18, color: AppTheme.surface),
           ),
           const SizedBox(width: AppSpacing.sm),
         ],
@@ -40,15 +40,15 @@ class XPSectionTitle extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
+              Text(title, style: Theme.of(context).textTheme.headlineSmall),
               if (subtitle != null) ...[
                 const SizedBox(height: AppSpacing.xxs),
-                Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  subtitle!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
               ],
             ],
           ),
@@ -60,7 +60,7 @@ class XPSectionTitle extends StatelessWidget {
               actionLabel!,
               style: Theme.of(
                 context,
-              ).textTheme.labelLarge?.copyWith(color: AppTheme.textSecondary),
+              ).textTheme.labelLarge?.copyWith(color: AppTheme.primaryDeep),
             ),
           ),
       ],

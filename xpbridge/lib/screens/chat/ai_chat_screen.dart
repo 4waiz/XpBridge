@@ -7,11 +7,7 @@ import '../../services/ai_service.dart';
 import '../../services/job_matcher_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/chat_bubble.dart';
-import '../../widgets/xp_app_bar.dart';
-import '../../widgets/xp_button.dart';
-import '../../widgets/xp_card.dart';
-import '../../widgets/xp_chip.dart';
-import '../../widgets/xp_section_title.dart';
+import '../../widgets/xp_ai.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -29,6 +25,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   bool _showMatchedRoles = false;
   bool _isInitialized = false;
   bool _showQuickActions = true;
+  bool _isVoiceMode = false;
 
   @override
   void initState() {
@@ -47,7 +44,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         AiChatMessage(
           id: 'welcome',
           content:
-              "Hi${profile != null ? ' ${profile.name.split(' ').first}' : ''}! I'm your career advisor. Tell me about yourself, your skills, or the kind of work you want, and I'll help you find the best fit.",
+              "Hi${profile != null ? ' ${profile.name.split(' ').first}' : ''}! I'd be happy to help identify opportunities. Tell me the role, location style, or kind of company you're aiming for.",
           sender: MessageSender.ai,
           timestamp: DateTime.now(),
         ),
@@ -87,6 +84,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
 
     setState(() {
+      _isVoiceMode = false;
       _messages.add(
         AiChatMessage(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -140,7 +138,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
         if (matches.isNotEmpty) {
           setState(() {
-            _matchedRoles = matches.take(5).toList();
+            _matchedRoles = matches.take(6).toList();
             _showMatchedRoles = true;
           });
         }
@@ -171,107 +169,176 @@ class _AiChatScreenState extends State<AiChatScreen> {
       _showMatchedRoles = false;
       _isInitialized = false;
       _showQuickActions = true;
+      _isVoiceMode = false;
     });
     _initializeChat();
   }
 
+  void _toggleQuickActions() {
+    setState(() {
+      _showQuickActions = !_showQuickActions;
+      _isVoiceMode = false;
+    });
+  }
+
+  void _toggleVoiceMode() {
+    setState(() {
+      _isVoiceMode = !_isVoiceMode;
+      _showQuickActions = false;
+    });
+  }
+
+  List<XPAiResultCardData> _resultCards(List<MatchedRole> matches) {
+    return matches.map((match) {
+      final subtitleParts = <String>[
+        match.startup.companyName,
+        if (match.role.commitment?.isNotEmpty == true) match.role.commitment!,
+      ];
+      return XPAiResultCardData(
+        eyebrow: match.startup.industry,
+        title: match.role.title,
+        subtitle: subtitleParts.join(' · '),
+        trailingLabel: '${(match.matchScore * 100).round()}% fit',
+        onTap: () => context.pushNamed(
+          'startupDetail',
+          pathParameters: {'id': match.startup.id},
+        ),
+      );
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final greeting = _messages.isNotEmpty ? _messages.first.content : '';
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: XPAppBar(
-        title: 'Career Advisor',
-        subtitle: 'AI-powered guidance',
-        trailing: XPHeaderButton(
-          icon: Icons.refresh_rounded,
-          onTap: _resetChat,
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _isInitialized
-                ? ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.page,
-                      AppSpacing.md,
-                      AppSpacing.page,
-                      AppSpacing.md,
+      backgroundColor: Colors.transparent,
+      body: XPAiShell(
+        showBackdropMap: _showMatchedRoles,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.page,
+                  AppSpacing.sm,
+                  AppSpacing.page,
+                  AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    XPAiCircleActionButton(
+                      icon: Icons.arrow_back_ios_new_rounded,
+                      onTap: () => context.pop(),
                     ),
-                    itemCount:
-                        _messages.length +
-                        (_showQuickActions && _messages.length == 1 ? 1 : 0) +
-                        (_showMatchedRoles ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (_showQuickActions &&
-                          _messages.length == 1 &&
-                          index == 1) {
-                        return _QuickActions(onTap: _sendMessage);
-                      }
-
-                      final adjustedIndex =
-                          _showQuickActions &&
-                              _messages.length == 1 &&
-                              index > 0
-                          ? index - 1
-                          : index;
-
-                      if (_showMatchedRoles &&
-                          adjustedIndex == _messages.length) {
-                        return _MatchedRolesSection(matches: _matchedRoles);
-                      }
-
-                      return ChatBubble(message: _messages[adjustedIndex]);
-                    },
-                  )
-                : const Center(child: CircularProgressIndicator()),
-          ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.page,
-              AppSpacing.md,
-              AppSpacing.page,
-              AppSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              boxShadow: AppTheme.elevatedShadow,
-            ),
-            child: SafeArea(
-              top: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      decoration: const InputDecoration(
-                        hintText: 'Ask about missions, skills, or next steps',
-                        prefixIcon: Icon(Icons.chat_bubble_outline_rounded),
-                      ),
-                      textInputAction: TextInputAction.send,
-                      minLines: 1,
-                      maxLines: 4,
-                      onSubmitted: (_) => _sendMessage(),
+                    const Spacer(),
+                    XPAiCircleActionButton(
+                      icon: Icons.edit_outlined,
+                      onTap: _resetChat,
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  SizedBox(
-                    width: 56,
-                    height: 56,
-                    child: XPButton(
-                      label: '',
-                      icon: Icons.send_rounded,
-                      expand: false,
-                      onPressed: _isLoading ? null : _sendMessage,
-                      size: XPButtonSize.medium,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              Expanded(
+                child: _isInitialized
+                    ? AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 260),
+                        child: _isVoiceMode
+                            ? Padding(
+                                key: const ValueKey('voice'),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.pageWide,
+                                ),
+                                child: const XPAiVoiceState(
+                                  status: 'Recording...',
+                                  subtitle:
+                                      'Describe the role, location style, or salary range you want.',
+                                ),
+                              )
+                            : ListView(
+                                key: const ValueKey('chat'),
+                                controller: _scrollController,
+                                padding: const EdgeInsets.fromLTRB(
+                                  AppSpacing.pageWide,
+                                  AppSpacing.md,
+                                  AppSpacing.pageWide,
+                                  AppSpacing.md,
+                                ),
+                                children: [
+                                  if (_messages.length == 1) ...[
+                                    Text(
+                                      'Ready for\nyour next role?',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .displayMedium
+                                          ?.copyWith(
+                                            color: AppTheme.surface,
+                                            fontSize: 46,
+                                            height: 0.95,
+                                          ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.lg),
+                                  ],
+                                  if (_showQuickActions) ...[
+                                    _QuickActions(onTap: _sendMessage),
+                                    const SizedBox(height: AppSpacing.lg),
+                                  ],
+                                  ..._messages.map(
+                                    (message) => ChatBubble(message: message),
+                                  ),
+                                  if (_messages.length == 1) ...[
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      greeting,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(
+                                            color: Colors.transparent,
+                                            height: 0.01,
+                                          ),
+                                    ),
+                                  ],
+                                  if (_showMatchedRoles &&
+                                      _matchedRoles.isNotEmpty) ...[
+                                    const SizedBox(height: AppSpacing.sm),
+                                    XPAiFloatingResultsDeck(
+                                      cards: _resultCards(_matchedRoles),
+                                      actionLabel: 'View All',
+                                      onActionTap: () => context.pushNamed(
+                                        'studentDashboard',
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: AppSpacing.xl),
+                                ],
+                              ),
+                      )
+                    : const Center(child: CircularProgressIndicator()),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.page,
+                  AppSpacing.sm,
+                  AppSpacing.page,
+                  AppSpacing.lg,
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: XPAiComposer(
+                    controller: _controller,
+                    hintText: 'Ask XPBridge AI...',
+                    onSend: _sendMessage,
+                    onPlusTap: _toggleQuickActions,
+                    onMicTap: _toggleVoiceMode,
+                    isLoading: _isLoading,
+                    isMicActive: _isVoiceMode,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -285,98 +352,22 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      ('Find a mission for me', Icons.rocket_launch_rounded),
-      ('Improve my profile', Icons.auto_awesome_rounded),
-      ('What skills should I learn next?', Icons.psychology_alt_outlined),
-      ('Help me complete a mission', Icons.flag_outlined),
+      ('Remote Flutter roles', Icons.work_outline_rounded),
+      ('High-fit AI startups', Icons.auto_awesome_rounded),
+      ('Roles near me', Icons.pin_drop_outlined),
+      ('What should I apply to?', Icons.explore_outlined),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-      child: XPSection(
-        title: 'Quick actions',
-        child: Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: actions.map((action) {
-            return XPFilterChip(
-              label: action.$1,
-              icon: action.$2,
-              isSelected: false,
-              onTap: () => onTap(action.$1),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-}
-
-class _MatchedRolesSection extends StatelessWidget {
-  const _MatchedRolesSection({required this.matches});
-
-  final List<MatchedRole> matches;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          XPSectionTitle(
-            title: 'Matching opportunities',
-            subtitle: 'Best in-app matches based on the conversation.',
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ...matches.map((match) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: XPCard(
-                elevated: true,
-                radius: AppTheme.cornerRadiusLarge,
-                onTap: () => context.pushNamed(
-                  'startupDetail',
-                  pathParameters: {'id': match.startup.id},
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        XPAvatar(initial: match.startup.companyName[0]),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                match.role.title,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              const SizedBox(height: AppSpacing.xxs),
-                              Text(
-                                '${match.startup.companyName} • ${(match.matchScore * 100).round()}% fit',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    XPContainer(
-                      color: AppTheme.primaryLight,
-                      child: Text(match.matchReason),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: actions.map((action) {
+        return XPAiQuickChip(
+          label: action.$1,
+          icon: action.$2,
+          onTap: () => onTap(action.$1),
+        );
+      }).toList(),
     );
   }
 }

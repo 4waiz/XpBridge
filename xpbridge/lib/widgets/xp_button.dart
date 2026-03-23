@@ -33,6 +33,7 @@ class _XPButtonState extends State<XPButton> {
   Widget build(BuildContext context) {
     final isDisabled = widget.onPressed == null;
     final style = _styleForSize(widget.size);
+    final foreground = widget.tonal ? AppTheme.primaryDeep : AppTheme.surface;
 
     final button = AnimatedScale(
       scale: _pressed ? 0.985 : 1,
@@ -41,15 +42,27 @@ class _XPButtonState extends State<XPButton> {
       child: Container(
         height: style.height,
         decoration: BoxDecoration(
-          color: isDisabled
-              ? AppTheme.cardBackground
+          gradient: isDisabled
+              ? null
               : widget.tonal
-              ? AppTheme.primaryLight
+              ? AppTheme.whiteGlowGradient
+              : AppTheme.primaryGlowGradient,
+          color: isDisabled
+              ? AppTheme.primarySoft
+              : widget.tonal
+              ? null
               : AppTheme.primary,
           borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-          boxShadow: isDisabled || widget.tonal
+          border: Border.all(
+            color: widget.tonal
+                ? AppTheme.primary.withValues(alpha: 0.12)
+                : Colors.transparent,
+          ),
+          boxShadow: isDisabled
               ? null
-              : AppTheme.floatingShadow,
+              : widget.tonal
+              ? AppTheme.softShadow
+              : AppTheme.softGlowShadow,
         ),
         child: Material(
           color: Colors.transparent,
@@ -70,7 +83,7 @@ class _XPButtonState extends State<XPButton> {
                     Icon(
                       widget.icon,
                       size: style.iconSize,
-                      color: isDisabled ? AppTheme.textMuted : AppTheme.text,
+                      color: isDisabled ? AppTheme.textMuted : foreground,
                     ),
                     const SizedBox(width: AppSpacing.xs),
                   ],
@@ -80,8 +93,7 @@ class _XPButtonState extends State<XPButton> {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         fontSize: style.fontSize,
-                        fontWeight: FontWeight.w800,
-                        color: isDisabled ? AppTheme.textMuted : AppTheme.text,
+                        color: isDisabled ? AppTheme.textMuted : foreground,
                       ),
                     ),
                   ),
@@ -128,12 +140,14 @@ class XPOutlinedButton extends StatelessWidget {
     final child = Container(
       height: style.height,
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: AppTheme.glassStrong,
         borderRadius: BorderRadius.circular(AppTheme.pillRadius),
         border: Border.all(
-          color: isDisabled ? AppTheme.cardBackground : AppTheme.border,
+          color: isDisabled
+              ? AppTheme.primary.withValues(alpha: 0.05)
+              : AppTheme.primary.withValues(alpha: 0.12),
         ),
-        boxShadow: AppTheme.cardShadow,
+        boxShadow: AppTheme.glassShadow,
       ),
       child: Material(
         color: Colors.transparent,
@@ -160,7 +174,6 @@ class XPOutlinedButton extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       fontSize: style.fontSize,
-                      fontWeight: FontWeight.w700,
                       color: isDisabled ? AppTheme.textMuted : AppTheme.text,
                     ),
                   ),

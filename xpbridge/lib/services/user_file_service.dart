@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,6 @@ class UserFileService {
     try {
       // Check if user already exists
       if (await userExists(email)) {
-        print('User already exists');
         return false;
       }
 
@@ -36,7 +36,6 @@ class UserFileService {
       } else {
         // Mobile/Desktop: use file
         final file = await _getFile();
-        print('File path: ${file.path}');
 
         if (!await file.parent.exists()) {
           await file.parent.create(recursive: true);
@@ -45,10 +44,8 @@ class UserFileService {
         await file.writeAsString(line, mode: FileMode.append);
       }
 
-      print('User saved successfully');
       return true;
-    } catch (e) {
-      print('Error saving user: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -66,7 +63,7 @@ class UserFileService {
         }
         return await file.readAsString();
       }
-    } catch (e) {
+    } catch (_) {
       return '';
     }
   }
@@ -80,8 +77,6 @@ class UserFileService {
 
     try {
       final contents = await _getUsersData();
-      print('Stored users data: "$contents"');
-      print('Looking for email: $email');
       if (contents.isEmpty) return false;
 
       final lines = contents.split('\n');
@@ -94,7 +89,7 @@ class UserFileService {
         }
       }
       return false;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
@@ -126,7 +121,7 @@ class UserFileService {
         }
       }
       return false;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }

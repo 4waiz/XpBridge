@@ -6,109 +6,151 @@ class AppTheme {
 
   static const Color background = Color(0xFFF7F7F5);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color cardBackground = Color(0xFFF0F1ED);
-  static const Color surfaceMuted = cardBackground;
-
   static const Color primary = Color(0xFF2EC4B6);
-  static const Color primaryDark = Color(0xFF22A89B);
-  static const Color primaryLight = Color(0xFFE5F7F4);
+  static const Color primaryDark = Color(0xFF159C92);
+  static const Color primaryDeep = Color(0xFF0B6662);
+  static const Color primaryLight = Color(0xFFDDF7F3);
+  static const Color primarySoft = Color(0xFFEAF9F6);
+  static const Color primaryMist = Color(0xFFF1FBF9);
+  static const Color cardBackground = primarySoft;
+  static const Color surfaceMuted = primarySoft;
+  static const Color glass = Color(0xD9FFFFFF);
+  static const Color glassStrong = Color(0xE8FFFFFF);
+  static const Color glassBorder = Color(0x4DFFFFFF);
+  static const Color sheetBackground = Color(0xF2FFFFFF);
+  static const Color aiShellTop = Color(0xFF158F86);
+  static const Color aiShellMid = Color(0xFF63D7CB);
+  static const Color aiShellBottom = Color(0xFFF7F7F5);
+  static const Color aiComposerFill = Color(0xEAF6FAF7);
+  static const Color aiComposerBorder = Color(0x66CDEEE8);
+  static const Color aiBubbleFill = Color(0xF3FFFFFF);
+  static const Color aiBubbleUser = Color(0xE1F5F2F0);
+  static const Color aiLine = Color(0x26FFFFFF);
 
   static const Color text = Color(0xFF1F2933);
-  static const Color textSecondary = Color(0xFF5F6C76);
-  static const Color textMuted = Color(0xFF7B8794);
-  static const Color border = Color(0xFFE7EAE6);
+  static const Color textSecondary = Color(0xFF56616A);
+  static const Color textMuted = Color(0xFF7E8A94);
+  static const Color border = Color(0xFFE3E8E5);
 
-  static const Color success = Color(0xFF7BCFA6);
-  static const Color successDark = Color(0xFF3D9B72);
-  static const Color warning = Color(0xFFF3B64C);
-  static const Color error = Color(0xFFE76F51);
+  static const Color success = primaryDark;
+  static const Color successDark = primaryDeep;
+  static const Color warning = Color(0xFF71808A);
+  static const Color error = Color(0xFFB95864);
 
-  static const double cornerRadius = 24;
-  static const double cornerRadiusSmall = 20;
-  static const double cornerRadiusLarge = 32;
-  static const double fieldRadius = 20;
+  static const double cornerRadius = 26;
+  static const double cornerRadiusSmall = 22;
+  static const double cornerRadiusLarge = 34;
+  static const double fieldRadius = 28;
   static const double pillRadius = 999;
+
+  static const LinearGradient primaryGlowGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF34D7C8), Color(0xFF159C92)],
+  );
+
+  static const LinearGradient whiteGlowGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFFFFFF), Color(0xFFF1FFFD)],
+  );
+
+  static const LinearGradient aiShellGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    stops: [0, 0.38, 0.78, 1],
+    colors: [aiShellTop, aiShellMid, Color(0xFFE9F8F5), aiShellBottom],
+  );
+
+  static const RadialGradient aiOrbGradient = RadialGradient(
+    center: Alignment(0, -0.1),
+    radius: 0.88,
+    colors: [Color(0xFFFFFCF2), Color(0xFF9CE8DE), Color(0xFF2EC4B6)],
+    stops: [0, 0.44, 1],
+  );
 
   static ThemeData get light {
     final baseTextTheme = GoogleFonts.manropeTextTheme();
+    final display = GoogleFonts.cormorantGaramondTextTheme();
     final textTheme = baseTextTheme.copyWith(
-      displayLarge: baseTextTheme.displayLarge?.copyWith(
-        fontWeight: FontWeight.w800,
+      displayLarge: display.displayLarge?.copyWith(
         color: text,
-        height: 1.05,
-        letterSpacing: -1.2,
+        fontWeight: FontWeight.w700,
+        height: 0.96,
+        letterSpacing: -1.1,
       ),
-      displayMedium: baseTextTheme.displayMedium?.copyWith(
-        fontWeight: FontWeight.w800,
+      displayMedium: display.displayMedium?.copyWith(
         color: text,
-        height: 1.08,
-        letterSpacing: -0.8,
+        fontWeight: FontWeight.w700,
+        height: 0.98,
+        letterSpacing: -0.9,
       ),
-      headlineLarge: baseTextTheme.headlineLarge?.copyWith(
-        fontWeight: FontWeight.w800,
+      headlineLarge: display.headlineLarge?.copyWith(
         color: text,
-        height: 1.08,
+        fontWeight: FontWeight.w700,
+        height: 1,
         letterSpacing: -0.7,
       ),
-      headlineMedium: baseTextTheme.headlineMedium?.copyWith(
-        fontWeight: FontWeight.w800,
+      headlineMedium: display.headlineMedium?.copyWith(
         color: text,
-        height: 1.1,
-        letterSpacing: -0.5,
+        fontWeight: FontWeight.w700,
+        height: 1.04,
+        letterSpacing: -0.55,
       ),
       headlineSmall: baseTextTheme.headlineSmall?.copyWith(
-        fontWeight: FontWeight.w800,
         color: text,
-        height: 1.12,
-        letterSpacing: -0.35,
+        fontWeight: FontWeight.w800,
+        height: 1.08,
+        letterSpacing: -0.4,
       ),
       titleLarge: baseTextTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.w700,
         color: text,
-        height: 1.2,
+        fontWeight: FontWeight.w800,
+        height: 1.14,
       ),
       titleMedium: baseTextTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w700,
         color: text,
+        fontWeight: FontWeight.w700,
         height: 1.2,
       ),
       titleSmall: baseTextTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.w700,
         color: text,
+        fontWeight: FontWeight.w700,
         height: 1.2,
       ),
       bodyLarge: baseTextTheme.bodyLarge?.copyWith(
-        fontWeight: FontWeight.w500,
         color: text,
-        height: 1.5,
+        fontWeight: FontWeight.w500,
+        height: 1.58,
       ),
       bodyMedium: baseTextTheme.bodyMedium?.copyWith(
-        fontWeight: FontWeight.w500,
         color: text,
-        height: 1.5,
+        fontWeight: FontWeight.w500,
+        height: 1.54,
       ),
       bodySmall: baseTextTheme.bodySmall?.copyWith(
-        fontWeight: FontWeight.w500,
         color: textSecondary,
-        height: 1.45,
+        fontWeight: FontWeight.w500,
+        height: 1.5,
       ),
       labelLarge: baseTextTheme.labelLarge?.copyWith(
-        fontWeight: FontWeight.w700,
         color: text,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.05,
       ),
       labelMedium: baseTextTheme.labelMedium?.copyWith(
-        fontWeight: FontWeight.w600,
         color: textSecondary,
+        fontWeight: FontWeight.w700,
       ),
       labelSmall: baseTextTheme.labelSmall?.copyWith(
-        fontWeight: FontWeight.w600,
         color: textMuted,
+        fontWeight: FontWeight.w700,
       ),
     );
 
     final colorScheme = const ColorScheme.light().copyWith(
       primary: primary,
-      onPrimary: text,
+      onPrimary: surface,
       secondary: primaryDark,
       onSecondary: surface,
       surface: surface,
@@ -117,21 +159,21 @@ class AppTheme {
       onError: surface,
       outline: border,
       outlineVariant: border,
-      surfaceContainerHighest: cardBackground,
       shadow: text.withValues(alpha: 0.08),
+      surfaceContainerHighest: primarySoft,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: background,
-      cardColor: surface,
       canvasColor: background,
+      cardColor: surface,
       splashFactory: InkSparkle.splashFactory,
       textTheme: textTheme,
       dividerColor: border,
       appBarTheme: AppBarTheme(
-        backgroundColor: background,
+        backgroundColor: Colors.transparent,
         foregroundColor: text,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -140,116 +182,107 @@ class AppTheme {
         titleTextStyle: textTheme.titleLarge,
       ),
       cardTheme: CardThemeData(
-        color: surface,
+        color: glassStrong,
         elevation: 0,
         margin: EdgeInsets.zero,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(cornerRadius),
+          borderRadius: BorderRadius.circular(cornerRadiusLarge),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          shadowColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          minimumSize: const Size.fromHeight(58),
+          minimumSize: const Size.fromHeight(60),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
           backgroundColor: primary,
-          foregroundColor: text,
-          disabledBackgroundColor: cardBackground,
-          disabledForegroundColor: textMuted,
-          textStyle: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+          foregroundColor: surface,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(pillRadius),
           ),
+          textStyle: textTheme.labelLarge,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           elevation: 0,
-          minimumSize: const Size.fromHeight(58),
+          minimumSize: const Size.fromHeight(60),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
           foregroundColor: text,
-          side: const BorderSide(color: border),
-          backgroundColor: surface,
-          textStyle: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          backgroundColor: glassStrong,
+          side: BorderSide(color: primary.withValues(alpha: 0.12)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(pillRadius),
+          ),
+          textStyle: textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: text,
-          textStyle: textTheme.labelLarge,
+          textStyle: textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: cardBackground,
-        disabledColor: cardBackground,
-        selectedColor: primaryLight,
-        secondarySelectedColor: primaryLight,
+        backgroundColor: glassStrong,
+        disabledColor: primarySoft,
+        selectedColor: primarySoft,
+        secondarySelectedColor: primarySoft,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(pillRadius),
-          side: BorderSide.none,
+          side: BorderSide(color: primary.withValues(alpha: 0.1)),
         ),
         labelStyle: textTheme.labelMedium?.copyWith(color: text),
         secondaryLabelStyle: textTheme.labelMedium?.copyWith(color: text),
+        side: BorderSide(color: primary.withValues(alpha: 0.08)),
         brightness: Brightness.light,
-        side: BorderSide.none,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface,
+        fillColor: glassStrong,
         hintStyle: textTheme.bodyMedium?.copyWith(color: textMuted),
         labelStyle: textTheme.bodyMedium?.copyWith(color: textSecondary),
         helperStyle: textTheme.bodySmall?.copyWith(color: textSecondary),
         errorStyle: textTheme.bodySmall?.copyWith(color: error),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 18,
+          horizontal: 22,
+          vertical: 20,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(fieldRadius),
-          borderSide: const BorderSide(color: Colors.transparent),
+          borderSide: BorderSide(color: primary.withValues(alpha: 0.08)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(fieldRadius),
-          borderSide: const BorderSide(color: Colors.transparent),
+          borderSide: BorderSide(color: primary.withValues(alpha: 0.08)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(fieldRadius),
           borderSide: BorderSide(
-            color: primary.withValues(alpha: 0.45),
-            width: 1.2,
+            color: primary.withValues(alpha: 0.34),
+            width: 1.4,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(fieldRadius),
-          borderSide: BorderSide(
-            color: error.withValues(alpha: 0.3),
-            width: 1.2,
-          ),
+          borderSide: BorderSide(color: error.withValues(alpha: 0.36)),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(fieldRadius),
-          borderSide: BorderSide(
-            color: error.withValues(alpha: 0.6),
-            width: 1.2,
-          ),
+          borderSide: BorderSide(color: error.withValues(alpha: 0.62)),
         ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: surface,
+        backgroundColor: Colors.transparent,
+        modalBackgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        modalBackgroundColor: surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(cornerRadiusLarge),
         ),
@@ -268,84 +301,136 @@ class AppTheme {
           return states.contains(WidgetState.selected) ? surface : textMuted;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          return states.contains(WidgetState.selected)
-              ? primary
-              : cardBackground;
+          return states.contains(WidgetState.selected) ? primary : primarySoft;
         }),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
-        foregroundColor: text,
+        foregroundColor: surface,
         elevation: 0,
-        extendedTextStyle: textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-        ),
+        extendedTextStyle: textTheme.labelLarge,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(pillRadius),
         ),
       ),
       sliderTheme: SliderThemeData(
-        trackHeight: 6,
+        trackHeight: 8,
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 11),
-        overlayShape: const RoundSliderOverlayShape(overlayRadius: 22),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
         activeTrackColor: primary,
-        inactiveTrackColor: cardBackground,
-        thumbColor: primary,
-        overlayColor: primary.withValues(alpha: 0.14),
+        inactiveTrackColor: primarySoft,
+        thumbColor: surface,
+        overlayColor: primary.withValues(alpha: 0.12),
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: primary,
-        linearTrackColor: cardBackground,
+        linearTrackColor: primarySoft,
       ),
-      dividerTheme: const DividerThemeData(color: border, thickness: 1),
+      dividerTheme: DividerThemeData(
+        color: primary.withValues(alpha: 0.08),
+        thickness: 1,
+      ),
       tabBarTheme: TabBarThemeData(
         dividerColor: Colors.transparent,
         labelColor: text,
         unselectedLabelColor: textSecondary,
         indicatorSize: TabBarIndicatorSize.tab,
-        labelStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+        labelStyle: textTheme.labelLarge,
         unselectedLabelStyle: textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 
-  static List<BoxShadow> get cardShadow => [
+  static List<BoxShadow> get glassShadow => [
     BoxShadow(
-      color: text.withValues(alpha: 0.04),
-      blurRadius: 32,
-      offset: const Offset(0, 16),
-      spreadRadius: -18,
+      color: primaryDeep.withValues(alpha: 0.08),
+      blurRadius: 46,
+      offset: const Offset(0, 18),
+      spreadRadius: -22,
+    ),
+    BoxShadow(
+      color: text.withValues(alpha: 0.06),
+      blurRadius: 28,
+      offset: const Offset(0, 10),
+      spreadRadius: -20,
     ),
   ];
 
   static List<BoxShadow> get elevatedShadow => [
     BoxShadow(
-      color: text.withValues(alpha: 0.08),
-      blurRadius: 50,
-      offset: const Offset(0, 26),
+      color: primaryDeep.withValues(alpha: 0.12),
+      blurRadius: 70,
+      offset: const Offset(0, 30),
       spreadRadius: -24,
     ),
   ];
 
   static List<BoxShadow> get softShadow => [
     BoxShadow(
-      color: text.withValues(alpha: 0.035),
-      blurRadius: 22,
-      offset: const Offset(0, 10),
-      spreadRadius: -12,
+      color: primaryDeep.withValues(alpha: 0.08),
+      blurRadius: 32,
+      offset: const Offset(0, 12),
+      spreadRadius: -20,
     ),
   ];
 
   static List<BoxShadow> get floatingShadow => [
     BoxShadow(
-      color: text.withValues(alpha: 0.07),
-      blurRadius: 40,
-      offset: const Offset(0, 18),
-      spreadRadius: -18,
+      color: primaryDeep.withValues(alpha: 0.14),
+      blurRadius: 64,
+      offset: const Offset(0, 24),
+      spreadRadius: -24,
     ),
   ];
+
+  static List<BoxShadow> get softGlowShadow => [
+    BoxShadow(
+      color: primary.withValues(alpha: 0.32),
+      blurRadius: 30,
+      offset: const Offset(0, 12),
+      spreadRadius: -12,
+    ),
+  ];
+
+  static List<BoxShadow> get aiOrbShadow => [
+    BoxShadow(
+      color: primary.withValues(alpha: 0.38),
+      blurRadius: 64,
+      offset: const Offset(0, 12),
+      spreadRadius: -8,
+    ),
+  ];
+
+  static List<BoxShadow> get aiComposerShadow => [
+    BoxShadow(
+      color: primaryDeep.withValues(alpha: 0.1),
+      blurRadius: 48,
+      offset: const Offset(0, 22),
+      spreadRadius: -26,
+    ),
+  ];
+
+  static List<BoxShadow> get heroCardShadow => [
+    BoxShadow(
+      color: primaryDeep.withValues(alpha: 0.22),
+      blurRadius: 90,
+      offset: const Offset(0, 34),
+      spreadRadius: -28,
+    ),
+  ];
+
+  static List<BoxShadow> get modalShadow => [
+    BoxShadow(
+      color: primaryDeep.withValues(alpha: 0.14),
+      blurRadius: 90,
+      offset: const Offset(0, 30),
+      spreadRadius: -26,
+    ),
+  ];
+
+  static List<BoxShadow> get cardShadow => glassShadow;
 }
 
 class AppSpacing {

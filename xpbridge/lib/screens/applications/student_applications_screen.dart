@@ -10,6 +10,8 @@ import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
 import '../../widgets/xp_chip.dart';
 import '../../widgets/xp_input.dart';
+import '../../widgets/xp_premium.dart';
+import '../../widgets/xp_section_title.dart';
 
 class StudentApplicationsScreen extends StatelessWidget {
   const StudentApplicationsScreen({super.key});
@@ -19,13 +21,13 @@ class StudentApplicationsScreen extends StatelessWidget {
       case ApplicationStatus.pending:
         return AppTheme.warning;
       case ApplicationStatus.accepted:
-        return AppTheme.success;
+        return AppTheme.primaryDark;
       case ApplicationStatus.rejected:
         return AppTheme.error;
       case ApplicationStatus.interviewing:
         return AppTheme.primary;
       case ApplicationStatus.hired:
-        return const Color(0xFF5D7CE0);
+        return AppTheme.primaryDeep;
       case ApplicationStatus.completed:
         return AppTheme.successDark;
     }
@@ -34,17 +36,51 @@ class StudentApplicationsScreen extends StatelessWidget {
   String _statusText(ApplicationStatus status) {
     switch (status) {
       case ApplicationStatus.pending:
-        return 'Pending';
+        return 'Pending review';
       case ApplicationStatus.accepted:
         return 'Accepted';
       case ApplicationStatus.rejected:
-        return 'Rejected';
+        return 'Closed';
       case ApplicationStatus.interviewing:
         return 'Interviewing';
       case ApplicationStatus.hired:
-        return 'In Progress';
+        return 'In progress';
       case ApplicationStatus.completed:
         return 'Completed';
+    }
+  }
+
+  double _statusProgress(ApplicationStatus status) {
+    switch (status) {
+      case ApplicationStatus.pending:
+        return 0.2;
+      case ApplicationStatus.interviewing:
+        return 0.45;
+      case ApplicationStatus.accepted:
+        return 0.62;
+      case ApplicationStatus.hired:
+        return 0.82;
+      case ApplicationStatus.completed:
+        return 1;
+      case ApplicationStatus.rejected:
+        return 1;
+    }
+  }
+
+  String _statusSummary(Application application) {
+    switch (application.status) {
+      case ApplicationStatus.pending:
+        return 'Your note has been delivered. The team is reviewing your fit.';
+      case ApplicationStatus.interviewing:
+        return 'You have made it into an active review cycle.';
+      case ApplicationStatus.accepted:
+        return 'The startup wants to move forward with you.';
+      case ApplicationStatus.hired:
+        return 'You are actively working on this mission now.';
+      case ApplicationStatus.completed:
+        return 'Mission delivered. Add a reflection to capture what shipped.';
+      case ApplicationStatus.rejected:
+        return 'This one closed out. Keep momentum with the next match.';
     }
   }
 
@@ -77,203 +113,161 @@ class StudentApplicationsScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-            left: AppSpacing.md,
-            right: AppSpacing.md,
-            top: AppSpacing.md,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
-              boxShadow: AppTheme.elevatedShadow,
-            ),
-            child: StatefulBuilder(
-              builder: (ctx, setModalState) {
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 48,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: AppTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.pillRadius,
-                            ),
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return XPPremiumSheet(
+              title: 'Mission reflection',
+              subtitle:
+                  'Capture what you shipped, what changed, and the proof you can share.',
+              footer: XPButton(
+                label: 'Save reflection',
+                icon: Icons.arrow_upward_rounded,
+                onPressed: () async {
+                  if (didController.text.trim().isEmpty ||
+                      learnedController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Please fill in what you did and learned.',
+                        ),
+                        backgroundColor: AppTheme.error,
+                      ),
+                    );
+                    return;
+                  }
+
+                  final hours = int.tryParse(hoursController.text.trim());
+
+                  await appState.saveReflection(
+                    application.id,
+                    did: didController.text.trim(),
+                    learned: learnedController.text.trim(),
+                    skillsPracticed: selectedSkills.toList(),
+                    hoursSpent: hours,
+                    deliverableUrl: deliverableController.text.trim().isNotEmpty
+                        ? deliverableController.text.trim()
+                        : null,
+                    deliverableType: selectedDeliverableType,
+                  );
+                  if (application.status != ApplicationStatus.completed) {
+                    await appState.updateApplicationStatus(
+                      application.id,
+                      ApplicationStatus.completed,
+                    );
+                  }
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Reflection saved'),
+                        backgroundColor: AppTheme.successDark,
+                      ),
+                    );
+                  }
+                },
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    XPTextField(
+                      controller: didController,
+                      labelText: 'What did you do?',
+                      prefixIcon: Icons.task_alt_outlined,
+                      maxLines: 4,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    XPTextField(
+                      controller: learnedController,
+                      labelText: 'What did you learn?',
+                      prefixIcon: Icons.lightbulb_outline_rounded,
+                      maxLines: 4,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'Skills practiced',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: (student?.skills ?? []).map((skill) {
+                        return XPChoiceChip(
+                          label: skill,
+                          selected: selectedSkills.contains(skill),
+                          onSelected: (selected) {
+                            setModalState(() {
+                              if (selected) {
+                                selectedSkills.add(skill);
+                              } else {
+                                selectedSkills.remove(skill);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: XPTextField(
+                            controller: hoursController,
+                            labelText: 'Hours spent',
+                            prefixIcon: Icons.timer_outlined,
+                            keyboardType: TextInputType.number,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        'Submit reflection',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Capture what you shipped, what you learned, and the proof you can show.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      XPTextField(
-                        controller: didController,
-                        labelText: 'What did you do?',
-                        prefixIcon: Icons.task_alt_outlined,
-                        maxLines: 4,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      XPTextField(
-                        controller: learnedController,
-                        labelText: 'What did you learn?',
-                        prefixIcon: Icons.lightbulb_outline_rounded,
-                        maxLines: 4,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'Skills practiced',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: (student?.skills ?? []).map((skill) {
-                          return XPChoiceChip(
-                            label: skill,
-                            selected: selectedSkills.contains(skill),
-                            onSelected: (selected) {
-                              setModalState(() {
-                                if (selected) {
-                                  selectedSkills.add(skill);
-                                } else {
-                                  selectedSkills.remove(skill);
-                                }
-                              });
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: selectedDeliverableType,
+                            decoration: const InputDecoration(
+                              labelText: 'Proof type',
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'design',
+                                child: Text('Design'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'code',
+                                child: Text('Code'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'doc',
+                                child: Text('Doc'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'other',
+                                child: Text('Other'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setModalState(
+                                  () => selectedDeliverableType = value,
+                                );
+                              }
                             },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: XPTextField(
-                              controller: hoursController,
-                              labelText: 'Hours spent',
-                              prefixIcon: Icons.timer_outlined,
-                              keyboardType: TextInputType.number,
-                            ),
                           ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: selectedDeliverableType,
-                              decoration: const InputDecoration(
-                                labelText: 'Type',
-                              ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'design',
-                                  child: Text('Design'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'code',
-                                  child: Text('Code'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'doc',
-                                  child: Text('Doc'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'other',
-                                  child: Text('Other'),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setModalState(
-                                    () => selectedDeliverableType = value,
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      XPTextField(
-                        controller: deliverableController,
-                        labelText: 'Deliverable URL',
-                        hintText: 'Optional proof link',
-                        prefixIcon: Icons.link_rounded,
-                        keyboardType: TextInputType.url,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      XPButton(
-                        label: 'Save reflection',
-                        icon: Icons.save_outlined,
-                        onPressed: () async {
-                          if (didController.text.trim().isEmpty ||
-                              learnedController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please fill in what you did and learned.',
-                                ),
-                                backgroundColor: AppTheme.error,
-                              ),
-                            );
-                            return;
-                          }
-
-                          final hours = int.tryParse(
-                            hoursController.text.trim(),
-                          );
-
-                          await appState.saveReflection(
-                            application.id,
-                            did: didController.text.trim(),
-                            learned: learnedController.text.trim(),
-                            skillsPracticed: selectedSkills.toList(),
-                            hoursSpent: hours,
-                            deliverableUrl:
-                                deliverableController.text.trim().isNotEmpty
-                                ? deliverableController.text.trim()
-                                : null,
-                            deliverableType: selectedDeliverableType,
-                          );
-                          if (application.status !=
-                              ApplicationStatus.completed) {
-                            await appState.updateApplicationStatus(
-                              application.id,
-                              ApplicationStatus.completed,
-                            );
-                          }
-                          if (ctx.mounted) {
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Reflection saved'),
-                                backgroundColor: AppTheme.successDark,
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    XPTextField(
+                      controller: deliverableController,
+                      labelText: 'Deliverable URL',
+                      hintText: 'Optional link to what you shipped',
+                      prefixIcon: Icons.link_rounded,
+                      keyboardType: TextInputType.url,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -289,285 +283,322 @@ class StudentApplicationsScreen extends StatelessWidget {
         ? appState.getApplicationsForStudent(student.id)
         : <Application>[];
 
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: const XPAppBar(title: 'My Applications'),
-      body: student == null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.page),
-                child: Text(
-                  'Complete your profile to view applications.',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            )
-          : applications.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.page),
-                child: XPSection(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 88,
-                        height: 88,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryLight,
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.cornerRadiusLarge,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.description_outlined,
-                          size: 36,
-                          color: AppTheme.text,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        'No applications yet',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Once you apply to missions, they will show up here with progress updates and reflection prompts.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      XPButton(
-                        label: 'Discover missions',
-                        icon: Icons.arrow_forward_rounded,
-                        onPressed: () => context.goNamed('studentDashboard'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.page,
-                AppSpacing.md,
-                AppSpacing.page,
-                AppSpacing.page,
-              ),
-              itemCount: applications.length,
-              itemBuilder: (context, index) {
-                final application = applications[index];
-                final isCompleted =
-                    application.status == ApplicationStatus.completed;
-                final hasReflection =
-                    application.reflectionDid?.isNotEmpty == true ||
-                    application.reflectionLearned?.isNotEmpty == true;
+    final activeCount = applications
+        .where((app) => app.status != ApplicationStatus.completed)
+        .length;
+    final completedCount = applications
+        .where((app) => app.status == ApplicationStatus.completed)
+        .length;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                  child: XPCard(
-                    elevated: true,
-                    radius: AppTheme.cornerRadiusLarge,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 58,
-                              height: 58,
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryLight,
-                                borderRadius: BorderRadius.circular(
-                                  AppTheme.cornerRadiusSmall,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  application.startupName.isNotEmpty
-                                      ? application.startupName[0].toUpperCase()
-                                      : '?',
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    application.roleTitle ??
-                                        'Mission with ${application.startupName}',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w800),
-                                  ),
-                                  const SizedBox(height: AppSpacing.xxs),
-                                  Text(
-                                    application.startupName,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            XPBadge(
-                              label: _statusText(application.status),
-                              color: _statusColor(
-                                application.status,
-                              ).withValues(alpha: 0.16),
-                              textColor: _statusColor(application.status),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        XPContainer(
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.schedule_rounded,
-                                size: 16,
-                                color: AppTheme.textSecondary,
-                              ),
-                              const SizedBox(width: AppSpacing.xs),
-                              Text(
-                                'Applied ${_dateLabel(application.appliedAt)}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: XPScene(
+        compact: true,
+        child: SafeArea(
+          child: Column(
+            children: [
+              const XPAppBar(
+                title: 'Applications',
+                subtitle: 'Live mission tracking',
+              ),
+              Expanded(
+                child: student == null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.page),
+                          child: Text(
+                            'Complete your profile to view applications.',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                        if (application.message?.isNotEmpty == true) ...[
-                          const SizedBox(height: AppSpacing.md),
-                          XPContainer(
-                            child: Text(
-                              '"${application.message}"',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: AppTheme.textSecondary,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                            ),
-                          ),
-                        ],
-                        if (isCompleted && hasReflection) ...[
-                          const SizedBox(height: AppSpacing.md),
-                          XPContainer(
-                            color: AppTheme.primaryLight,
+                      )
+                    : applications.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.page),
+                          child: XPSection(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  'Reflection',
-                                  style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                Container(
+                                  width: 92,
+                                  height: 92,
+                                  decoration: BoxDecoration(
+                                    gradient: AppTheme.primaryGlowGradient,
+                                    borderRadius: BorderRadius.circular(28),
+                                    boxShadow: AppTheme.softGlowShadow,
+                                  ),
+                                  child: const Icon(
+                                    Icons.description_outlined,
+                                    size: 36,
+                                    color: AppTheme.surface,
+                                  ),
                                 ),
-                                if (application.reflectionDid?.isNotEmpty ==
-                                    true) ...[
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text(application.reflectionDid!),
-                                ],
-                                if (application.reflectionLearned?.isNotEmpty ==
-                                    true) ...[
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text(
-                                    application.reflectionLearned!,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                  ),
-                                ],
-                                if (application.skillsPracticed.isNotEmpty) ...[
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Wrap(
-                                    spacing: AppSpacing.xs,
-                                    runSpacing: AppSpacing.xs,
-                                    children: application.skillsPracticed
-                                        .map(
-                                          (skill) => XPSkillTag(label: skill),
-                                        )
-                                        .toList(),
-                                  ),
-                                ],
-                                if (application.hoursSpent != null ||
-                                    application.deliverableUrl?.isNotEmpty ==
-                                        true) ...[
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Wrap(
-                                    spacing: AppSpacing.sm,
-                                    runSpacing: AppSpacing.sm,
-                                    children: [
-                                      if (application.hoursSpent != null)
-                                        XPBadge(
-                                          label:
-                                              '${application.hoursSpent} hrs',
-                                          icon: Icons.timer_outlined,
-                                        ),
-                                      if (application
-                                              .deliverableUrl
-                                              ?.isNotEmpty ==
-                                          true)
-                                        XPBadge(
-                                          label: 'Deliverable linked',
-                                          icon: Icons.link_rounded,
-                                        ),
-                                    ],
-                                  ),
-                                ],
+                                const SizedBox(height: AppSpacing.lg),
+                                Text(
+                                  'No applications yet',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(
+                                  'Once you apply to opportunities, they will appear here with status updates and reflection prompts.',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: AppSpacing.xl),
+                                XPButton(
+                                  label: 'Discover roles',
+                                  onPressed: () =>
+                                      context.goNamed('studentDashboard'),
+                                ),
                               ],
                             ),
                           ),
-                        ],
-                        const SizedBox(height: AppSpacing.md),
-                        if (isCompleted && !hasReflection)
-                          XPButton(
-                            label: 'Submit reflection',
-                            icon: Icons.note_add_outlined,
-                            onPressed: () => _showReflectionSheet(
-                              context,
-                              application: application,
-                              appState: appState,
-                              student: student,
+                        ),
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.page,
+                          AppSpacing.md,
+                          AppSpacing.page,
+                          AppSpacing.page,
+                        ),
+                        children: [
+                          XPGlassPanel(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            backgroundColor: AppTheme.surface.withValues(
+                              alpha: 0.64,
                             ),
-                          )
-                        else if (!isCompleted)
-                          XPContainer(
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.hourglass_bottom_rounded,
-                                  size: 16,
-                                  color: AppTheme.textSecondary,
-                                ),
-                                const SizedBox(width: AppSpacing.xs),
                                 Expanded(
-                                  child: Text(
-                                    'Waiting for the startup to mark this mission complete.',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
+                                  child: _SummaryTile(
+                                    label: 'Active',
+                                    value: '$activeCount',
+                                    icon: Icons.bolt_rounded,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: _SummaryTile(
+                                    label: 'Completed',
+                                    value: '$completedCount',
+                                    icon: Icons.verified_rounded,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                          const SizedBox(height: AppSpacing.xl),
+                          XPSectionTitle(
+                            title: 'Your pipeline',
+                            subtitle:
+                                'Every application in motion, with reflection prompts when it matters.',
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          ...applications.map((application) {
+                            final isCompleted =
+                                application.status ==
+                                ApplicationStatus.completed;
+                            final hasReflection =
+                                application.reflectionDid?.isNotEmpty == true ||
+                                application.reflectionLearned?.isNotEmpty ==
+                                    true;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppSpacing.lg,
+                              ),
+                              child: XPApplicationStatusCard(
+                                title:
+                                    application.roleTitle ??
+                                    'Mission with ${application.startupName}',
+                                subtitle:
+                                    '${application.startupName} · Applied ${_dateLabel(application.appliedAt)}',
+                                statusLabel: _statusText(application.status),
+                                statusColor: _statusColor(application.status),
+                                progress: _statusProgress(application.status),
+                                summary: _statusSummary(application),
+                                trailing: Wrap(
+                                  spacing: AppSpacing.sm,
+                                  runSpacing: AppSpacing.sm,
+                                  children: [
+                                    XPBadge(
+                                      label: _dateLabel(application.appliedAt),
+                                      icon: Icons.schedule_rounded,
+                                    ),
+                                    if (application.message?.isNotEmpty == true)
+                                      XPBadge(
+                                        label: 'Intro note sent',
+                                        icon: Icons.chat_bubble_outline_rounded,
+                                        color: AppTheme.primarySoft,
+                                      ),
+                                  ],
+                                ),
+                                footer: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (application.message?.isNotEmpty ==
+                                        true) ...[
+                                      XPContainer(
+                                        child: Text(
+                                          '"${application.message}"',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: AppTheme.textSecondary,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.md),
+                                    ],
+                                    if (isCompleted && hasReflection) ...[
+                                      XPContainer(
+                                        color: AppTheme.primarySoft,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Reflection saved',
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.titleMedium,
+                                            ),
+                                            if (application
+                                                    .reflectionDid
+                                                    ?.isNotEmpty ==
+                                                true) ...[
+                                              const SizedBox(
+                                                height: AppSpacing.xs,
+                                              ),
+                                              Text(application.reflectionDid!),
+                                            ],
+                                            if (application
+                                                    .reflectionLearned
+                                                    ?.isNotEmpty ==
+                                                true) ...[
+                                              const SizedBox(
+                                                height: AppSpacing.xs,
+                                              ),
+                                              Text(
+                                                application.reflectionLearned!,
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall,
+                                              ),
+                                            ],
+                                            if (application
+                                                .skillsPracticed
+                                                .isNotEmpty) ...[
+                                              const SizedBox(
+                                                height: AppSpacing.sm,
+                                              ),
+                                              Wrap(
+                                                spacing: AppSpacing.xs,
+                                                runSpacing: AppSpacing.xs,
+                                                children: application
+                                                    .skillsPracticed
+                                                    .map(
+                                                      (skill) => XPSkillTag(
+                                                        label: skill,
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.md),
+                                    ],
+                                    if (isCompleted && !hasReflection)
+                                      XPButton(
+                                        label: 'Add reflection',
+                                        icon: Icons.auto_stories_rounded,
+                                        onPressed: () => _showReflectionSheet(
+                                          context,
+                                          application: application,
+                                          appState: appState,
+                                          student: student,
+                                        ),
+                                      )
+                                    else if (!isCompleted)
+                                      XPContainer(
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.hourglass_bottom_rounded,
+                                              size: 16,
+                                              color: AppTheme.textSecondary,
+                                            ),
+                                            const SizedBox(
+                                              width: AppSpacing.xs,
+                                            ),
+                                            Expanded(
+                                              child: Text(
+                                                'The next update appears here as soon as the startup moves the application forward.',
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryTile extends StatelessWidget {
+  const _SummaryTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return XPCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      backgroundColor: AppTheme.surface.withValues(alpha: 0.52),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: AppTheme.primaryGlowGradient,
+              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
             ),
+            child: Icon(icon, size: 18, color: AppTheme.surface),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(value, style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
     );
   }
 }

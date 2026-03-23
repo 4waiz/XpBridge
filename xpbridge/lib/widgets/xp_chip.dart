@@ -25,14 +25,15 @@ class XPChoiceChip extends StatelessWidget {
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.primaryLight : AppTheme.surface,
+          gradient: selected ? AppTheme.primaryGlowGradient : null,
+          color: selected ? null : AppTheme.glassStrong,
           borderRadius: BorderRadius.circular(AppTheme.pillRadius),
           border: Border.all(
             color: selected
-                ? AppTheme.primary.withValues(alpha: 0.26)
-                : AppTheme.border,
+                ? AppTheme.primary.withValues(alpha: 0.18)
+                : AppTheme.primary.withValues(alpha: 0.08),
           ),
-          boxShadow: selected ? AppTheme.softShadow : null,
+          boxShadow: selected ? AppTheme.softGlowShadow : AppTheme.softShadow,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -41,15 +42,14 @@ class XPChoiceChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 17,
-                color: selected ? AppTheme.text : AppTheme.textSecondary,
+                color: selected ? AppTheme.surface : AppTheme.textSecondary,
               ),
               const SizedBox(width: AppSpacing.xs),
             ],
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: selected ? AppTheme.text : AppTheme.textSecondary,
-                fontWeight: FontWeight.w700,
+                color: selected ? AppTheme.surface : AppTheme.textSecondary,
               ),
             ),
           ],
@@ -82,12 +82,15 @@ class XPFilterChip extends StatelessWidget {
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary : AppTheme.surface,
+          gradient: isSelected ? AppTheme.primaryGlowGradient : null,
+          color: isSelected ? null : AppTheme.glassStrong,
           borderRadius: BorderRadius.circular(AppTheme.pillRadius),
           border: Border.all(
-            color: isSelected ? Colors.transparent : AppTheme.border,
+            color: isSelected
+                ? AppTheme.primary.withValues(alpha: 0.14)
+                : AppTheme.primary.withValues(alpha: 0.08),
           ),
-          boxShadow: isSelected ? AppTheme.softShadow : AppTheme.cardShadow,
+          boxShadow: isSelected ? AppTheme.softGlowShadow : AppTheme.softShadow,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -96,15 +99,14 @@ class XPFilterChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: isSelected ? AppTheme.text : AppTheme.textSecondary,
+                color: isSelected ? AppTheme.surface : AppTheme.textSecondary,
               ),
               const SizedBox(width: AppSpacing.xs),
             ],
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: isSelected ? AppTheme.text : AppTheme.textSecondary,
-                fontWeight: FontWeight.w700,
+                color: isSelected ? AppTheme.surface : AppTheme.textSecondary,
               ),
             ),
           ],
@@ -131,20 +133,26 @@ class XPSkillTag extends StatelessWidget {
     final child = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: isMatched ? AppTheme.primaryLight : AppTheme.cardBackground,
+        gradient: isMatched ? AppTheme.primaryGlowGradient : null,
+        color: isMatched ? null : AppTheme.primarySoft,
         borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+        border: Border.all(
+          color: isMatched
+              ? AppTheme.primary.withValues(alpha: 0.14)
+              : AppTheme.primary.withValues(alpha: 0.08),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isMatched) ...[
-            const Icon(Icons.check_rounded, size: 15, color: AppTheme.text),
+            const Icon(Icons.check_rounded, size: 15, color: AppTheme.surface),
             const SizedBox(width: AppSpacing.xs),
           ],
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppTheme.text,
+              color: isMatched ? AppTheme.surface : AppTheme.text,
               fontWeight: FontWeight.w700,
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'xp_premium.dart';
 
 class XPBottomNavBar extends StatelessWidget {
   const XPBottomNavBar({
@@ -25,15 +26,13 @@ class XPBottomNavBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Container(
+        child: XPGlassPanel(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
-            boxShadow: AppTheme.elevatedShadow,
-          ),
+          borderRadius: 32,
+          backgroundColor: AppTheme.sheetBackground,
+          blurSigma: 26,
+          shadow: AppTheme.modalShadow,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(items.length, (index) {
               final item = items[index];
               final isActive = currentIndex == index;
@@ -50,10 +49,14 @@ class XPBottomNavBar extends StatelessWidget {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: isActive ? AppTheme.primary : Colors.transparent,
+                        gradient: isActive
+                            ? AppTheme.primaryGlowGradient
+                            : null,
+                        color: isActive ? null : Colors.transparent,
                         borderRadius: BorderRadius.circular(
                           AppTheme.cornerRadiusSmall,
                         ),
+                        boxShadow: isActive ? AppTheme.softGlowShadow : null,
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -62,7 +65,7 @@ class XPBottomNavBar extends StatelessWidget {
                             isActive ? item.activeIcon ?? item.icon : item.icon,
                             size: 20,
                             color: isActive
-                                ? AppTheme.text
+                                ? AppTheme.surface
                                 : AppTheme.textMuted,
                           ),
                           const SizedBox(height: 6),
@@ -72,11 +75,8 @@ class XPBottomNavBar extends StatelessWidget {
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: isActive
-                                      ? AppTheme.text
+                                      ? AppTheme.surface
                                       : AppTheme.textMuted,
-                                  fontWeight: isActive
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
                                 ),
                           ),
                         ],

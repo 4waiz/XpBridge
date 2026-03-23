@@ -139,7 +139,7 @@ class Application {
   }
 
   factory Application.fromMap(Map<String, dynamic> map) {
-    ApplicationStatus _parseStatus(dynamic value) {
+    ApplicationStatus parseStatus(dynamic value) {
       if (value is String) {
         switch (value) {
           case 'pending':
@@ -165,14 +165,14 @@ class Application {
       return ApplicationStatus.pending;
     }
 
-    List<String> _stringList(dynamic value) {
+    List<String> stringList(dynamic value) {
       if (value is List) {
         return value.map((e) => e.toString()).toList();
       }
       return [];
     }
 
-    DateTime? _parseDate(dynamic value) {
+    DateTime? parseDate(dynamic value) {
       if (value is String) {
         return DateTime.tryParse(value);
       }
@@ -186,23 +186,23 @@ class Application {
       studentName: map['studentName'] as String? ?? '',
       startupName: map['startupName'] as String? ?? '',
       roleTitle: map['roleTitle'] as String?,
-      status: _parseStatus(map['status']),
+      status: parseStatus(map['status']),
       message: map['message'] as String?,
-      appliedAt: _parseDate(map['appliedAt']) ?? DateTime.now(),
-      updatedAt: _parseDate(map['updatedAt']),
-      completedAt: _parseDate(map['completedAt']),
+      appliedAt: parseDate(map['appliedAt']) ?? DateTime.now(),
+      updatedAt: parseDate(map['updatedAt']),
+      completedAt: parseDate(map['completedAt']),
       reflectionDid: map['reflectionDid'] as String?,
       reflectionLearned: map['reflectionLearned'] as String?,
-      skillsPracticed: _stringList(map['skillsPracticed']),
+      skillsPracticed: stringList(map['skillsPracticed']),
       hoursSpent: map['hoursSpent'] as int?,
       deliverableUrl: map['deliverableUrl'] as String?,
       deliverableType: map['deliverableType'] as String?,
       mentorRating: map['mentorRating'] as int?,
       mentorFeedbackText: map['mentorFeedbackText'] as String?,
-      strengths: _stringList(map['strengths']),
-      growthAreas: _stringList(map['growthAreas']),
-      endorsedSkills: _stringList(map['endorsedSkills']),
-      feedbackAt: _parseDate(map['feedbackAt']),
+      strengths: stringList(map['strengths']),
+      growthAreas: stringList(map['growthAreas']),
+      endorsedSkills: stringList(map['endorsedSkills']),
+      feedbackAt: parseDate(map['feedbackAt']),
     );
   }
 }

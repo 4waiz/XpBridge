@@ -16,6 +16,7 @@ class LogoImageService {
   }) async {
     final picked = await _picker.pickImage(source: source, imageQuality: 90);
     if (picked == null) return null;
+    if (!context.mounted) return null;
 
     final cropped = await ImageCropper().cropImage(
       sourcePath: picked.path,

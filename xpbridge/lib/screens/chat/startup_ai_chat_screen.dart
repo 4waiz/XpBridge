@@ -4,10 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/student_profile.dart';
 import '../../services/ai_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/xp_app_bar.dart';
-import '../../widgets/xp_card.dart';
-import '../../widgets/xp_chip.dart';
-import '../../widgets/xp_section_title.dart';
+import '../../widgets/xp_ai.dart';
 
 class StartupAiChatScreen extends StatefulWidget {
   const StartupAiChatScreen({super.key});
@@ -18,15 +15,17 @@ class StartupAiChatScreen extends StatefulWidget {
 
 class _StartupAiChatScreenState extends State<StartupAiChatScreen> {
   static const _welcomeMessage =
-      "I'm your AI talent finder. Tell me what you're building or which skills you need, and I'll help you surface the best student matches.";
+      "I'd be happy to help identify talent. Tell me what you're building, the skills you need, and how quickly you want someone to contribute.";
   static const _resetMessage =
-      'Chat reset. Tell me what kind of student or capability you need.';
+      'Chat reset. Describe the capability, stack, or type of student you need.';
 
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
 
   final List<_ChatMessage> _messages = [];
   bool _isLoading = false;
+  bool _isVoiceMode = false;
+  bool _showQuickActions = true;
   List<StudentProfile> _matchedStudents = [];
   List<String> _searchedSkills = [];
 
@@ -61,13 +60,15 @@ class _StartupAiChatScreenState extends State<StartupAiChatScreen> {
     });
   }
 
-  Future<void> _sendMessage() async {
-    final text = _messageController.text.trim();
+  Future<void> _sendMessage([String? predefined]) async {
+    final text = predefined ?? _messageController.text.trim();
     if (text.isEmpty || _isLoading) return;
 
     setState(() {
       _messages.add(_ChatMessage(text: text, isUser: true));
       _isLoading = true;
+      _isVoiceMode = false;
+      _showQuickActions = false;
     });
     _messageController.clear();
     _scrollToBottom();
@@ -77,7 +78,7 @@ class _StartupAiChatScreenState extends State<StartupAiChatScreen> {
       setState(() {
         _isLoading = false;
         if (AiService.lastMatchedStudents.isNotEmpty) {
-          _matchedStudents = AiService.lastMatchedStudents;
+          _matchedStudents = AiService.lastMatchedStudents.take(6).toList();
           _searchedSkills = [];
         }
       });
@@ -92,116 +93,168 @@ class _StartupAiChatScreenState extends State<StartupAiChatScreen> {
     setState(() {
       _messages.clear();
       _matchedStudents.clear();
+      _isVoiceMode = false;
+      _showQuickActions = true;
     });
     AiService.resetStartupChat();
     _addBotMessage(_resetMessage);
   }
 
+  void _toggleVoiceMode() {
+    setState(() {
+      _isVoiceMode = !_isVoiceMode;
+      _showQuickActions = false;
+    });
+  }
+
+  void _toggleQuickActions() {
+    setState(() {
+      _showQuickActions = !_showQuickActions;
+      _isVoiceMode = false;
+    });
+  }
+
+  List<XPAiResultCardData> _studentCards() {
+    return _matchedStudents.map((student) {
+      final subtitle = [
+        if (student.education?.isNotEmpty == true) student.education!,
+        '${student.availabilityHours.round()}h / wk',
+      ].join(' · ');
+      return XPAiResultCardData(
+        eyebrow: student.skills.take(2).join(' · '),
+        title: student.name,
+        subtitle: subtitle,
+        trailingLabel: '${student.xpPoints} XP',
+        onTap: () => context.pushNamed(
+          'studentDetail',
+          pathParameters: {'id': student.id},
+        ),
+      );
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: XPAppBar(
-        title: 'AI Talent Finder',
-        subtitle: 'Describe the capability you need',
-        trailing: XPHeaderButton(
-          icon: Icons.refresh_rounded,
-          onTap: _resetChat,
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.page,
-                AppSpacing.md,
-                AppSpacing.page,
-                AppSpacing.md,
-              ),
-              itemCount:
-                  _messages.length +
-                  (_matchedStudents.isNotEmpty ? 1 : 0) +
-                  (_isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index < _messages.length) {
-                  return _MessageBubble(message: _messages[index]);
-                }
-                if (_isLoading && index == _messages.length) {
-                  return const _TypingIndicator();
-                }
-                return _StudentResults(
-                  students: _matchedStudents,
-                  searchedSkills: _searchedSkills,
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.page,
-              AppSpacing.md,
-              AppSpacing.page,
-              AppSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              boxShadow: AppTheme.elevatedShadow,
-            ),
-            child: SafeArea(
-              top: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: const InputDecoration(
-                        hintText: 'Describe the talent you need',
-                        prefixIcon: Icon(Icons.chat_bubble_outline_rounded),
-                      ),
-                      textInputAction: TextInputAction.send,
-                      maxLines: 4,
-                      minLines: 1,
-                      onSubmitted: (_) => _sendMessage(),
+      backgroundColor: Colors.transparent,
+      body: XPAiShell(
+        showBackdropMap: _matchedStudents.isNotEmpty,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.page,
+                  AppSpacing.sm,
+                  AppSpacing.page,
+                  AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    XPAiCircleActionButton(
+                      icon: Icons.arrow_back_ios_new_rounded,
+                      onTap: () => context.pop(),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _isLoading ? null : _sendMessage,
-                      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-                      child: Ink(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: _isLoading
-                              ? AppTheme.cardBackground
-                              : AppTheme.primary,
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.pillRadius,
+                    const Spacer(),
+                    XPAiCircleActionButton(
+                      icon: Icons.edit_outlined,
+                      onTap: _resetChat,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  child: _isVoiceMode
+                      ? const Padding(
+                          key: ValueKey('voice'),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.pageWide,
                           ),
-                        ),
-                        child: _isLoading
-                            ? const Padding(
-                                padding: EdgeInsets.all(16),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.send_rounded,
-                                color: AppTheme.text,
+                          child: XPAiVoiceState(
+                            status: 'Recording...',
+                            subtitle:
+                                'Describe the role, stack, or working style you want to hire for.',
+                          ),
+                        )
+                      : ListView(
+                          key: const ValueKey('chat'),
+                          controller: _scrollController,
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.pageWide,
+                            AppSpacing.md,
+                            AppSpacing.pageWide,
+                            AppSpacing.md,
+                          ),
+                          children: [
+                            if (_messages.length == 1) ...[
+                              Text(
+                                'Find the right\nstudent faster',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displayMedium
+                                    ?.copyWith(
+                                      color: AppTheme.surface,
+                                      fontSize: 44,
+                                      height: 0.96,
+                                    ),
                               ),
-                      ),
-                    ),
-                  ),
-                ],
+                              const SizedBox(height: AppSpacing.lg),
+                            ],
+                            if (_showQuickActions) ...[
+                              _StartupQuickActions(onTap: _sendMessage),
+                              const SizedBox(height: AppSpacing.lg),
+                            ],
+                            ..._messages.map(
+                              (message) => XPAiTextBubble(
+                                text: message.text,
+                                isUser: message.isUser,
+                              ),
+                            ),
+                            if (_isLoading)
+                              const XPAiTextBubble(
+                                text: '',
+                                isUser: false,
+                                isLoading: true,
+                              ),
+                            if (_matchedStudents.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.sm),
+                              XPAiFloatingResultsDeck(
+                                cards: _studentCards(),
+                                actionLabel: 'View All',
+                                onActionTap: () =>
+                                    context.pushNamed('startupDashboard'),
+                              ),
+                            ],
+                            const SizedBox(height: AppSpacing.xl),
+                          ],
+                        ),
+                ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.page,
+                  AppSpacing.sm,
+                  AppSpacing.page,
+                  AppSpacing.lg,
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: XPAiComposer(
+                    controller: _messageController,
+                    hintText: 'Ask XPBridge AI...',
+                    onSend: _sendMessage,
+                    onPlusTap: _toggleQuickActions,
+                    onMicTap: _toggleVoiceMode,
+                    isLoading: _isLoading,
+                    isMicActive: _isVoiceMode,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -214,216 +267,30 @@ class _ChatMessage {
   final bool isUser;
 }
 
-class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+class _StartupQuickActions extends StatelessWidget {
+  const _StartupQuickActions({required this.onTap});
 
-  final _ChatMessage message;
-
-  @override
-  Widget build(BuildContext context) {
-    final isUser = message.isUser;
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.md),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.8,
-        ),
-        decoration: BoxDecoration(
-          color: isUser ? AppTheme.primary : AppTheme.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(AppTheme.cornerRadius),
-            topRight: const Radius.circular(AppTheme.cornerRadius),
-            bottomLeft: Radius.circular(isUser ? AppTheme.cornerRadius : 8),
-            bottomRight: Radius.circular(isUser ? 8 : AppTheme.cornerRadius),
-          ),
-          boxShadow: AppTheme.cardShadow,
-        ),
-        child: Text(
-          message.text,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text),
-        ),
-      ),
-    );
-  }
-}
-
-class _TypingIndicator extends StatelessWidget {
-  const _TypingIndicator();
+  final Future<void> Function(String) onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.md),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(AppTheme.cornerRadius),
-            topRight: Radius.circular(AppTheme.cornerRadius),
-            bottomLeft: Radius.circular(8),
-            bottomRight: Radius.circular(AppTheme.cornerRadius),
-          ),
-          boxShadow: AppTheme.cardShadow,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            _AnimatedDot(delay: 0),
-            SizedBox(width: 4),
-            _AnimatedDot(delay: 200),
-            SizedBox(width: 4),
-            _AnimatedDot(delay: 400),
-          ],
-        ),
-      ),
-    );
-  }
-}
+    final actions = [
+      ('Flutter student for mobile app', Icons.phone_iphone_rounded),
+      ('Design-focused product talent', Icons.brush_outlined),
+      ('AI / data candidate', Icons.auto_graph_outlined),
+      ('Part-time technical generalist', Icons.hub_outlined),
+    ];
 
-class _AnimatedDot extends StatelessWidget {
-  const _AnimatedDot({required this.delay});
-
-  final int delay;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 600 + delay),
-      builder: (context, value, child) => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.3 + (value * 0.5)),
-          shape: BoxShape.circle,
-        ),
-      ),
-    );
-  }
-}
-
-class _StudentResults extends StatelessWidget {
-  const _StudentResults({required this.students, required this.searchedSkills});
-
-  final List<StudentProfile> students;
-  final List<String> searchedSkills;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        XPSectionTitle(
-          title: 'Matching students',
-          subtitle: 'Tap a card to review their full profile.',
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ...students.map(
-          (student) => Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: _StudentCard(
-              student: student,
-              searchedSkills: searchedSkills,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StudentCard extends StatelessWidget {
-  const _StudentCard({required this.student, required this.searchedSkills});
-
-  final StudentProfile student;
-  final List<String> searchedSkills;
-
-  @override
-  Widget build(BuildContext context) {
-    final matchedSkills = student.skills
-        .where(
-          (skill) => searchedSkills.any(
-            (searched) => skill.toLowerCase().contains(searched.toLowerCase()),
-          ),
-        )
-        .toList();
-
-    final displaySkills = searchedSkills.isNotEmpty
-        ? [
-            ...matchedSkills,
-            ...student.skills.where((skill) => !matchedSkills.contains(skill)),
-          ]
-        : student.skills;
-
-    return XPCard(
-      elevated: true,
-      radius: AppTheme.cornerRadiusLarge,
-      onTap: () => context.pushNamed(
-        'studentDetail',
-        pathParameters: {'id': student.id},
-      ),
-      child: Row(
-        children: [
-          XPAvatar(initial: student.name[0]),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  student.name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    XPBadge(
-                      label: '${student.availabilityHours}h/wk',
-                      icon: Icons.schedule_rounded,
-                      color: AppTheme.cardBackground,
-                    ),
-                    XPBadge(
-                      label: '${student.xpPoints} XP',
-                      icon: Icons.auto_awesome_rounded,
-                      color: AppTheme.primaryLight,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: displaySkills
-                      .take(4)
-                      .map(
-                        (skill) => XPSkillTag(
-                          label: skill,
-                          isMatched: matchedSkills.contains(skill),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: actions.map((action) {
+        return XPAiQuickChip(
+          label: action.$1,
+          icon: action.$2,
+          onTap: () => onTap(action.$1),
+        );
+      }).toList(),
     );
   }
 }

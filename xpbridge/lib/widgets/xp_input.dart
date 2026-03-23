@@ -63,7 +63,7 @@ class XPTextField extends StatelessWidget {
                 padding: EdgeInsets.only(bottom: maxLines > 1 ? 54 : 0),
                 child: Icon(
                   prefixIcon,
-                  color: AppTheme.textSecondary,
+                  color: AppTheme.primaryDeep.withValues(alpha: 0.7),
                   size: 20,
                 ),
               ),
@@ -71,7 +71,11 @@ class XPTextField extends StatelessWidget {
             ? null
             : IconButton(
                 onPressed: onSuffixTap,
-                icon: Icon(suffixIcon, color: AppTheme.textSecondary, size: 20),
+                icon: Icon(
+                  suffixIcon,
+                  color: AppTheme.primaryDeep.withValues(alpha: 0.7),
+                  size: 20,
+                ),
               ),
       ),
     );

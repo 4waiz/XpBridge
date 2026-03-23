@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'xp_premium.dart';
 
 class XPCard extends StatelessWidget {
   const XPCard({
@@ -24,23 +25,16 @@ class XPCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.circular(radius ?? AppTheme.cornerRadius);
-    final content = Container(
+    return XPGlassPanel(
+      onTap: onTap,
       padding: padding,
-      decoration: BoxDecoration(
-        color: backgroundColor ?? AppTheme.surface,
-        borderRadius: borderRadius,
-        border: bordered ? Border.all(color: AppTheme.border) : null,
-        boxShadow: elevated ? AppTheme.elevatedShadow : AppTheme.cardShadow,
-      ),
+      borderRadius: radius ?? AppTheme.cornerRadiusLarge,
+      backgroundColor: backgroundColor ?? AppTheme.glassStrong,
+      borderColor: bordered
+          ? AppTheme.primary.withValues(alpha: 0.14)
+          : AppTheme.glassBorder,
+      shadow: elevated ? AppTheme.elevatedShadow : AppTheme.glassShadow,
       child: child,
-    );
-
-    if (onTap == null) return content;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(onTap: onTap, borderRadius: borderRadius, child: content),
     );
   }
 }
@@ -67,7 +61,7 @@ class XPSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return XPCard(
       padding: padding,
-      backgroundColor: backgroundColor ?? AppTheme.surface,
+      backgroundColor: backgroundColor ?? AppTheme.glassStrong,
       elevated: true,
       radius: AppTheme.cornerRadiusLarge,
       child: Column(
@@ -84,8 +78,7 @@ class XPSection extends StatelessWidget {
                       if (title != null)
                         Text(
                           title!,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w800),
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
                       if (subtitle != null) ...[
                         const SizedBox(height: AppSpacing.xs),
@@ -128,10 +121,11 @@ class XPContainer extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: color ?? AppTheme.cardBackground,
+        color: color ?? AppTheme.primarySoft,
         borderRadius: BorderRadius.circular(
           borderRadius ?? AppTheme.cornerRadiusSmall,
         ),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.08)),
       ),
       child: child,
     );
@@ -154,7 +148,7 @@ class XPBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background = color ?? AppTheme.cardBackground;
+    final background = color ?? AppTheme.surface.withValues(alpha: 0.72);
     final foreground = textColor ?? AppTheme.text;
 
     return Container(
@@ -162,6 +156,7 @@ class XPBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+        border: Border.all(color: foreground.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -170,11 +165,13 @@ class XPBadge extends StatelessWidget {
             Icon(icon, size: 14, color: foreground),
             const SizedBox(width: AppSpacing.xs),
           ],
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(color: foreground),
             ),
           ),
         ],
@@ -200,21 +197,13 @@ class XPProgressBar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: AppTheme.cardBackground,
-            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppTheme.primary,
-                borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-              ),
-            ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+          child: LinearProgressIndicator(
+            value: progress.clamp(0, 1),
+            minHeight: height,
+            backgroundColor: AppTheme.primarySoft,
+            valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
           ),
         ),
         if (showLabel) ...[
