@@ -5,13 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app.dart';
-import '../../models/student_profile.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
+import '../../models/student_profile.dart';
 import '../../services/user_file_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
+import '../../widgets/xp_input.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -74,7 +75,6 @@ class _LoginScreenState extends State<LoginScreen> {
       final enteredEmail = _emailController.text.trim().toLowerCase();
       final enteredPassword = _passwordController.text;
 
-      // Check if user exists in the txt file
       final userExists = await UserFileService.userExists(enteredEmail);
       if (!userExists) {
         setState(() {
@@ -83,8 +83,10 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Validate credentials from txt file
-      final isValid = await UserFileService.validateUser(enteredEmail, enteredPassword);
+      final isValid = await UserFileService.validateUser(
+        enteredEmail,
+        enteredPassword,
+      );
       if (!isValid) {
         setState(() {
           _passwordError = 'Incorrect password. Please try again.';
@@ -97,7 +99,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // Save login state for auto-login on next app launch
       await prefs.setBool('is_logged_in', true);
 
       final appState = AppStateScope.of(context);
@@ -162,242 +163,122 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 32),
-                // Logo and welcome section
-                Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          gradient: LinearGradient(
-                            colors: [
-                              AppTheme.primary,
-                              AppTheme.primaryDark,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primary.withValues(alpha: 0.3),
-                              blurRadius: 24,
-                              offset: const Offset(0, 12),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.auto_graph_rounded,
-                          color: Colors.white,
-                          size: 40,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      const Text(
-                        'Welcome Back',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.text,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Sign in to continue your journey',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+          padding: const EdgeInsets.all(AppSpacing.page),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                  boxShadow: AppTheme.elevatedShadow,
                 ),
-                const SizedBox(height: 40),
-                // Login form card
-                XPCard(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Email',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: AppTheme.text,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        onChanged: (_) {
-                          if (_emailError != null) {
-                            setState(() => _emailError = null);
-                          }
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Enter your email',
-                          prefixIcon: Icon(
-                            Icons.email_outlined,
-                            color: _emailError != null
-                                ? AppTheme.error
-                                : AppTheme.textMuted,
-                          ),
-                          filled: true,
-                          fillColor: _emailError != null
-                              ? AppTheme.error.withValues(alpha: 0.05)
-                              : AppTheme.cardBackground,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: _emailError != null
-                                ? BorderSide(color: AppTheme.error)
-                                : BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: _emailError != null
-                                ? BorderSide(color: AppTheme.error)
-                                : BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(
-                              color: _emailError != null
-                                  ? AppTheme.error
-                                  : AppTheme.primary,
-                              width: 2,
-                            ),
-                          ),
-                          errorText: _emailError,
-                          errorStyle: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Password',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: AppTheme.text,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        onChanged: (_) {
-                          if (_passwordError != null) {
-                            setState(() => _passwordError = null);
-                          }
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Enter your password',
-                          prefixIcon: Icon(
-                            Icons.lock_outline,
-                            color: _passwordError != null
-                                ? AppTheme.error
-                                : AppTheme.textMuted,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              color: AppTheme.textMuted,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                          filled: true,
-                          fillColor: _passwordError != null
-                              ? AppTheme.error.withValues(alpha: 0.05)
-                              : AppTheme.cardBackground,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: _passwordError != null
-                                ? BorderSide(color: AppTheme.error)
-                                : BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: _passwordError != null
-                                ? BorderSide(color: AppTheme.error)
-                                : BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(
-                              color: _passwordError != null
-                                  ? AppTheme.error
-                                  : AppTheme.primary,
-                              width: 2,
-                            ),
-                          ),
-                          errorText: _passwordError,
-                          errorStyle: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {},
-                          child: const Text(
-                            'Forgot Password?',
-                            style: TextStyle(
-                              color: AppTheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      XPButton(
-                        label: 'Sign In',
-                        icon: Icons.login_rounded,
-                        onPressed: _handleLogin,
-                      ),
-                    ],
-                  ),
+                child: const Icon(
+                  Icons.auto_graph_rounded,
+                  size: 34,
+                  color: AppTheme.text,
                 ),
-                const SizedBox(height: 32),
-                // Sign up link
-                Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => context.goNamed('signup'),
-                        child: const Text(
-                          'Sign Up',
-                          style: TextStyle(
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.w700,
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              Text(
+                'Welcome back',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Sign in to keep building experience, tracking applications, and discovering new missions.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              XPCard(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                elevated: true,
+                radius: AppTheme.cornerRadiusLarge,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Log in',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Use the email and password you created on XPBridge.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    XPTextField(
+                      controller: _emailController,
+                      labelText: 'Email',
+                      hintText: 'you@example.com',
+                      errorText: _emailError,
+                      prefixIcon: Icons.mail_outline_rounded,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) => setState(() {
+                            _emailError = null;
+                          }),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    XPTextField(
+                      controller: _passwordController,
+                      labelText: 'Password',
+                      hintText: 'Enter your password',
+                      errorText: _passwordError,
+                      prefixIcon: Icons.lock_outline_rounded,
+                      suffixIcon: _obscurePassword
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
+                      onSuffixTap: () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
+                      onChanged: (_) => setState(() {
+                            _passwordError = null;
+                          }),
+                      onSubmitted: (_) => _handleLogin(),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    XPButton(
+                      label: 'Continue',
+                      icon: Icons.arrow_forward_rounded,
+                      onPressed: _handleLogin,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              XPCard(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                radius: AppTheme.cornerRadiusLarge,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'New here? Create an account to set up your student or startup profile.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    XPOutlinedButton(
+                      label: 'Sign up',
+                      expand: false,
+                      size: XPButtonSize.medium,
+                      onPressed: () => context.goNamed('signup'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

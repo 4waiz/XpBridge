@@ -21,17 +21,16 @@ class XPChoiceChip extends StatelessWidget {
     return GestureDetector(
       onTap: () => onSelected(!selected),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.primary.withValues(alpha: 0.15)
-              : AppTheme.cardBackground,
-          borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+          color: selected ? AppTheme.primaryLight : AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.pillRadius),
           border: Border.all(
-            color: selected ? AppTheme.primary : Colors.transparent,
-            width: 2,
+            color: selected ? AppTheme.primary.withValues(alpha: 0.26) : AppTheme.border,
           ),
+          boxShadow: selected ? AppTheme.softShadow : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -39,18 +38,17 @@ class XPChoiceChip extends StatelessWidget {
             if (icon != null) ...[
               Icon(
                 icon,
-                size: 18,
-                color: selected ? AppTheme.primary : AppTheme.textSecondary,
+                size: 17,
+                color: selected ? AppTheme.text : AppTheme.textSecondary,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.xs),
             ],
             Text(
               label,
-              style: TextStyle(
-                color: selected ? AppTheme.primary : AppTheme.text,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: selected ? AppTheme.text : AppTheme.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
           ],
         ),
@@ -59,7 +57,6 @@ class XPChoiceChip extends StatelessWidget {
   }
 }
 
-/// Filter chip with a different visual style
 class XPFilterChip extends StatelessWidget {
   const XPFilterChip({
     super.key,
@@ -79,22 +76,16 @@ class XPFilterChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         decoration: BoxDecoration(
-          gradient: isSelected
-              ? LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.primaryDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: isSelected ? null : AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: isSelected
-              ? null
-              : Border.all(color: AppTheme.cardBackground, width: 1.5),
-          boxShadow: isSelected ? AppTheme.softShadow : null,
+          color: isSelected ? AppTheme.primary : AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : AppTheme.border,
+          ),
+          boxShadow: isSelected ? AppTheme.softShadow : AppTheme.cardShadow,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -103,17 +94,16 @@ class XPFilterChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: isSelected ? Colors.white : AppTheme.textSecondary,
+                color: isSelected ? AppTheme.text : AppTheme.textSecondary,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: AppSpacing.xs),
             ],
             Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : AppTheme.text,
-              ),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: isSelected ? AppTheme.text : AppTheme.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
           ],
         ),
@@ -122,7 +112,6 @@ class XPFilterChip extends StatelessWidget {
   }
 }
 
-/// Skill tag component
 class XPSkillTag extends StatelessWidget {
   const XPSkillTag({
     super.key,
@@ -137,42 +126,31 @@ class XPSkillTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final widget = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    final child = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: isMatched
-            ? AppTheme.success.withValues(alpha: 0.15)
-            : AppTheme.cardBackground,
-        borderRadius: BorderRadius.circular(10),
-        border: isMatched
-            ? Border.all(color: AppTheme.success.withValues(alpha: 0.4))
-            : null,
+        color: isMatched ? AppTheme.primaryLight : AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(AppTheme.pillRadius),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isMatched) ...[
-            Icon(
-              Icons.check_circle,
-              size: 14,
-              color: AppTheme.successDark,
-            ),
-            const SizedBox(width: 6),
+            const Icon(Icons.check_rounded, size: 15, color: AppTheme.text),
+            const SizedBox(width: AppSpacing.xs),
           ],
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isMatched ? AppTheme.successDark : AppTheme.text,
-            ),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w700,
+                ),
           ),
         ],
       ),
     );
 
-    if (onTap == null) return widget;
-
-    return GestureDetector(onTap: onTap, child: widget);
+    if (onTap == null) return child;
+    return GestureDetector(onTap: onTap, child: child);
   }
 }

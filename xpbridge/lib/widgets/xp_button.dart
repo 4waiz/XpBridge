@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
+enum XPButtonSize { small, medium, large }
+
 class XPButton extends StatefulWidget {
   const XPButton({
     super.key,
@@ -10,7 +12,7 @@ class XPButton extends StatefulWidget {
     this.icon,
     this.tonal = false,
     this.expand = true,
-    this.size = XPButtonSize.medium,
+    this.size = XPButtonSize.large,
   });
 
   final String label;
@@ -24,93 +26,57 @@ class XPButton extends StatefulWidget {
   State<XPButton> createState() => _XPButtonState();
 }
 
-enum XPButtonSize { small, medium, large }
-
 class _XPButtonState extends State<XPButton> {
   bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final isDisabled = widget.onPressed == null;
+    final style = _styleForSize(widget.size);
 
-    final height = switch (widget.size) {
-      XPButtonSize.small => 44.0,
-      XPButtonSize.medium => 52.0,
-      XPButtonSize.large => 58.0,
-    };
-
-    final fontSize = switch (widget.size) {
-      XPButtonSize.small => 14.0,
-      XPButtonSize.medium => 15.0,
-      XPButtonSize.large => 16.0,
-    };
-
-    final iconSize = switch (widget.size) {
-      XPButtonSize.small => 18.0,
-      XPButtonSize.medium => 20.0,
-      XPButtonSize.large => 22.0,
-    };
-
-    final backgroundColor = widget.tonal
-        ? AppTheme.primary.withValues(alpha: 0.12)
-        : AppTheme.primary;
-
-    final foregroundColor = widget.tonal ? AppTheme.primary : Colors.white;
-
-    final button = Container(
-      height: height,
-      decoration: BoxDecoration(
-        gradient: widget.tonal || isDisabled
-            ? null
-            : LinearGradient(
-                colors: [AppTheme.primary, AppTheme.primaryDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-        color: widget.tonal
-            ? backgroundColor
-            : isDisabled
-            ? AppTheme.cardBackground
-            : null,
-        borderRadius: BorderRadius.circular(AppTheme.cornerRadius),
-        boxShadow: isDisabled || widget.tonal
-            ? null
-            : [
-                BoxShadow(
-                  color: AppTheme.primary.withValues(alpha: 0.3),
-                  offset: const Offset(0, 4),
-                  blurRadius: 12,
-                ),
-              ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.onPressed,
-          borderRadius: BorderRadius.circular(AppTheme.cornerRadius),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            alignment: Alignment.center,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
+    final button = AnimatedScale(
+      scale: _pressed ? 0.985 : 1,
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOut,
+      child: Container(
+        height: style.height,
+        decoration: BoxDecoration(
+          color: isDisabled
+              ? AppTheme.cardBackground
+              : widget.tonal
+                  ? AppTheme.primaryLight
+                  : AppTheme.primary,
+          borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+          boxShadow: isDisabled || widget.tonal ? null : AppTheme.floatingShadow,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onPressed,
+            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: style.horizontalPadding),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
                 children: [
                   if (widget.icon != null) ...[
                     Icon(
                       widget.icon,
-                      size: iconSize,
-                      color: isDisabled ? AppTheme.textMuted : foregroundColor,
+                      size: style.iconSize,
+                      color: isDisabled ? AppTheme.textMuted : AppTheme.text,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: AppSpacing.xs),
                   ],
-                  Text(
-                    widget.label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: fontSize,
-                      color: isDisabled ? AppTheme.textMuted : foregroundColor,
+                  Flexible(
+                    child: Text(
+                      widget.label,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontSize: style.fontSize,
+                            fontWeight: FontWeight.w800,
+                            color: isDisabled ? AppTheme.textMuted : AppTheme.text,
+                          ),
                     ),
                   ),
                 ],
@@ -121,23 +87,15 @@ class _XPButtonState extends State<XPButton> {
       ),
     );
 
-    return AnimatedScale(
-      scale: _pressed ? 0.97 : 1,
-      duration: const Duration(milliseconds: 100),
-      curve: Curves.easeOut,
-      child: Listener(
-        onPointerDown: (_) => setState(() => _pressed = true),
-        onPointerUp: (_) => setState(() => _pressed = false),
-        onPointerCancel: (_) => setState(() => _pressed = false),
-        child: widget.expand
-            ? SizedBox(width: double.infinity, child: button)
-            : button,
-      ),
+    return Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: widget.expand ? SizedBox(width: double.infinity, child: button) : button,
     );
   }
 }
 
-// Secondary button variant
 class XPOutlinedButton extends StatelessWidget {
   const XPOutlinedButton({
     super.key,
@@ -145,62 +103,107 @@ class XPOutlinedButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.expand = true,
+    this.size = XPButtonSize.large,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final bool expand;
+  final XPButtonSize size;
 
   @override
   Widget build(BuildContext context) {
+    final style = _styleForSize(size);
     final isDisabled = onPressed == null;
 
-    return Container(
-      height: 52,
+    final child = Container(
+      height: style.height,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.cornerRadius),
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.pillRadius),
         border: Border.all(
-          color: isDisabled ? AppTheme.cardBackground : AppTheme.primary,
-          width: 2,
+          color: isDisabled ? AppTheme.cardBackground : AppTheme.border,
         ),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(AppTheme.cornerRadius - 2),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            alignment: Alignment.center,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(
-                      icon,
-                      size: 20,
-                      color: isDisabled ? AppTheme.textMuted : AppTheme.primary,
-                    ),
-                    const SizedBox(width: 10),
-                  ],
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: isDisabled ? AppTheme.textMuted : AppTheme.primary,
-                    ),
+          borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: style.horizontalPadding),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(
+                    icon,
+                    size: style.iconSize,
+                    color: isDisabled ? AppTheme.textMuted : AppTheme.text,
                   ),
+                  const SizedBox(width: AppSpacing.xs),
                 ],
-              ),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontSize: style.fontSize,
+                          fontWeight: FontWeight.w700,
+                          color: isDisabled ? AppTheme.textMuted : AppTheme.text,
+                        ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
+
+    return expand ? SizedBox(width: double.infinity, child: child) : child;
+  }
+}
+
+class _ButtonStyleSpec {
+  const _ButtonStyleSpec({
+    required this.height,
+    required this.fontSize,
+    required this.iconSize,
+    required this.horizontalPadding,
+  });
+
+  final double height;
+  final double fontSize;
+  final double iconSize;
+  final double horizontalPadding;
+}
+
+_ButtonStyleSpec _styleForSize(XPButtonSize size) {
+  switch (size) {
+    case XPButtonSize.small:
+      return const _ButtonStyleSpec(
+        height: 48,
+        fontSize: 14,
+        iconSize: 18,
+        horizontalPadding: 18,
+      );
+    case XPButtonSize.medium:
+      return const _ButtonStyleSpec(
+        height: 54,
+        fontSize: 15,
+        iconSize: 19,
+        horizontalPadding: 22,
+      );
+    case XPButtonSize.large:
+      return const _ButtonStyleSpec(
+        height: 60,
+        fontSize: 16,
+        iconSize: 20,
+        horizontalPadding: 24,
+      );
   }
 }

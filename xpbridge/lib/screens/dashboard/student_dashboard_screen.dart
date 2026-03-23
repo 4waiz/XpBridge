@@ -3,10 +3,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../app.dart';
 import '../../data/dummy_data.dart';
-import '../../models/startup_profile.dart';
 import '../../models/event_log_entry.dart';
+import '../../models/startup_profile.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/xp_app_bar.dart';
+import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
+import '../../widgets/xp_chip.dart';
+import '../../widgets/xp_navigation.dart';
+import '../../widgets/xp_section_title.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key});
@@ -19,20 +24,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   String? _selectedIndustry;
   String? _selectedSkill;
   bool _feedExpanded = false;
-  bool _statsExpanded = false;
+  bool _statsExpanded = true;
 
   List<StartupProfile> get _filteredStartups {
     var startups = DummyData.startups;
 
     if (_selectedIndustry != null) {
-      startups = startups
-          .where((s) => s.industry == _selectedIndustry)
-          .toList();
+      startups = startups.where((startup) => startup.industry == _selectedIndustry).toList();
     }
 
     if (_selectedSkill != null) {
       startups = startups
-          .where((s) => s.requiredSkills.contains(_selectedSkill))
+          .where((startup) => startup.requiredSkills.contains(_selectedSkill))
           .toList();
     }
 
@@ -76,32 +79,20 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   String _levelName(int level) {
     switch (level) {
-      case 1:
-        return 'Explorer';
-      case 2:
-        return 'Contributor';
-      case 3:
-        return 'Achiever';
       case 4:
         return 'Leader';
+      case 3:
+        return 'Achiever';
+      case 2:
+        return 'Contributor';
       default:
         return 'Explorer';
     }
   }
 
-  String _levelSubtitle(int level) {
-    switch (level) {
-      case 1:
-        return "You're just getting started on XPBridge.";
-      case 2:
-        return "You're building momentum and making progress.";
-      case 3:
-        return "You're becoming a valued contributor.";
-      case 4:
-        return "You've reached the highest level.";
-      default:
-        return "You're just getting started on XPBridge.";
-    }
+  String _firstName(String? name) {
+    if (name == null || name.trim().isEmpty) return 'there';
+    return name.trim().split(' ').first;
   }
 
   void _showLevelInfoSheet(BuildContext context, int xp, int level) {
@@ -115,181 +106,63 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A1F2933),
-              blurRadius: 20,
-              offset: Offset(0, -4),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+              boxShadow: AppTheme.elevatedShadow,
             ),
-          ],
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardBackground,
-                      borderRadius: BorderRadius.circular(2),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppTheme.cardBackground,
+                        borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                      ),
                     ),
                   ),
-                ),
-
-                // Header
-                Text(
-                  'Level $level – ${_levelName(level)}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.text,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _levelSubtitle(level),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // XP Progress section
-                Text(
-                  'Progress to Level ${level + 1}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: nextLevel != null ? progress : 1.0,
-                    minHeight: 10,
-                    backgroundColor: AppTheme.cardBackground,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  nextLevel != null ? '$xpInLevel / $xpNeeded XP' : 'Max level reached',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primary,
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // How to Earn XP
-                const Text(
-                  'How to Earn XP',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.text,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _XPEarnItem(
-                  icon: Icons.rocket_launch_rounded,
-                  text: 'Complete a mission',
-                  xp: '+100 XP',
-                ),
-                _XPEarnItem(
-                  icon: Icons.edit_note_rounded,
-                  text: 'Submit a reflection',
-                  xp: '+15 XP',
-                ),
-                _XPEarnItem(
-                  icon: Icons.feedback_outlined,
-                  text: 'Receive startup feedback',
-                  xp: '+25 XP',
-                ),
-                _XPEarnItem(
-                  icon: Icons.star_rounded,
-                  text: 'First mission bonus',
-                  xp: '+50 XP',
-                ),
-
-                const SizedBox(height: 24),
-
-                // Why Levels Matter
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        size: 18,
-                        color: AppTheme.primary,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Higher levels unlock better mission matches and more visibility to startups.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppTheme.textSecondary,
-                            height: 1.4,
-                          ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    'Level $level • ${_levelName(level)}',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
                         ),
-                      ),
-                    ],
                   ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // CTA Button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primary,
-                      side: const BorderSide(color: AppTheme.primary, width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Browse Missions',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
+                  const SizedBox(height: AppSpacing.sm),
+                  XPProgressBar(progress: nextLevel != null ? progress : 1),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    nextLevel != null ? '$xpInLevel / $xpNeeded XP in this level' : 'Max level reached',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.xl),
+                  Text(
+                    'How to earn XP',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const _XpEarnRow(icon: Icons.rocket_launch_rounded, label: 'Complete a mission', xp: '+100'),
+                  const _XpEarnRow(icon: Icons.edit_note_rounded, label: 'Submit a reflection', xp: '+15'),
+                  const _XpEarnRow(icon: Icons.feedback_outlined, label: 'Receive startup feedback', xp: '+25'),
+                  const _XpEarnRow(icon: Icons.star_rounded, label: 'First mission bonus', xp: '+50'),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -301,482 +174,295 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     final level = studentProfile?.level ?? 1;
     final progress = _levelProgress(xpPoints, level);
     final nextLevel = _nextLevelTarget(level);
-    final List<EventLogEntry> feedEvents = appState.eventLog;
+    final feedEvents = appState.eventLog;
     final feedOptOut = appState.xpFeedOptOut;
+    final hasFilters = _selectedIndustry != null || _selectedSkill != null;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  border: Border(
-                    bottom: BorderSide(color: AppTheme.cardBackground),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Hello, ${studentProfile?.name.split(' ').first ?? 'there'}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'Discover Missions',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppTheme.text,
-                                ),
-                              ),
-                            ],
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            AppSpacing.md,
+            AppSpacing.page,
+            AppSpacing.page,
+          ),
+          children: [
+            XPDashboardAppBar(
+              eyebrow: 'Hello',
+              title: _firstName(studentProfile?.name),
+              subtitle: 'Discover startup missions that match your skills and growth goals.',
+              leading: XPAvatar(initial: _firstName(studentProfile?.name)[0]),
+              trailing: XPHeaderButton(
+                icon: Icons.person_outline_rounded,
+                onTap: () => context.pushNamed('studentProfile'),
+              ),
+              bottom: GestureDetector(
+                onTap: () => _showLevelInfoSheet(context, xpPoints, level),
+                child: XPContainer(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          XPBadge(
+                            label: 'Level $level',
+                            color: AppTheme.primaryLight,
                           ),
-                        ),
-                        GestureDetector(
-                          onTap: () => context.pushNamed('studentProfile'),
-                          child: Container(
-                            width: 46,
-                            height: 46,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [AppTheme.primary, AppTheme.primaryDark],
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primary.withValues(alpha: 0.24),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Text(
-                                studentProfile?.name.isNotEmpty == true
-                                    ? studentProfile!.name[0].toUpperCase()
-                                    : '?',
-                                style: const TextStyle(
+                          const Spacer(),
+                          Text(
+                            '$xpPoints XP',
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  fontSize: 17,
                                 ),
-                              ),
-                            ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      XPProgressBar(progress: progress),
+                      if (nextLevel != null) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          '${nextLevel - xpPoints} XP to Level ${level + 1}',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 10),
-                    GestureDetector(
-                      onTap: () => _showLevelInfoSheet(context, xpPoints, level),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            XPCard(
+              radius: AppTheme.cornerRadiusLarge,
+              child: Column(
+                children: [
+                  InkWell(
+                    onTap: () => setState(() => _statsExpanded = !_statsExpanded),
+                    borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                    child: Padding(
+                      padding: EdgeInsets.zero,
                       child: Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withValues(alpha: 0.06),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  'Level',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: AppTheme.textSecondary,
-                                  ),
+                          Text(
+                            'Your snapshot',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'L$level',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
-                                    color: AppTheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      '$xpPoints XP',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.text,
-                                      ),
-                                    ),
-                                    if (nextLevel != null)
-                                      Text(
-                                        '${nextLevel - xpPoints} to L${level + 1}',
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(7),
-                                  child: LinearProgressIndicator(
-                                    value: progress,
-                                    minHeight: 6,
-                                    backgroundColor: AppTheme.cardBackground,
-                                    valueColor: const AlwaysStoppedAnimation<Color>(
-                                      AppTheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          const Spacer(),
+                          Icon(
+                            _statsExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                            color: AppTheme.textSecondary,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    GestureDetector(
-                      onTap: () => setState(() => _statsExpanded = !_statsExpanded),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.cardBackground.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(10),
+                  ),
+                  if (_statsExpanded) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _MetricCard(
+                            label: 'Matches',
+                            value: '${_filteredStartups.length}',
+                            icon: Icons.rocket_launch_rounded,
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.analytics_outlined, size: 16, color: AppTheme.textSecondary),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Your Stats',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                            const Spacer(),
-                            Icon(
-                              _statsExpanded ? Icons.expand_less : Icons.expand_more,
-                              size: 18,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ],
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: _MetricCard(
+                            label: 'Skills',
+                            value: '${studentProfile?.skills.length ?? 0}',
+                            icon: Icons.psychology_alt_outlined,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: _MetricCard(
+                            label: 'Hours',
+                            value: '${studentProfile?.availabilityHours.round() ?? 0}',
+                            icon: Icons.schedule_rounded,
+                          ),
+                        ),
+                      ],
                     ),
-                    if (_statsExpanded) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.cardBackground.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _StatItem(
-                                icon: Icons.rocket_launch_rounded,
-                                label: 'Available',
-                                value: '${_filteredStartups.length}',
-                                color: AppTheme.primary,
-                              ),
-                            ),
-                            Container(width: 1, height: 32, color: AppTheme.surface),
-                            Expanded(
-                              child: _StatItem(
-                                icon: Icons.psychology_rounded,
-                                label: 'Skills',
-                                value: '${studentProfile?.skills.length ?? 0}',
-                                color: AppTheme.success,
-                              ),
-                            ),
-                            Container(width: 1, height: 32, color: AppTheme.surface),
-                            Expanded(
-                              child: _StatItem(
-                                icon: Icons.timer_rounded,
-                                label: 'Hours/wk',
-                                value: '${studentProfile?.availabilityHours.round() ?? 0}',
-                                color: AppTheme.warning,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
-                ),
+                ],
               ),
             ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _StickyHeaderDelegate(
-                minHeight: 140,
-                maxHeight: 140,
-                child: SizedBox.expand(
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
-                    color: AppTheme.surface,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              _FilterChip(
-                                label: 'All Industries',
-                                isSelected: _selectedIndustry == null,
-                                onTap: () => setState(() => _selectedIndustry = null),
-                              ),
-                              ...DummyData.industries.take(4).map(
-                                (industry) => _FilterChip(
-                                  label: industry,
-                                  isSelected: _selectedIndustry == industry,
-                                  onTap: () => setState(() => _selectedIndustry = industry),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              _FilterChip(
-                                label: 'All Skills',
-                                isSelected: _selectedSkill == null,
-                                onTap: () => setState(() => _selectedSkill = null),
-                                secondary: true,
-                              ),
-                              if (studentProfile != null)
-                                ...studentProfile.skills.map(
-                                  (skill) => _FilterChip(
-                                    label: skill,
-                                    isSelected: _selectedSkill == skill,
-                                    onTap: () => setState(() => _selectedSkill = skill),
-                                    secondary: true,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: _QuickActionCard(
+                    title: 'AI Coach',
+                    icon: Icons.auto_awesome_rounded,
+                    onTap: () => context.pushNamed('aiChat'),
                   ),
                 ),
-              ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _QuickActionCard(
+                    title: 'Applications',
+                    icon: Icons.description_outlined,
+                    onTap: () => context.pushNamed('myApplications'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _QuickActionCard(
+                    title: 'Profile',
+                    icon: Icons.person_outline_rounded,
+                    onTap: () => context.pushNamed('studentProfile'),
+                  ),
+                ),
+              ],
             ),
-            SliverToBoxAdapter(
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
-                color: AppTheme.surface,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _IconActionChip(
-                        icon: Icons.auto_awesome_rounded,
-                        label: 'Skills',
-                        onTap: () => context.pushNamed('studentProfile'),
-                      ),
-                      _IconActionChip(
-                        icon: Icons.description_rounded,
-                        label: 'Apps',
-                        onTap: () => context.pushNamed('myApplications'),
-                      ),
-                      _IconActionChip(
-                        icon: Icons.smart_toy_rounded,
-                        label: 'AI Chat',
-                        onTap: () => context.pushNamed('aiChat'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (!feedOptOut && feedEvents.isNotEmpty)
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-                sliver: SliverToBoxAdapter(
-                  child: XPCard(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              'XP Happening Now',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
-                                color: AppTheme.text,
-                              ),
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              icon: Icon(_feedExpanded ? Icons.expand_less : Icons.expand_more),
-                              onPressed: () => setState(() => _feedExpanded = !_feedExpanded),
-                            ),
-                          ],
-                        ),
-                        if (_feedExpanded)
-                          ...feedEvents.take(4).map((event) {
-                            final time = '${event.timestamp.month}/${event.timestamp.day}';
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 34,
-                                    height: 34,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primary.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        event.firstName.isNotEmpty
-                                            ? event.firstName[0].toUpperCase()
-                                            : '?',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          event.displayText,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            color: AppTheme.text,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '$time - ${event.firstName}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: AppTheme.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
-              sliver: SliverToBoxAdapter(
-                child: Row(
-                  children: [
-                    const Text(
-                      'Recommended for you',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (_selectedIndustry != null || _selectedSkill != null)
-                      TextButton.icon(
-                        onPressed: () => setState(() {
+            const SizedBox(height: AppSpacing.lg),
+            XPSection(
+              title: 'Filters',
+              action: hasFilters
+                  ? TextButton(
+                      onPressed: () {
+                        setState(() {
                           _selectedIndustry = null;
                           _selectedSkill = null;
-                        }),
-                        icon: const Icon(Icons.clear, size: 14),
-                        label: const Text('Clear'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.textSecondary,
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                          textStyle: const TextStyle(fontSize: 11),
+                        });
+                      },
+                      child: const Text('Clear'),
+                    )
+                  : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        XPFilterChip(
+                          label: 'All industries',
+                          isSelected: _selectedIndustry == null,
+                          onTap: () => setState(() => _selectedIndustry = null),
                         ),
-                      ),
-                  ],
-                ),
+                        const SizedBox(width: AppSpacing.sm),
+                        ...DummyData.industries.take(6).map(
+                          (industry) => Padding(
+                            padding: const EdgeInsets.only(right: AppSpacing.sm),
+                            child: XPFilterChip(
+                              label: industry,
+                              isSelected: _selectedIndustry == industry,
+                              onTap: () => setState(() => _selectedIndustry = industry),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        XPFilterChip(
+                          label: 'All skills',
+                          isSelected: _selectedSkill == null,
+                          onTap: () => setState(() => _selectedSkill = null),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        ...?studentProfile?.skills.map(
+                          (skill) => Padding(
+                            padding: const EdgeInsets.only(right: AppSpacing.sm),
+                            child: XPFilterChip(
+                              label: skill,
+                              isSelected: _selectedSkill == skill,
+                              onTap: () => setState(() => _selectedSkill = skill),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
+            if (!feedOptOut && feedEvents.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.lg),
+              XPSection(
+                title: 'XP Happening Now',
+                action: TextButton(
+                  onPressed: () => setState(() => _feedExpanded = !_feedExpanded),
+                  child: Text(_feedExpanded ? 'Hide' : 'Show'),
+                ),
+                child: Column(
+                  children: (_feedExpanded ? feedEvents.take(4) : feedEvents.take(2))
+                      .map((event) => _FeedRow(event: event))
+                      .toList(),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            const XPSectionTitle(title: 'Recommended for you'),
+            const SizedBox(height: AppSpacing.md),
             if (_filteredStartups.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _EmptyState(
-                  onClear: () => setState(() {
-                    _selectedIndustry = null;
-                    _selectedSkill = null;
-                  }),
+              XPSection(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryLight,
+                        borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                      ),
+                      child: const Icon(Icons.search_off_rounded, size: 34, color: AppTheme.text),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'No matching missions',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Try clearing filters or updating your skills to expand the suggestions.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    XPOutlinedButton(
+                      label: 'Clear filters',
+                      onPressed: () {
+                        setState(() {
+                          _selectedIndustry = null;
+                          _selectedSkill = null;
+                        });
+                      },
+                    ),
+                  ],
                 ),
               )
             else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final startup = _filteredStartups[index];
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          bottom: index < _filteredStartups.length - 1 ? 24 : 0,
-                        ),
-                        child: _StartupCard(
-                          startup: startup,
-                          studentSkills: studentProfile?.skills ?? [],
-                          onTap: () => context.pushNamed(
-                            'startupDetail',
-                            pathParameters: {'id': startup.id},
-                          ),
-                        ),
-                      );
-                    },
-                    childCount: _filteredStartups.length,
+              ..._filteredStartups.map((startup) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  child: _StartupCard(
+                    startup: startup,
+                    studentSkills: studentProfile?.skills ?? [],
+                    onTap: () => context.pushNamed(
+                      'startupDetail',
+                      pathParameters: {'id': startup.id},
+                    ),
                   ),
-                ),
-              ),
+                );
+              }),
           ],
         ),
       ),
-      bottomNavigationBar: _BottomNav(
+      bottomNavigationBar: XPBottomNavBar(
         currentIndex: 0,
         onTap: (index) {
           if (index == 1) {
@@ -787,278 +473,129 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             context.pushNamed('studentProfile');
           }
         },
+        items: const [
+          XPBottomNavItem(label: 'Discover', icon: Icons.home_outlined, activeIcon: Icons.home_rounded),
+          XPBottomNavItem(label: 'AI Chat', icon: Icons.auto_awesome_outlined, activeIcon: Icons.auto_awesome_rounded),
+          XPBottomNavItem(label: 'Apps', icon: Icons.description_outlined, activeIcon: Icons.description_rounded),
+          XPBottomNavItem(label: 'Profile', icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded),
+        ],
       ),
     );
   }
-
 }
 
-class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _StickyHeaderDelegate({
-    required this.child,
-    required this.minHeight,
-    required this.maxHeight,
-  });
-
-  final Widget child;
-  final double minHeight;
-  final double maxHeight;
-
-  @override
-  double get minExtent => minHeight;
-
-  @override
-  double get maxExtent => maxHeight;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: AppTheme.surface,
-      child: child,
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _StickyHeaderDelegate oldDelegate) {
-    return child != oldDelegate.child ||
-        minHeight != oldDelegate.minHeight ||
-        maxHeight != oldDelegate.maxHeight;
-  }
-}
-
-class _StatItem extends StatefulWidget {
-  const _StatItem({
-    required this.icon,
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
     required this.label,
     required this.value,
-    required this.color,
+    required this.icon,
   });
 
-  final IconData icon;
   final String label;
   final String value;
-  final Color color;
-
-  @override
-  State<_StatItem> createState() => _StatItemState();
-}
-
-class _StatItemState extends State<_StatItem> {
-  late int _targetValue;
-  late int _currentValue;
-
-  @override
-  void initState() {
-    super.initState();
-    _targetValue = int.tryParse(widget.value) ?? 0;
-    _currentValue = 0;
-    _animateValue();
-  }
-
-  void _animateValue() {
-    if (_targetValue == 0) return;
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (!mounted) return;
-      if (_currentValue < _targetValue) {
-        setState(() {
-          _currentValue = (_currentValue + (_targetValue / 10).ceil())
-              .clamp(0, _targetValue);
-        });
-        _animateValue();
-      }
-    });
-  }
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                widget.color.withValues(alpha: 0.12),
-                widget.color.withValues(alpha: 0.04),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: widget.color.withValues(alpha: 0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return XPCard(
+      backgroundColor: AppTheme.cardBackground,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.md),
+      child: Column(
+        children: [
+          Icon(icon, color: AppTheme.text, size: 18),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
-          child: Icon(widget.icon, color: widget.color, size: 20),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _currentValue.toString(),
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.text,
-          ),
-        ),
-        Text(
-          widget.label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onClear});
-
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppTheme.cardBackground,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 140,
-              height: 140,
-              child: Image.asset(
-                'assets/illustrations/not found.png',
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No missions found',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.text,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Try adjusting your filters to find more opportunities',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.primaryDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: onClear,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Get Started'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
       ),
     );
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.isSelected,
+class _QuickActionCard extends StatelessWidget {
+  const _QuickActionCard({
+    required this.title,
+    required this.icon,
     required this.onTap,
-    this.secondary = false,
   });
 
-  final String label;
-  final bool isSelected;
+  final String title;
+  final IconData icon;
   final VoidCallback onTap;
-  final bool secondary;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: isSelected
-                ? LinearGradient(
-                    colors: secondary
-                        ? [AppTheme.success, AppTheme.successDark]
-                        : [AppTheme.primary, AppTheme.primaryDark],
-                  )
-                : null,
-            color: isSelected ? null : AppTheme.cardBackground,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: (secondary ? AppTheme.success : AppTheme.primary)
-                          .withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isSelected ? Colors.white : AppTheme.text,
+    return XPCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryLight,
+              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
             ),
+            child: Icon(icon, color: AppTheme.text),
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StartupCard extends StatefulWidget {
+class _FeedRow extends StatelessWidget {
+  const _FeedRow({required this.event});
+
+  final EventLogEntry event;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = '${event.timestamp.month}/${event.timestamp.day}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Row(
+        children: [
+          XPAvatar(initial: event.firstName.isNotEmpty ? event.firstName[0] : '?', size: 42),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.displayText,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  '$date • ${event.firstName}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StartupCard extends StatelessWidget {
   const _StartupCard({
     required this.startup,
     required this.studentSkills,
@@ -1070,488 +607,137 @@ class _StartupCard extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_StartupCard> createState() => _StartupCardState();
-}
-
-class _StartupCardState extends State<_StartupCard> {
-  bool _isPressed = false;
-
-  int get _matchingSkills {
-    return widget.startup.requiredSkills
-        .where((skill) => widget.studentSkills.contains(skill))
-        .length;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final matchCount = _matchingSkills;
-    final hasMatch = matchCount > 0;
-    final primaryRole =
-        widget.startup.openRoles.isNotEmpty ? widget.startup.openRoles.first : null;
-    final matchPercentage = widget.startup.requiredSkills.isNotEmpty
-        ? ((matchCount / widget.startup.requiredSkills.length) * 100).round()
+    final matchCount =
+        startup.requiredSkills.where((skill) => studentSkills.contains(skill)).length;
+    final matchPercentage = startup.requiredSkills.isNotEmpty
+        ? ((matchCount / startup.requiredSkills.length) * 100).round()
         : 0;
 
-    return GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) {
-          setState(() => _isPressed = false);
-          widget.onTap();
-        },
-        onTapCancel: () => setState(() => _isPressed = false),
-        child: AnimatedScale(
-          scale: _isPressed ? 0.98 : 1.0,
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          child: XPCard(
-            padding: const EdgeInsets.all(20),
-            elevated: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primary.withValues(alpha: 0.15),
-                        AppTheme.primary.withValues(alpha: 0.05),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Text(
-                      widget.startup.companyName[0].toUpperCase(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.primary,
-                        fontSize: 22,
-                      ),
-                    ),
-                  ),
+    return XPCard(
+      onTap: onTap,
+      elevated: true,
+      radius: AppTheme.cornerRadiusLarge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryLight,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.startup.companyName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                          color: AppTheme.text,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          widget.startup.industry,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (hasMatch)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.success.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        width: 1.5,
-                        color: AppTheme.success.withValues(alpha: 0.4),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.success.withValues(alpha: 0.06),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      '$matchPercentage% match',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.successDark,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              widget.startup.description,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-                height: 1.5,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (widget.startup.openRoles.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: widget.startup.openRoles.take(2).map((role) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppTheme.primary.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.work_outline,
-                          size: 14,
-                          color: AppTheme.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          role.title,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-            if (primaryRole != null &&
-                (primaryRole.learningOutcome.isNotEmpty ||
-                    primaryRole.estimatedHours != null ||
-                    primaryRole.durationWeeks != null)) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  if (primaryRole.learningOutcome.isNotEmpty)
-                    Chip(
-                      label: Text(primaryRole.learningOutcome),
-                      backgroundColor: AppTheme.cardBackground,
-                      labelStyle: const TextStyle(
-                        color: AppTheme.text,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  if (primaryRole.estimatedHours != null)
-                    Chip(
-                      avatar: const Icon(
-                        Icons.timer_outlined,
-                        size: 14,
-                        color: AppTheme.textSecondary,
-                      ),
-                      label: Text('${primaryRole.estimatedHours} hrs'),
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                      ),
-                      backgroundColor: AppTheme.cardBackground,
-                    ),
-                  if (primaryRole.durationWeeks != null)
-                    Chip(
-                      avatar: const Icon(
-                        Icons.calendar_today,
-                        size: 14,
-                        color: AppTheme.textSecondary,
-                      ),
-                      label: Text('${primaryRole.durationWeeks} wks'),
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                      ),
-                      backgroundColor: AppTheme.cardBackground,
-                    ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: widget.startup.requiredSkills.map((skill) {
-                final isMatch = widget.studentSkills.contains(skill);
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isMatch
-                        ? AppTheme.success.withValues(alpha: 0.12)
-                        : AppTheme.cardBackground,
-                    borderRadius: BorderRadius.circular(8),
-                    border: isMatch
-                        ? Border.all(
-                            color: AppTheme.success.withValues(alpha: 0.3),
-                          )
-                        : null,
-                  ),
+                child: Center(
                   child: Text(
-                    skill,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isMatch ? AppTheme.successDark : AppTheme.text,
-                    ),
+                    startup.companyName[0].toUpperCase(),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                   ),
-                );
-              }).toList(),
-            ),
-              ],
-            ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      startup.companyName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(startup.industry, style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              if (matchCount > 0)
+                XPBadge(
+                  label: '$matchPercentage% match',
+                  color: AppTheme.primaryLight,
+                ),
+            ],
           ),
-        ),
-      );
-  }
-}
-
-class _BottomNav extends StatelessWidget {
-  const _BottomNav({required this.currentIndex, required this.onTap});
-
-  final int currentIndex;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.text.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, -8),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            startup.description,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondary,
+                ),
+          ),
+          if (startup.openRoles.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: startup.openRoles
+                  .take(2)
+                  .map((role) => XPBadge(label: role.title, color: AppTheme.cardBackground))
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: startup.requiredSkills
+                .map(
+                  (skill) => XPSkillTag(
+                    label: skill,
+                    isMatched: studentSkills.contains(skill),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          XPOutlinedButton(
+            label: 'View mission',
+            icon: Icons.arrow_forward_rounded,
+            onPressed: onTap,
           ),
         ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _NavItem(
-                icon: Icons.explore_outlined,
-                activeIcon: Icons.explore,
-                label: 'Discover',
-                isActive: currentIndex == 0,
-                onTap: () => onTap(0),
-              ),
-              _NavItem(
-                icon: Icons.auto_awesome_outlined,
-                activeIcon: Icons.auto_awesome,
-                label: 'AI Advisor',
-                isActive: currentIndex == 1,
-                onTap: () => onTap(1),
-              ),
-              _NavItem(
-                icon: Icons.description_outlined,
-                activeIcon: Icons.description,
-                label: 'Applications',
-                isActive: currentIndex == 2,
-                onTap: () => onTap(2),
-              ),
-              _NavItem(
-                icon: Icons.person_outline,
-                activeIcon: Icons.person,
-                label: 'Profile',
-                isActive: currentIndex == 3,
-                onTap: () => onTap(3),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
 
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(
-          horizontal: isActive ? 16 : 12,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: isActive ? AppTheme.primary.withValues(alpha: 0.1) : null,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isActive ? activeIcon : icon,
-              color: isActive ? AppTheme.primary : AppTheme.textMuted,
-              size: 22,
-            ),
-            if (isActive) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Icon Action Chip Widget (compact version for quick actions)
-class _IconActionChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _IconActionChip({
+class _XpEarnRow extends StatelessWidget {
+  const _XpEarnRow({
     required this.icon,
     required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: AppTheme.primary),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _XPEarnItem extends StatelessWidget {
-  const _XPEarnItem({
-    required this.icon,
-    required this.text,
     required this.xp,
   });
 
   final IconData icon;
-  final String text;
+  final String label;
   final String xp;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
+              color: AppTheme.primaryLight,
+              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
             ),
-            child: Icon(
-              icon,
-              size: 16,
-              color: AppTheme.primary,
-            ),
+            child: Icon(icon, size: 18, color: AppTheme.text),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.text,
-              ),
-            ),
-          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: Text(label)),
           Text(
             xp,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.primary,
-            ),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
           ),
         ],
       ),

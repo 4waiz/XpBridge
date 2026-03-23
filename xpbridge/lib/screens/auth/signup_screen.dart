@@ -5,8 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app.dart';
 import '../../services/user_file_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
+import '../../widgets/xp_input.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -92,7 +94,6 @@ class _SignupScreenState extends State<SignupScreen> {
       final name = _nameController.text.trim();
       final role = _selectedRole == UserRole.student ? 'student' : 'startup';
 
-      // Check if user already exists in the txt file
       if (await UserFileService.userExists(email)) {
         setState(() {
           _emailError = 'Account already exists. Please login.';
@@ -100,7 +101,6 @@ class _SignupScreenState extends State<SignupScreen> {
         return;
       }
 
-      // Save user credentials to txt file
       final saved = await UserFileService.saveUser(email, password);
       if (!saved) {
         setState(() {
@@ -109,7 +109,6 @@ class _SignupScreenState extends State<SignupScreen> {
         return;
       }
 
-      // Still save other data to SharedPreferences for profile info
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_email', email);
       await prefs.setString('user_name', name);
@@ -134,297 +133,141 @@ class _SignupScreenState extends State<SignupScreen> {
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Back button
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardBackground,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    onPressed: () => context.goNamed('login'),
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: AppTheme.text,
+          padding: const EdgeInsets.all(AppSpacing.page),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              XPHeaderButton(
+                icon: Icons.arrow_back_rounded,
+                onTap: () => context.goNamed('login'),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Create your account',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Choose your role, set up your profile, and redesign your path into real experience.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              Text(
+                'I am joining as',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: _RoleCard(
+                      title: 'Student',
+                      subtitle: 'Learn through startup missions',
+                      icon: Icons.school_rounded,
+                      selected: _selectedRole == UserRole.student,
+                      onTap: () {
+                        setState(() {
+                          _selectedRole = UserRole.student;
+                          _roleError = null;
+                        });
+                      },
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                // Header
-                const Text(
-                  'Create Account',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.text,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Join XPBridge and start your journey',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                // Role selection
-                const Text(
-                  'I am a...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.text,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _RoleCard(
-                        title: 'Student',
-                        subtitle: 'Looking to learn & grow',
-                        icon: Icons.school_rounded,
-                        isSelected: _selectedRole == UserRole.student,
-                        onTap: () {
-                          setState(() {
-                            _selectedRole = UserRole.student;
-                            _roleError = null;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _RoleCard(
-                        title: 'Startup',
-                        subtitle: 'Looking for talent',
-                        icon: Icons.rocket_launch_rounded,
-                        isSelected: _selectedRole == UserRole.startup,
-                        onTap: () {
-                          setState(() {
-                            _selectedRole = UserRole.startup;
-                            _roleError = null;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                if (_roleError != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    _roleError!,
-                    style: TextStyle(
-                      color: AppTheme.error,
-                      fontSize: 12,
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _RoleCard(
+                      title: 'Startup',
+                      subtitle: 'Find motivated early talent',
+                      icon: Icons.rocket_launch_rounded,
+                      selected: _selectedRole == UserRole.startup,
+                      onTap: () {
+                        setState(() {
+                          _selectedRole = UserRole.startup;
+                          _roleError = null;
+                        });
+                      },
                     ),
                   ),
                 ],
-                const SizedBox(height: 28),
-                // Form
-                XPCard(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        label: 'Full Name',
-                        controller: _nameController,
-                        icon: Icons.person_outline,
-                        hint: 'Enter your name',
-                        error: _nameError,
-                        onChanged: () {
-                          if (_nameError != null) {
-                            setState(() => _nameError = null);
-                          }
-                        },
+              ),
+              if (_roleError != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  _roleError!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.error,
                       ),
-                      const SizedBox(height: 20),
-                      _buildTextField(
-                        label: 'Email',
-                        controller: _emailController,
-                        icon: Icons.email_outlined,
-                        hint: 'Enter your email',
-                        error: _emailError,
-                        keyboardType: TextInputType.emailAddress,
-                        onChanged: () {
-                          if (_emailError != null) {
-                            setState(() => _emailError = null);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Password',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: AppTheme.text,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        onChanged: (_) {
-                          if (_passwordError != null) {
-                            setState(() => _passwordError = null);
-                          }
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Create a password',
-                          prefixIcon: Icon(
-                            Icons.lock_outline,
-                            color: _passwordError != null
-                                ? AppTheme.error
-                                : AppTheme.textMuted,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              color: AppTheme.textMuted,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                          filled: true,
-                          fillColor: _passwordError != null
-                              ? AppTheme.error.withValues(alpha: 0.05)
-                              : AppTheme.cardBackground,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: _passwordError != null
-                                ? BorderSide(color: AppTheme.error)
-                                : BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: _passwordError != null
-                                ? BorderSide(color: AppTheme.error)
-                                : BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(
-                              color: _passwordError != null
-                                  ? AppTheme.error
-                                  : AppTheme.primary,
-                              width: 2,
-                            ),
-                          ),
-                          errorText: _passwordError,
-                          errorStyle: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      XPButton(
-                        label: 'Create Account',
-                        icon: Icons.arrow_forward_rounded,
-                        onPressed: _handleSignup,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Login link
-                Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Already have an account? ',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => context.goNamed('login'),
-                        child: const Text(
-                          'Sign In',
-                          style: TextStyle(
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ],
-            ),
+              const SizedBox(height: AppSpacing.xl),
+              XPCard(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                elevated: true,
+                radius: AppTheme.cornerRadiusLarge,
+                child: Column(
+                  children: [
+                    XPTextField(
+                      controller: _nameController,
+                      labelText: 'Full name',
+                      hintText: 'Enter your full name',
+                      errorText: _nameError,
+                      prefixIcon: Icons.person_outline_rounded,
+                      textCapitalization: TextCapitalization.words,
+                      onChanged: (_) => setState(() => _nameError = null),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    XPTextField(
+                      controller: _emailController,
+                      labelText: 'Email',
+                      hintText: 'you@example.com',
+                      errorText: _emailError,
+                      prefixIcon: Icons.mail_outline_rounded,
+                      keyboardType: TextInputType.emailAddress,
+                      onChanged: (_) => setState(() => _emailError = null),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    XPTextField(
+                      controller: _passwordController,
+                      labelText: 'Password',
+                      hintText: 'At least 6 characters',
+                      errorText: _passwordError,
+                      prefixIcon: Icons.lock_outline_rounded,
+                      suffixIcon: _obscurePassword
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      obscureText: _obscurePassword,
+                      onSuffixTap: () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
+                      onChanged: (_) => setState(() => _passwordError = null),
+                      onSubmitted: (_) => _handleSignup(),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    XPButton(
+                      label: 'Create account',
+                      icon: Icons.arrow_forward_rounded,
+                      onPressed: _handleSignup,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Center(
+                child: TextButton(
+                  onPressed: () => context.goNamed('login'),
+                  child: const Text('Already have an account? Log in'),
+                ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required IconData icon,
-    required String hint,
-    String? error,
-    TextInputType? keyboardType,
-    required VoidCallback onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: AppTheme.text,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          onChanged: (_) => onChanged(),
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(
-              icon,
-              color: error != null ? AppTheme.error : AppTheme.textMuted,
-            ),
-            filled: true,
-            fillColor: error != null
-                ? AppTheme.error.withValues(alpha: 0.05)
-                : AppTheme.cardBackground,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide:
-                  error != null ? BorderSide(color: AppTheme.error) : BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide:
-                  error != null ? BorderSide(color: AppTheme.error) : BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: error != null ? AppTheme.error : AppTheme.primary,
-                width: 2,
-              ),
-            ),
-            errorText: error,
-            errorStyle: const TextStyle(fontSize: 12),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -434,14 +277,14 @@ class _RoleCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.isSelected,
+    required this.selected,
     required this.onTap,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
-  final bool isSelected;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -449,79 +292,42 @@ class _RoleCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary.withValues(alpha: 0.08) : AppTheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          color: selected ? AppTheme.primaryLight : AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
           border: Border.all(
-            color: isSelected ? AppTheme.primary : AppTheme.cardBackground,
-            width: 2,
+            color: selected ? AppTheme.primary.withValues(alpha: 0.3) : AppTheme.border,
           ),
-          boxShadow: isSelected
-              ? AppTheme.cardShadow
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+          boxShadow: selected ? AppTheme.softShadow : AppTheme.cardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
-                gradient: isSelected
-                    ? LinearGradient(
-                        colors: [AppTheme.primary, AppTheme.primaryDark],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : LinearGradient(
-                        colors: [
-                          AppTheme.primary.withValues(alpha: 0.1),
-                          AppTheme.primary.withValues(alpha: 0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
+                color: selected ? AppTheme.primary : AppTheme.cardBackground,
+                borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? Colors.white : AppTheme.primary.withValues(alpha: 0.8),
-                size: 26,
+                color: AppTheme.text,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: isSelected ? AppTheme.primary : AppTheme.text,
-              ),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),

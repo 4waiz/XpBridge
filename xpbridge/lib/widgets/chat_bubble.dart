@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../models/ai_chat_message.dart';
 import '../theme/app_theme.dart';
 
 class ChatBubble extends StatelessWidget {
-  final AiChatMessage message;
-
   const ChatBubble({super.key, required this.message});
+
+  final AiChatMessage message;
 
   @override
   Widget build(BuildContext context) {
@@ -18,46 +19,43 @@ class ChatBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.8,
         ),
         margin: EdgeInsets.only(
-          left: isUser ? 48 : 0,
-          right: isUser ? 0 : 48,
-          bottom: 12,
+          left: isUser ? 52 : 0,
+          right: isUser ? 0 : 52,
+          bottom: AppSpacing.md,
         ),
         child: Column(
-          crossAxisAlignment:
-              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: isUser ? AppTheme.primary : AppTheme.surface,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(20),
-                  topRight: const Radius.circular(20),
-                  bottomLeft: Radius.circular(isUser ? 20 : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : 20),
+                  topLeft: const Radius.circular(AppTheme.cornerRadius),
+                  topRight: const Radius.circular(AppTheme.cornerRadius),
+                  bottomLeft: Radius.circular(isUser ? AppTheme.cornerRadius : 8),
+                  bottomRight: Radius.circular(isUser ? 8 : AppTheme.cornerRadius),
                 ),
-                boxShadow: AppTheme.softShadow,
+                boxShadow: AppTheme.cardShadow,
               ),
               child: message.isLoading
                   ? const _TypingIndicator()
                   : Text(
                       message.content,
-                      style: TextStyle(
-                        color: isUser ? Colors.white : AppTheme.text,
-                        fontSize: 15,
-                        height: 1.4,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.text,
+                          ),
                     ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xxs),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
               child: Text(
                 _formatTime(message.timestamp),
-                style: TextStyle(
-                  color: AppTheme.textMuted,
-                  fontSize: 11,
-                ),
+                style: Theme.of(context).textTheme.labelSmall,
               ),
             ),
           ],
@@ -82,7 +80,7 @@ class _TypingIndicator extends StatefulWidget {
 
 class _TypingIndicatorState extends State<_TypingIndicator>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late final AnimationController _controller;
 
   @override
   void initState() {
@@ -111,15 +109,15 @@ class _TypingIndicatorState extends State<_TypingIndicator>
             final value = (_controller.value + delay) % 1.0;
             final opacity = (value < 0.5 ? value * 2 : 2 - value * 2).clamp(0.3, 1.0);
 
-            return Container(
-              margin: EdgeInsets.only(right: index < 2 ? 4 : 0),
+            return Padding(
+              padding: EdgeInsets.only(right: index < 2 ? 4 : 0),
               child: Opacity(
                 opacity: opacity,
                 child: Container(
                   width: 8,
                   height: 8,
-                  decoration: BoxDecoration(
-                    color: AppTheme.textMuted,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.textSecondary,
                     shape: BoxShape.circle,
                   ),
                 ),

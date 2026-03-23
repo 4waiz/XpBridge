@@ -7,8 +7,11 @@ import '../../models/application.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
+import '../../widgets/xp_chip.dart';
+import '../../widgets/xp_input.dart';
 import '../../widgets/xp_section_title.dart';
 
 class StartupDetailScreen extends StatefulWidget {
@@ -45,141 +48,108 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (sheetContext) => Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          left: AppSpacing.md,
+          right: AppSpacing.md,
+          top: AppSpacing.md,
         ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          roleTitle != null
-                              ? 'Apply for $roleTitle'
-                              : 'Apply to ${_startup?.companyName}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          roleTitle != null
-                              ? 'Tell the team why you are a fit for $roleTitle.'
-                              : 'Write a brief message to introduce yourself.',
-                          style: TextStyle(
-                            color: Colors.black.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+            boxShadow: AppTheme.elevatedShadow,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 48,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBackground,
+                      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
                     ),
                   ),
-                  if (roleTitle != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        _startup?.companyName ?? '',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _messageController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: roleTitle != null
-                      ? 'Why are you excited about $roleTitle?'
-                      : 'Why are you interested in this opportunity?',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: AppTheme.background,
                 ),
-              ),
-              const SizedBox(height: 20),
-              XPButton(
-                label: 'Send Application',
-                icon: Icons.send_rounded,
-                onPressed: () async {
-                  final appState = AppStateScope.of(context);
-                  final student = appState.studentProfile;
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  roleTitle != null
+                      ? 'Apply for $roleTitle'
+                      : 'Apply to ${_startup?.companyName}',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  roleTitle != null
+                      ? 'Share a short note explaining why you are a fit for this role.'
+                      : 'Introduce yourself and explain why this startup caught your attention.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                XPTextField(
+                  controller: _messageController,
+                  labelText: 'Message',
+                  hintText: 'Why are you interested in this opportunity?',
+                  prefixIcon: Icons.chat_bubble_outline_rounded,
+                  maxLines: 5,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                XPButton(
+                  label: 'Send application',
+                  icon: Icons.send_rounded,
+                  onPressed: () async {
+                    final appState = AppStateScope.of(context);
+                    final student = appState.studentProfile;
 
-                  if (student != null && _startup != null) {
-                    final application = Application(
-                      id: 'app_${DateTime.now().millisecondsSinceEpoch}',
-                      studentId: student.id,
-                      startupId: _startup!.id,
-                      studentName: student.name,
-                      startupName: _startup!.companyName,
-                      roleTitle: roleTitle,
-                      status: ApplicationStatus.pending,
-                      message: _messageController.text.isNotEmpty
-                          ? _messageController.text
-                          : null,
-                      appliedAt: DateTime.now(),
-                    );
-                    await appState.addApplication(application);
-                    setState(() {
-                      if (roleTitle != null) {
-                        _appliedRoleTitles.add(roleTitle);
-                      } else {
-                        _hasApplied = true;
-                      }
-                    });
-                    _messageController.clear();
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          roleTitle != null
-                              ? 'Applied for $roleTitle at ${_startup!.companyName}!'
-                              : 'Applied to ${_startup!.companyName}!',
+                    if (student != null && _startup != null) {
+                      final application = Application(
+                        id: 'app_${DateTime.now().millisecondsSinceEpoch}',
+                        studentId: student.id,
+                        startupId: _startup!.id,
+                        studentName: student.name,
+                        startupName: _startup!.companyName,
+                        roleTitle: roleTitle,
+                        status: ApplicationStatus.pending,
+                        message: _messageController.text.isNotEmpty
+                            ? _messageController.text
+                            : null,
+                        appliedAt: DateTime.now(),
+                      );
+                      await appState.addApplication(application);
+                      setState(() {
+                        if (roleTitle != null) {
+                          _appliedRoleTitles.add(roleTitle);
+                        } else {
+                          _hasApplied = true;
+                        }
+                      });
+                      _messageController.clear();
+                      if (!sheetContext.mounted) return;
+                      Navigator.pop(sheetContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            roleTitle != null
+                                ? 'Applied for $roleTitle at ${_startup!.companyName}'
+                                : 'Applied to ${_startup!.companyName}',
+                          ),
+                          backgroundColor: AppTheme.successDark,
                         ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                },
-              ),
-              const SizedBox(height: 10),
-            ],
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -195,30 +165,13 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
     if (startup == null) {
       return Scaffold(
         backgroundColor: AppTheme.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            onPressed: () => context.pop(),
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: AppTheme.softShadow,
-              ),
-              child: const Icon(Icons.arrow_back, color: AppTheme.text),
-            ),
-          ),
-          title: const Text('Not Found'),
-        ),
+        appBar: const XPAppBar(title: 'Not Found'),
         body: const Center(child: Text('Startup not found')),
       );
     }
 
-    final matchingSkills = startup.requiredSkills
-        .where((skill) => studentSkills.contains(skill))
-        .toList();
+    final matchingSkills =
+        startup.requiredSkills.where((skill) => studentSkills.contains(skill)).toList();
     StartupRole? nextRoleToApply;
     for (final role in startup.openRoles) {
       if (!_appliedRoleTitles.contains(role.title)) {
@@ -230,236 +183,118 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: AppTheme.softShadow,
-            ),
-            child: const Icon(Icons.arrow_back, color: AppTheme.text),
-          ),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              startup.companyName,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-                color: AppTheme.text,
-              ),
-            ),
-            Text(
-              startup.industry,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
+      appBar: XPAppBar(
+        title: startup.companyName,
+        subtitle: startup.industry,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.page,
+          AppSpacing.md,
+          AppSpacing.page,
+          120,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hero Card with Company Info
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppTheme.primary.withValues(alpha: 0.08),
-                    AppTheme.primary.withValues(alpha: 0.02),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
-                ),
-              ),
-              child: XPCard(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                AppTheme.primary,
-                                AppTheme.primaryDark,
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primary.withValues(alpha: 0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              startup.companyName[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                fontSize: 28,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                startup.companyName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 20,
-                                  color: AppTheme.text,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  startup.industry,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      startup.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.6,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    if (startup.websiteUrl != null) ...[
-                      const SizedBox(height: 12),
+            XPSection(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                        width: 74,
+                        height: 74,
                         decoration: BoxDecoration(
-                          color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(10),
+                          color: AppTheme.primary,
+                          borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Center(
+                          child: Text(
+                            startup.companyName[0].toUpperCase(),
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  color: AppTheme.text,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              Icons.language,
-                              size: 16,
-                              color: AppTheme.primary,
+                            XPBadge(
+                              label: startup.industry,
+                              color: AppTheme.primaryLight,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(height: AppSpacing.sm),
                             Text(
-                              startup.websiteUrl!,
-                              style: const TextStyle(
-                                color: AppTheme.primary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
+                              startup.companyName,
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
                             ),
+                            if (startup.websiteUrl != null) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                startup.websiteUrl!,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.textSecondary,
+                                    ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     ],
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    startup.description,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Skill Match Card
             if (matchingSkills.isNotEmpty) ...[
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.success.withValues(alpha: 0.15),
-                      AppTheme.success.withValues(alpha: 0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppTheme.success.withValues(alpha: 0.3),
-                  ),
-                ),
-                padding: const EdgeInsets.all(16),
+              const SizedBox(height: AppSpacing.lg),
+              XPCard(
+                backgroundColor: AppTheme.primaryLight,
+                radius: AppTheme.cornerRadiusLarge,
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
-                        color: AppTheme.successDark.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppTheme.primary,
+                        borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
                       ),
                       child: const Icon(
-                        Icons.check_circle,
-                        color: AppTheme.successDark,
+                        Icons.check_rounded,
+                        color: AppTheme.text,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Great match!',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.successDark,
-                            ),
-                          ),
                           Text(
-                            'You have ${matchingSkills.length} matching skill${matchingSkills.length > 1 ? 's' : ''}: ${matchingSkills.join(", ")}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppTheme.textSecondary,
-                            ),
+                            'Strong skill match',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'You already match ${matchingSkills.length} required skill${matchingSkills.length > 1 ? 's' : ''}: ${matchingSkills.join(', ')}.',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                       ),
@@ -467,282 +302,132 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
             ],
-
-            // Open Roles Section
             if (startup.openRoles.isNotEmpty) ...[
-              const XPSectionTitle(title: 'Open Roles'),
-              const SizedBox(height: 10),
-              Column(
-                children: startup.openRoles.map((role) {
-                  final alreadyApplied = _appliedRoleTitles.contains(role.title);
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: XPCard(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.work_outline,
-                                  color: AppTheme.primary,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      role.title,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 16,
-                                        color: AppTheme.text,
-                                      ),
-                                    ),
-                                    if (role.commitment != null) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        role.commitment!,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: AppTheme.textSecondary,
+              const SizedBox(height: AppSpacing.lg),
+              const XPSectionTitle(title: 'Open roles'),
+              const SizedBox(height: AppSpacing.md),
+              ...startup.openRoles.map((role) {
+                final alreadyApplied = _appliedRoleTitles.contains(role.title);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: XPCard(
+                    elevated: true,
+                    radius: AppTheme.cornerRadiusLarge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    role.title,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w800,
                                         ),
-                                      ),
-                                    ],
+                                  ),
+                                  if (role.commitment?.isNotEmpty == true) ...[
+                                    const SizedBox(height: AppSpacing.xxs),
+                                    Text(
+                                      role.commitment!,
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
                                   ],
-                                ),
+                                ],
                               ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: alreadyApplied
-                                      ? AppTheme.success.withValues(alpha: 0.1)
-                                      : AppTheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: TextButton.icon(
-                                  onPressed: alreadyApplied
-                                      ? null
-                                      : () => _showApplyDialog(context, role: role),
-                                  icon: Icon(
-                                    alreadyApplied ? Icons.check_circle : Icons.send_rounded,
-                                    color: alreadyApplied ? AppTheme.successDark : AppTheme.primary,
-                                    size: 18,
-                                  ),
-                                  label: Text(
-                                    alreadyApplied ? 'Applied' : 'Apply',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      color: alreadyApplied ? AppTheme.successDark : AppTheme.primary,
-                                    ),
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
-                          if (role.learningOutcome.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              role.learningOutcome,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppTheme.textSecondary,
-                              ),
+                            XPOutlinedButton(
+                              label: alreadyApplied ? 'Applied' : 'Apply',
+                              expand: false,
+                              size: XPButtonSize.small,
+                              onPressed: alreadyApplied
+                                  ? null
+                                  : () => _showApplyDialog(context, role: role),
                             ),
                           ],
-                          Row(
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          role.learningOutcome,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        if (role.description?.isNotEmpty == true) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            role.description!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                ),
+                          ),
+                        ],
+                        if (role.estimatedHours != null || role.durationWeeks != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
                             children: [
                               if (role.estimatedHours != null)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 8, right: 8),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.cardBackground,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.timer_outlined,
-                                        size: 14,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${role.estimatedHours} hrs',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                XPBadge(
+                                  label: '${role.estimatedHours} hrs',
+                                  icon: Icons.timer_outlined,
                                 ),
                               if (role.durationWeeks != null)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 8),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.cardBackground,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.calendar_today,
-                                        size: 14,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${role.durationWeeks} wks',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                XPBadge(
+                                  label: '${role.durationWeeks} weeks',
+                                  icon: Icons.calendar_today_outlined,
                                 ),
                             ],
                           ),
-                          if (role.description?.isNotEmpty == true) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppTheme.cardBackground,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                role.description!,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  height: 1.5,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 8),
-            ],
-
-            // Skills Section
-            const XPSectionTitle(title: 'Skills They Need'),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: startup.requiredSkills.map((skill) {
-                final isMatch = studentSkills.contains(skill);
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: isMatch
-                        ? LinearGradient(
-                            colors: [
-                              AppTheme.success.withValues(alpha: 0.2),
-                              AppTheme.success.withValues(alpha: 0.1),
-                            ],
-                          )
-                        : null,
-                    color: isMatch ? null : AppTheme.cardBackground,
-                    borderRadius: BorderRadius.circular(12),
-                    border: isMatch
-                        ? Border.all(color: AppTheme.success.withValues(alpha: 0.4))
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isMatch) ...[
-                        const Icon(Icons.check, size: 16, color: AppTheme.successDark),
-                        const SizedBox(width: 6),
                       ],
-                      Text(
-                        skill,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: isMatch ? AppTheme.successDark : AppTheme.text,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
+                );
+              }),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            const XPSectionTitle(title: 'Skills they need'),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: startup.requiredSkills.map((skill) {
+                return XPSkillTag(
+                  label: skill,
+                  isMatched: studentSkills.contains(skill),
                 );
               }).toList(),
             ),
-
-            // Project Details Section
-            if (startup.projectDetails != null) ...[
-              const SizedBox(height: 20),
-              const XPSectionTitle(title: "What They're Looking For"),
-              const SizedBox(height: 10),
-              XPCard(
-                padding: const EdgeInsets.all(16),
+            if (startup.projectDetails?.isNotEmpty == true) ...[
+              const SizedBox(height: AppSpacing.lg),
+              XPSection(
+                title: 'What they are looking for',
                 child: Text(
                   startup.projectDetails!,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
-                    color: AppTheme.textSecondary,
-                  ),
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
                 ),
               ),
             ],
-            const SizedBox(height: 100),
           ],
         ),
       ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.text.withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: XPButton(
-            label: startup.openRoles.isNotEmpty
-                ? (roleCta != null ? 'Apply for ${roleCta.title}' : 'Applications Sent')
-                : (_hasApplied ? 'Application Sent!' : 'Apply Now'),
-            icon: startup.openRoles.isNotEmpty
-                ? (roleCta != null ? Icons.work_outline : Icons.check_circle)
-                : (_hasApplied ? Icons.check_circle : Icons.send_rounded),
-            onPressed: startup.openRoles.isNotEmpty
-                ? (roleCta != null ? () => _showApplyDialog(context, role: roleCta) : null)
-                : (_hasApplied ? null : () => _showApplyDialog(context)),
-          ),
+      bottomNavigationBar: XPBottomActionBar(
+        child: XPButton(
+          label: startup.openRoles.isNotEmpty
+              ? (roleCta != null ? 'Apply for ${roleCta.title}' : 'Applications sent')
+              : (_hasApplied ? 'Application sent' : 'Apply now'),
+          icon: startup.openRoles.isNotEmpty
+              ? (roleCta != null ? Icons.work_outline_rounded : Icons.check_circle_rounded)
+              : (_hasApplied ? Icons.check_circle_rounded : Icons.send_rounded),
+          onPressed: startup.openRoles.isNotEmpty
+              ? (roleCta != null ? () => _showApplyDialog(context, role: roleCta) : null)
+              : (_hasApplied ? null : () => _showApplyDialog(context)),
         ),
       ),
     );

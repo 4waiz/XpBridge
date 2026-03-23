@@ -9,54 +9,58 @@ class XPSectionTitle extends StatelessWidget {
     this.actionLabel,
     this.onActionTap,
     this.icon,
+    this.subtitle,
   });
 
   final String title;
   final String? actionLabel;
   final VoidCallback? onActionTap;
   final IconData? icon;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (icon != null) ...[
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+              boxShadow: AppTheme.cardShadow,
             ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: AppTheme.primary,
-            ),
+            child: Icon(icon, size: 18, color: AppTheme.text),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.sm),
         ],
         Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.text,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: AppSpacing.xxs),
+                Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ],
           ),
         ),
         if (actionLabel != null)
           TextButton(
             onPressed: onActionTap,
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
             child: Text(
               actionLabel!,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
             ),
           ),
       ],
@@ -64,7 +68,6 @@ class XPSectionTitle extends StatelessWidget {
   }
 }
 
-/// A divider with optional label
 class XPDivider extends StatelessWidget {
   const XPDivider({super.key, this.label});
 
@@ -73,38 +76,20 @@ class XPDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (label == null) {
-      return Divider(
-        color: AppTheme.cardBackground,
-        thickness: 1,
-        height: 32,
-      );
+      return const Divider(height: AppSpacing.xxxl, thickness: 1);
     }
 
     return Row(
       children: [
-        Expanded(
-          child: Divider(
-            color: AppTheme.cardBackground,
-            thickness: 1,
-          ),
-        ),
+        const Expanded(child: Divider()),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
             label!,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textMuted,
-            ),
+            style: Theme.of(context).textTheme.labelSmall,
           ),
         ),
-        Expanded(
-          child: Divider(
-            color: AppTheme.cardBackground,
-            thickness: 1,
-          ),
-        ),
+        const Expanded(child: Divider()),
       ],
     );
   }

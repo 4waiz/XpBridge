@@ -20,9 +20,8 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1100),
     )..forward();
-
     _navigateAfterSplash();
   }
 
@@ -32,14 +31,9 @@ class _SplashScreenState extends State<SplashScreen>
 
     final prefs = await SharedPreferences.getInstance();
     final onboardingComplete = prefs.getBool('onboarding_complete') ?? false;
-
     if (!mounted) return;
 
-    if (onboardingComplete) {
-      context.goNamed('login');
-    } else {
-      context.goNamed('intro');
-    }
+    context.goNamed(onboardingComplete ? 'login' : 'intro');
   }
 
   @override
@@ -50,123 +44,94 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: Stack(
         children: [
-          // Background pattern
+          const Positioned.fill(child: _SplashBackdrop()),
           Positioned.fill(
-            child: CustomPaint(
-              painter: _SplashPatternPainter(),
-            ),
-          ),
-          // Content
-          Center(
-            child: FadeTransition(
-              opacity: CurvedAnimation(
-                parent: _controller,
-                curve: Curves.easeInOut,
-              ),
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.1),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: _controller,
-                    curve: Curves.easeOutCubic,
-                  ),
-                ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.page),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo container
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(32),
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primary,
-                            AppTheme.primaryDark,
+                    const Spacer(),
+                    FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.08),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 112,
+                              height: 112,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary,
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.cornerRadiusLarge,
+                                ),
+                                boxShadow: AppTheme.elevatedShadow,
+                              ),
+                              child: const Icon(
+                                Icons.auto_graph_rounded,
+                                size: 50,
+                                color: AppTheme.text,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                            Text(
+                              'XPBridge',
+                              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.sm,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.surface,
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.pillRadius,
+                                ),
+                                boxShadow: AppTheme.cardShadow,
+                              ),
+                              child: Text(
+                                'Learn. Build. Grow.',
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      color: AppTheme.textSecondary,
+                                    ),
+                              ),
+                            ),
                           ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primary.withValues(alpha: 0.35),
-                            blurRadius: 40,
-                            offset: const Offset(0, 20),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.auto_graph_rounded,
-                        color: Colors.white,
-                        size: 48,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    // App name
-                    const Text(
-                      'XPBridge',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.text,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Tagline in a container
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.cardBackground,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Text(
-                        'Learn. Build. Grow.',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textSecondary,
                         ),
                       ),
                     ),
+                    const Spacer(),
+                    FadeTransition(
+                      opacity: CurvedAnimation(
+                        parent: _controller,
+                        curve: const Interval(0.4, 1, curve: Curves.easeIn),
+                      ),
+                      child: const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(strokeWidth: 3),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxxl),
                   ],
                 ),
-              ),
-            ),
-          ),
-          // Bottom loading indicator
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: FadeTransition(
-              opacity: CurvedAnimation(
-                parent: _controller,
-                curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
-              ),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.primary.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           ),
@@ -176,17 +141,35 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _SplashPatternPainter extends CustomPainter {
+class _SplashBackdrop extends StatelessWidget {
+  const _SplashBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _SplashBackdropPainter(),
+    );
+  }
+}
+
+class _SplashBackdropPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppTheme.cardBackground.withValues(alpha: 0.5)
-      ..strokeWidth = 1;
+    final tealPaint = Paint()
+      ..color = AppTheme.primary.withValues(alpha: 0.08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 80);
+    final neutralPaint = Paint()
+      ..color = AppTheme.text.withValues(alpha: 0.04)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 90);
 
-    const spacing = 40.0;
-    for (var x = 0.0; x < size.width; x += spacing) {
-      for (var y = 0.0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 1.5, paint);
+    canvas.drawCircle(Offset(size.width * 0.25, size.height * 0.22), 120, tealPaint);
+    canvas.drawCircle(Offset(size.width * 0.78, size.height * 0.3), 100, neutralPaint);
+    canvas.drawCircle(Offset(size.width * 0.55, size.height * 0.78), 140, tealPaint);
+
+    final dotPaint = Paint()..color = AppTheme.border;
+    for (double x = 24; x < size.width; x += 34) {
+      for (double y = 24; y < size.height; y += 34) {
+        canvas.drawCircle(Offset(x, y), 1.2, dotPaint);
       }
     }
   }

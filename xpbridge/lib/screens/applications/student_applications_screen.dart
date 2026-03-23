@@ -5,7 +5,11 @@ import '../../app.dart';
 import '../../models/application.dart';
 import '../../models/student_profile.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/xp_app_bar.dart';
+import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
+import '../../widgets/xp_chip.dart';
+import '../../widgets/xp_input.dart';
 
 class StudentApplicationsScreen extends StatelessWidget {
   const StudentApplicationsScreen({super.key});
@@ -21,7 +25,7 @@ class StudentApplicationsScreen extends StatelessWidget {
       case ApplicationStatus.interviewing:
         return AppTheme.primary;
       case ApplicationStatus.hired:
-        return const Color(0xFF8B5CF6);
+        return const Color(0xFF5D7CE0);
       case ApplicationStatus.completed:
         return AppTheme.successDark;
     }
@@ -51,19 +55,15 @@ class StudentApplicationsScreen extends StatelessWidget {
     required StudentProfile? student,
   }) {
     final didController = TextEditingController(text: application.reflectionDid);
-    final learnedController =
-        TextEditingController(text: application.reflectionLearned);
-    final hoursController = TextEditingController(
-      text: application.hoursSpent?.toString() ?? '',
-    );
-    final deliverableController = TextEditingController(
-      text: application.deliverableUrl ?? '',
-    );
+    final learnedController = TextEditingController(text: application.reflectionLearned);
+    final hoursController =
+        TextEditingController(text: application.hoursSpent?.toString() ?? '');
+    final deliverableController =
+        TextEditingController(text: application.deliverableUrl ?? '');
     final selectedSkills = <String>{...application.skillsPracticed};
-    String selectedDeliverableType =
-        application.deliverableType?.isNotEmpty == true
-            ? application.deliverableType!
-            : 'other';
+    String selectedDeliverableType = application.deliverableType?.isNotEmpty == true
+        ? application.deliverableType!
+        : 'other';
 
     showModalBottomSheet(
       context: context,
@@ -73,240 +73,173 @@ class StudentApplicationsScreen extends StatelessWidget {
         return Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+            left: AppSpacing.md,
+            right: AppSpacing.md,
+            top: AppSpacing.md,
           ),
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
               boxShadow: AppTheme.elevatedShadow,
             ),
             child: StatefulBuilder(
-              builder: (ctx, setState) {
+              builder: (ctx, setModalState) {
                 return SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(AppSpacing.xl),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Center(
                         child: Container(
-                          width: 40,
-                          height: 4,
+                          width: 48,
+                          height: 5,
                           decoration: BoxDecoration(
                             color: AppTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(2),
+                            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
                         'Submit reflection',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.text,
-                        ),
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Capture what you shipped, what you learned, and the proof you can show.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      XPTextField(
                         controller: didController,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          labelText: 'What did you do?',
-                          prefixIcon: const Padding(
-                            padding: EdgeInsets.only(bottom: 48),
-                            child: Icon(Icons.task_alt_outlined),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: AppTheme.cardBackground,
-                        ),
+                        labelText: 'What did you do?',
+                        prefixIcon: Icons.task_alt_outlined,
+                        maxLines: 4,
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
+                      const SizedBox(height: AppSpacing.md),
+                      XPTextField(
                         controller: learnedController,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          labelText: 'What did you learn?',
-                          prefixIcon: const Padding(
-                            padding: EdgeInsets.only(bottom: 48),
-                            child: Icon(Icons.lightbulb_outline),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: AppTheme.cardBackground,
-                        ),
+                        labelText: 'What did you learn?',
+                        prefixIcon: Icons.lightbulb_outline_rounded,
+                        maxLines: 4,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.md),
                       Text(
                         'Skills practiced',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.text,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: (student?.skills ?? [])
-                            .map(
-                              (skill) => ChoiceChip(
-                                label: Text(skill),
-                                selected: selectedSkills.contains(skill),
-                                onSelected: (selected) {
-                                  setState(() {
-                                    if (selected) {
-                                      selectedSkills.add(skill);
-                                    } else {
-                                      selectedSkills.remove(skill);
-                                    }
-                                  });
-                                },
-                              ),
-                            )
-                            .toList(),
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: (student?.skills ?? []).map((skill) {
+                          return XPChoiceChip(
+                            label: skill,
+                            selected: selectedSkills.contains(skill),
+                            onSelected: (selected) {
+                              setModalState(() {
+                                if (selected) {
+                                  selectedSkills.add(skill);
+                                } else {
+                                  selectedSkills.remove(skill);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
                           Expanded(
-                            child: TextField(
+                            child: XPTextField(
                               controller: hoursController,
+                              labelText: 'Hours spent',
+                              prefixIcon: Icons.timer_outlined,
                               keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'Hours spent',
-                                prefixIcon: const Icon(Icons.timer_outlined),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide.none,
-                                ),
-                                filled: true,
-                                fillColor: AppTheme.cardBackground,
-                              ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               value: selectedDeliverableType,
+                              decoration: const InputDecoration(
+                                labelText: 'Type',
+                              ),
                               items: const [
-                                DropdownMenuItem(
-                                  value: 'design',
-                                  child: Text('Design'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'code',
-                                  child: Text('Code'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'doc',
-                                  child: Text('Doc'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'other',
-                                  child: Text('Other'),
-                                ),
+                                DropdownMenuItem(value: 'design', child: Text('Design')),
+                                DropdownMenuItem(value: 'code', child: Text('Code')),
+                                DropdownMenuItem(value: 'doc', child: Text('Doc')),
+                                DropdownMenuItem(value: 'other', child: Text('Other')),
                               ],
                               onChanged: (value) {
                                 if (value != null) {
-                                  setState(() => selectedDeliverableType = value);
+                                  setModalState(() => selectedDeliverableType = value);
                                 }
                               },
-                              decoration: InputDecoration(
-                                labelText: 'Deliverable type',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide.none,
-                                ),
-                                filled: true,
-                                fillColor: AppTheme.cardBackground,
-                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
+                      const SizedBox(height: AppSpacing.md),
+                      XPTextField(
                         controller: deliverableController,
+                        labelText: 'Deliverable URL',
+                        hintText: 'Optional proof link',
+                        prefixIcon: Icons.link_rounded,
                         keyboardType: TextInputType.url,
-                        decoration: InputDecoration(
-                          labelText: 'Deliverable URL (optional)',
-                          prefixIcon: const Icon(Icons.link),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: AppTheme.cardBackground,
-                        ),
                       ),
-                      const SizedBox(height: 18),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            if (didController.text.trim().isEmpty ||
-                                learnedController.text.trim().isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please fill in what you did and learned.'),
-                                  backgroundColor: AppTheme.error,
-                                ),
-                              );
-                              return;
-                            }
-
-                            final hours = int.tryParse(hoursController.text.trim());
-
-                            await appState.saveReflection(
-                              application.id,
-                              did: didController.text.trim(),
-                              learned: learnedController.text.trim(),
-                              skillsPracticed: selectedSkills.toList(),
-                              hoursSpent: hours,
-                              deliverableUrl:
-                                  deliverableController.text.trim().isNotEmpty
-                                      ? deliverableController.text.trim()
-                                      : null,
-                              deliverableType: selectedDeliverableType,
+                      const SizedBox(height: AppSpacing.xl),
+                      XPButton(
+                        label: 'Save reflection',
+                        icon: Icons.save_outlined,
+                        onPressed: () async {
+                          if (didController.text.trim().isEmpty ||
+                              learnedController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please fill in what you did and learned.'),
+                                backgroundColor: AppTheme.error,
+                              ),
                             );
-                            if (application.status != ApplicationStatus.completed) {
-                              await appState.updateApplicationStatus(
-                                application.id,
-                                ApplicationStatus.completed,
-                              );
-                            }
-                            if (ctx.mounted) {
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Reflection saved'),
-                                  backgroundColor: AppTheme.successDark,
-                                ),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.save),
-                          label: const Text(
-                            'Save reflection',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                        ),
+                            return;
+                          }
+
+                          final hours = int.tryParse(hoursController.text.trim());
+
+                          await appState.saveReflection(
+                            application.id,
+                            did: didController.text.trim(),
+                            learned: learnedController.text.trim(),
+                            skillsPracticed: selectedSkills.toList(),
+                            hoursSpent: hours,
+                            deliverableUrl: deliverableController.text.trim().isNotEmpty
+                                ? deliverableController.text.trim()
+                                : null,
+                            deliverableType: selectedDeliverableType,
+                          );
+                          if (application.status != ApplicationStatus.completed) {
+                            await appState.updateApplicationStatus(
+                              application.id,
+                              ApplicationStatus.completed,
+                            );
+                          }
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Reflection saved'),
+                                backgroundColor: AppTheme.successDark,
+                              ),
+                            );
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -318,375 +251,274 @@ class StudentApplicationsScreen extends StatelessWidget {
       },
     );
   }
+
+  String _dateLabel(DateTime date) => '${date.month}/${date.day}/${date.year}';
+
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final student = appState.studentProfile;
-    final applications = student != null
-        ? appState.getApplicationsForStudent(student.id)
-        : <Application>[];
+    final applications =
+        student != null ? appState.getApplicationsForStudent(student.id) : <Application>[];
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: AppTheme.softShadow,
-            ),
-            child: const Icon(Icons.arrow_back, color: AppTheme.text),
-          ),
-        ),
-        title: const Text(
-          'My Applications',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppTheme.text,
-          ),
-        ),
-      ),
+      appBar: const XPAppBar(title: 'My Applications'),
       body: student == null
-          ? const Center(child: Text('Complete your profile to view applications.'))
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.page),
+                child: Text(
+                  'Complete your profile to view applications.',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
           : applications.isEmpty
               ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 140,
-                        height: 140,
-                        child: Image.asset(
-                          'assets/illustrations/not found.png',
-                          fit: BoxFit.contain,
-                        ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.page),
+                    child: XPSection(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 88,
+                            height: 88,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryLight,
+                              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                            ),
+                            child: const Icon(
+                              Icons.description_outlined,
+                              size: 36,
+                              color: AppTheme.text,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Text(
+                            'No applications yet',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Once you apply to missions, they will show up here with progress updates and reflection prompts.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          XPButton(
+                            label: 'Discover missions',
+                            icon: Icons.arrow_forward_rounded,
+                            onPressed: () => context.goNamed('studentDashboard'),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'No applications yet',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.text,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextButton(
-                        onPressed: () => context.goNamed('studentDashboard'),
-                        child: const Text('Discover missions'),
-                      ),
-                    ],
+                    ),
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.page,
+                    AppSpacing.md,
+                    AppSpacing.page,
+                    AppSpacing.page,
+                  ),
                   itemCount: applications.length,
                   itemBuilder: (context, index) {
-                final application = applications[index];
-                final isCompleted =
-                    application.status == ApplicationStatus.completed;
-                final hasReflection =
-                    application.reflectionDid?.isNotEmpty == true ||
-                    application.reflectionLearned?.isNotEmpty == true;
+                    final application = applications[index];
+                    final isCompleted = application.status == ApplicationStatus.completed;
+                    final hasReflection = application.reflectionDid?.isNotEmpty == true ||
+                        application.reflectionLearned?.isNotEmpty == true;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: XPCard(
-                    padding: const EdgeInsets.all(18),
-                    elevated: true,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                      child: XPCard(
+                        elevated: true,
+                        radius: AppTheme.cornerRadiusLarge,
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: AppTheme.cardBackground,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  application.startupName.isNotEmpty
-                                      ? application.startupName[0].toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTheme.primary,
-                                    fontSize: 20,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 58,
+                                  height: 58,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryLight,
+                                    borderRadius: BorderRadius.circular(
+                                      AppTheme.cornerRadiusSmall,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      application.startupName.isNotEmpty
+                                          ? application.startupName[0].toUpperCase()
+                                          : '?',
+                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    application.roleTitle ??
-                                        'Mission with ${application.startupName}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                      color: AppTheme.text,
-                                    ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        application.roleTitle ??
+                                            'Mission with ${application.startupName}',
+                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.xxs),
+                                      Text(
+                                        application.startupName,
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 4),
+                                ),
+                                XPBadge(
+                                  label: _statusText(application.status),
+                                  color: _statusColor(application.status).withValues(alpha: 0.16),
+                                  textColor: _statusColor(application.status),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            XPContainer(
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.schedule_rounded,
+                                    size: 16,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                  const SizedBox(width: AppSpacing.xs),
                                   Text(
-                                    application.startupName,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: AppTheme.textSecondary,
-                                    ),
+                                    'Applied ${_dateLabel(application.appliedAt)}',
+                                    style: Theme.of(context).textTheme.bodySmall,
                                   ),
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _statusColor(application.status)
-                                    .withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                _statusText(application.status),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: _statusColor(application.status),
+                            if (application.message?.isNotEmpty == true) ...[
+                              const SizedBox(height: AppSpacing.md),
+                              XPContainer(
+                                child: Text(
+                                  '"${application.message}"',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: AppTheme.textSecondary,
+                                        fontStyle: FontStyle.italic,
+                                      ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.schedule,
-                              size: 14,
-                              color: AppTheme.textSecondary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Applied ${application.appliedAt.month}/${application.appliedAt.day}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (application.message != null) ...[
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppTheme.cardBackground,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '"${application.message}"',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontStyle: FontStyle.italic,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (isCompleted && hasReflection) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppTheme.success.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: const [
-                                    Icon(
-                                      Icons.notes_outlined,
-                                      size: 16,
-                                      color: AppTheme.successDark,
-                                    ),
-                                    SizedBox(width: 6),
+                            ],
+                            if (isCompleted && hasReflection) ...[
+                              const SizedBox(height: AppSpacing.md),
+                              XPContainer(
+                                color: AppTheme.primaryLight,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
                                       'Reflection',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppTheme.successDark,
+                                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                    if (application.reflectionDid?.isNotEmpty == true) ...[
+                                      const SizedBox(height: AppSpacing.xs),
+                                      Text(application.reflectionDid!),
+                                    ],
+                                    if (application.reflectionLearned?.isNotEmpty == true) ...[
+                                      const SizedBox(height: AppSpacing.xs),
+                                      Text(
+                                        application.reflectionLearned!,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(color: AppTheme.textSecondary),
+                                      ),
+                                    ],
+                                    if (application.skillsPracticed.isNotEmpty) ...[
+                                      const SizedBox(height: AppSpacing.sm),
+                                      Wrap(
+                                        spacing: AppSpacing.xs,
+                                        runSpacing: AppSpacing.xs,
+                                        children: application.skillsPracticed
+                                            .map((skill) => XPSkillTag(label: skill))
+                                            .toList(),
+                                      ),
+                                    ],
+                                    if (application.hoursSpent != null ||
+                                        application.deliverableUrl?.isNotEmpty == true) ...[
+                                      const SizedBox(height: AppSpacing.sm),
+                                      Wrap(
+                                        spacing: AppSpacing.sm,
+                                        runSpacing: AppSpacing.sm,
+                                        children: [
+                                          if (application.hoursSpent != null)
+                                            XPBadge(
+                                              label: '${application.hoursSpent} hrs',
+                                              icon: Icons.timer_outlined,
+                                            ),
+                                          if (application.deliverableUrl?.isNotEmpty == true)
+                                            XPBadge(
+                                              label: 'Deliverable linked',
+                                              icon: Icons.link_rounded,
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: AppSpacing.md),
+                            if (isCompleted && !hasReflection)
+                              XPButton(
+                                label: 'Submit reflection',
+                                icon: Icons.note_add_outlined,
+                                onPressed: () => _showReflectionSheet(
+                                  context,
+                                  application: application,
+                                  appState: appState,
+                                  student: student,
+                                ),
+                              )
+                            else if (!isCompleted)
+                              XPContainer(
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.hourglass_bottom_rounded,
+                                      size: 16,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                    const SizedBox(width: AppSpacing.xs),
+                                    Expanded(
+                                      child: Text(
+                                        'Waiting for the startup to mark this mission complete.',
+                                        style: Theme.of(context).textTheme.bodySmall,
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  application.reflectionDid ?? '',
-                                  style: TextStyle(
-                                    color: AppTheme.text,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  application.reflectionLearned ?? '',
-                                  style: TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                if (application.skillsPracticed.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: application.skillsPracticed.map((skill) {
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.cardBackground,
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Text(
-                                          skill,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                                if (application.hoursSpent != null) ...[
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.timer,
-                                        size: 14,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '${application.hoursSpent} hrs spent',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                if (application.deliverableUrl != null &&
-                                    application.deliverableUrl!.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.link,
-                                        size: 14,
-                                        color: AppTheme.primary,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Flexible(
-                                        child: Text(
-                                          application.deliverableUrl!,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppTheme.primary,
-                                            decoration: TextDecoration.underline,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        if (isCompleted && !hasReflection)
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () => _showReflectionSheet(
-                                context,
-                                application: application,
-                                appState: appState,
-                                student: student,
                               ),
-                              icon: const Icon(Icons.note_add_outlined),
-                              label: const Text(
-                                'Submit reflection',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          )
-                        else if (!isCompleted)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.cardBackground,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.hourglass_bottom,
-                                  size: 14,
-                                  color: AppTheme.textSecondary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Waiting for startup to mark complete',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
