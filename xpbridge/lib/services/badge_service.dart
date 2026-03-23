@@ -44,7 +44,10 @@ class BadgeService {
     }
 
     for (final student in students) {
-      final completed = completedCount(student.id);
+      final completedFromApps = completedCount(student.id);
+      final completed = student.missionsCompletedCount > completedFromApps
+          ? student.missionsCompletedCount
+          : completedFromApps;
       final collabXp = collaborationXp(student.id);
       final sharedWins = guildApplications.where(
         (item) =>

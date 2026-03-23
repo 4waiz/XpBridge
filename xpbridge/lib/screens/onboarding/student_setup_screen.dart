@@ -67,6 +67,7 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
     );
 
     await prefs.setString('profile_name', _nameController.text);
+    await prefs.setString('profile_id', profile.id);
     await prefs.setString('profile_bio', _bioController.text);
     await prefs.setString('profile_education', _educationController.text);
     await prefs.setStringList('profile_skills', _skills.toList());

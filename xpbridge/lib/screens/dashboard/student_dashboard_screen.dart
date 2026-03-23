@@ -674,7 +674,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     height: 320,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      itemCount: teamMissionEntries.length.clamp(0, 5),
+                      itemCount: teamMissionEntries.length > 5
+                          ? 5
+                          : teamMissionEntries.length,
                       separatorBuilder: (_, __) =>
                           const SizedBox(width: AppSpacing.md),
                       itemBuilder: (context, index) {

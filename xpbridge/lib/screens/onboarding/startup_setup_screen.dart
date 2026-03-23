@@ -152,6 +152,7 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
     );
 
     await prefs.setString('startup_name', _companyNameController.text);
+    await prefs.setString('startup_id', profile.id);
     await prefs.setString('startup_description', _descriptionController.text);
     await prefs.setString('startup_industry', _selectedIndustry!);
     await prefs.setStringList('startup_skills', _requiredSkills.toList());

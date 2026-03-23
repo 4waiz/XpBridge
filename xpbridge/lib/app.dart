@@ -68,6 +68,10 @@ class AppState extends ChangeNotifier {
     _studentProfile = null;
     _startupProfile = null;
     _applications = [];
+    _aiInterviews = [];
+    _guilds = [];
+    _guildApplications = [];
+    _skillBadges = [];
     _eventLog = [];
     _xpFeedOptOut = false;
 
@@ -103,7 +107,9 @@ class AppState extends ChangeNotifier {
       if (name.isEmpty) return false;
 
       _studentProfile = StudentProfile(
-        id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+        id:
+            prefs.getString('profile_id') ??
+            'user_${DateTime.now().millisecondsSinceEpoch}',
         name: name,
         email: email,
         bio: bio,
@@ -141,7 +147,9 @@ class AppState extends ChangeNotifier {
       }
 
       _startupProfile = StartupProfile(
-        id: 'startup_${DateTime.now().millisecondsSinceEpoch}',
+        id:
+            prefs.getString('startup_id') ??
+            'startup_${DateTime.now().millisecondsSinceEpoch}',
         companyName: companyName,
         email: email,
         description: description ?? '',
@@ -495,7 +503,7 @@ class AppState extends ChangeNotifier {
         (badge) =>
             badge.studentId == currentStudent.id &&
             !previousBadgeIds.contains(badge.id),
-        orElse: () => const SkillBadge(
+        orElse: () => SkillBadge(
           id: '',
           studentId: '',
           title: '',

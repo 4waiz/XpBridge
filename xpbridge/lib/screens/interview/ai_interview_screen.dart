@@ -49,18 +49,6 @@ class _AiInterviewScreenState extends State<AiInterviewScreen> {
     }
   }
 
-  void _loadDraft() {
-    final existing = _draftResponses[_currentIndex];
-    if (existing == null) {
-      _responseController.clear();
-      return;
-    }
-    _responseController.value = TextEditingValue(
-      text: existing.responseText,
-      selection: TextSelection.collapsed(offset: existing.responseText.length),
-    );
-  }
-
   void _saveDraft(AiInterview interview, {required bool skipped}) {
     _draftResponses[_currentIndex] = AiInterviewResponse(
       question: interview.questions[_currentIndex],
@@ -121,8 +109,9 @@ class _AiInterviewScreenState extends State<AiInterviewScreen> {
 
     final application = appState.getApplicationById(interview.applicationId);
     final totalQuestions = interview.questions.length;
-    final progress = ((_currentIndex + 1) / totalQuestions).clamp(0, 1);
-    _loadDraft();
+    final progress = ((_currentIndex + 1) / totalQuestions)
+        .clamp(0.0, 1.0)
+        .toDouble();
 
     return Scaffold(
       backgroundColor: Colors.transparent,

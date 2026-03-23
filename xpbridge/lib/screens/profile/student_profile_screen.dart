@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app.dart';
 import '../../models/application.dart';
+import '../../models/skill_badge.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/team_mission_widgets.dart';
 import '../../widgets/verified_badges_section.dart';
@@ -112,7 +113,7 @@ class StudentProfileScreen extends StatelessWidget {
     final nextLevel = _nextLevelTarget(level);
     final badges = profile != null
         ? appState.getBadgesForStudent(profile.id)
-        : const [];
+        : const <SkillBadge>[];
     final currentGuild = profile != null
         ? appState.getGuildForStudent(profile.id)
         : null;
