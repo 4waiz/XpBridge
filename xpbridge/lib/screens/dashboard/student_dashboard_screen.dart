@@ -5,7 +5,9 @@ import '../../app.dart';
 import '../../data/dummy_data.dart';
 import '../../models/event_log_entry.dart';
 import '../../models/startup_profile.dart';
+import '../../models/startup_role.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/team_mission_widgets.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
@@ -81,19 +83,20 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   int _levelBase(int level) {
-    switch (level) {
-      case 4:
-        return 900;
-      case 3:
-        return 500;
-      case 2:
-        return 200;
-      default:
-        return 0;
-    }
+    if (level >= 10) return 6000;
+    if (level >= 9) return 4800;
+    if (level >= 8) return 3800;
+    if (level >= 7) return 3000;
+    if (level >= 6) return 2200;
+    if (level >= 5) return 1500;
+    if (level >= 4) return 900;
+    if (level >= 3) return 500;
+    if (level >= 2) return 200;
+    return 0;
   }
 
   int? _nextLevelTarget(int level) {
+    if (level >= 10) return null;
     switch (level) {
       case 1:
         return 200;
@@ -101,6 +104,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         return 500;
       case 3:
         return 900;
+      case 4:
+        return 1500;
+      case 5:
+        return 2200;
+      case 6:
+        return 3000;
+      case 7:
+        return 3800;
+      case 8:
+        return 4800;
+      case 9:
+        return 6000;
       default:
         return null;
     }
@@ -116,16 +131,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   String _levelName(int level) {
-    switch (level) {
-      case 4:
-        return 'Leader';
-      case 3:
-        return 'Achiever';
-      case 2:
-        return 'Contributor';
-      default:
-        return 'Explorer';
-    }
+    if (level >= 10) return 'Master';
+    if (level >= 8) return 'Operator';
+    if (level >= 6) return 'Builder';
+    if (level >= 4) return 'Leader';
+    if (level >= 2) return 'Contributor';
+    return 'Explorer';
   }
 
   String _firstName(String? name) {
@@ -156,6 +167,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       primaryRole,
       if (commitment != null && commitment.isNotEmpty) commitment,
     ];
+  }
+
+  List<MapEntry<StartupProfile, StartupRole>> _teamMissionEntries(
+    List<StartupProfile> startups,
+  ) {
+    return startups
+        .expand(
+          (startup) => startup.openRoles
+              .where((role) => role.teamMissionConfig != null)
+              .map((role) => MapEntry(startup, role)),
+        )
+        .toList();
   }
 
   void _showLevelInfoSheet(BuildContext context, int xp, int level) {
@@ -337,6 +360,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     final secondaryStartups = sortedStartups.length > 1
         ? sortedStartups.sublist(1)
         : const <StartupProfile>[];
+    final currentGuild = studentProfile != null
+        ? appState.getGuildForStudent(studentProfile.id)
+        : null;
+    final teamMissionEntries = _teamMissionEntries(sortedStartups);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -515,6 +542,49 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
+              XPSection(
+                title: 'Guilds',
+                subtitle:
+                    currentGuild != null
+                    ? 'Your guild can apply to larger, role-based team missions.'
+                    : 'Create or join a guild to unlock team missions.',
+                action: XPOutlinedButton(
+                  label: 'Open guilds',
+                  icon: Icons.groups_rounded,
+                  expand: false,
+                  size: XPButtonSize.small,
+                  onPressed: () => context.pushNamed('guilds'),
+                ),
+                child: currentGuild == null
+                    ? XPContainer(
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.group_add_outlined,
+                              color: AppTheme.primaryDark,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'Build a cross-functional squad for product, design, development, and growth missions.',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : GuildPreviewCard(
+                        guild: currentGuild,
+                        members: appState.getGuildMembers(currentGuild.id),
+                        activeMissions:
+                            appState.getActiveGuildMissionCount(currentGuild.id),
+                        onTap: () => context.pushNamed(
+                          'guildDetail',
+                          pathParameters: {'id': currentGuild.id},
+                        ),
+                      ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
               XPSectionTitle(
                 title: 'Featured recommendation',
                 subtitle: hasFilters
@@ -592,6 +662,45 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       )
                       .toList(),
                 ),
+                if (teamMissionEntries.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xl),
+                  const XPSectionTitle(
+                    title: 'Team missions',
+                    subtitle:
+                        'Larger missions built for guilds with complementary roles.',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    height: 320,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: teamMissionEntries.length.clamp(0, 5),
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(width: AppSpacing.md),
+                      itemBuilder: (context, index) {
+                        final entry = teamMissionEntries[index];
+                        final startup = entry.key;
+                        final role = entry.value;
+                        return SizedBox(
+                          width: 300,
+                          child: TeamMissionSummaryCard(
+                            company: startup.companyName,
+                            title: role.title,
+                            description: role.description ?? startup.description,
+                            config: role.teamMissionConfig!,
+                            onTap: () => context.pushNamed(
+                              'startupDetail',
+                              pathParameters: {'id': startup.id},
+                            ),
+                            ctaLabel: currentGuild != null
+                                ? 'Apply as guild'
+                                : 'View mission',
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.xl),
                 XPSectionTitle(
                   title: 'Ultra Micro Missions',

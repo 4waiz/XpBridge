@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app.dart';
 import '../../models/application.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/team_mission_widgets.dart';
+import '../../widgets/verified_badges_section.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_card.dart';
 import '../../widgets/xp_chip.dart';
@@ -26,19 +28,20 @@ class StudentProfileScreen extends StatelessWidget {
   }
 
   int _levelBase(int level) {
-    switch (level) {
-      case 4:
-        return 900;
-      case 3:
-        return 500;
-      case 2:
-        return 200;
-      default:
-        return 0;
-    }
+    if (level >= 10) return 6000;
+    if (level >= 9) return 4800;
+    if (level >= 8) return 3800;
+    if (level >= 7) return 3000;
+    if (level >= 6) return 2200;
+    if (level >= 5) return 1500;
+    if (level >= 4) return 900;
+    if (level >= 3) return 500;
+    if (level >= 2) return 200;
+    return 0;
   }
 
   int? _nextLevelTarget(int level) {
+    if (level >= 10) return null;
     switch (level) {
       case 1:
         return 200;
@@ -46,6 +49,18 @@ class StudentProfileScreen extends StatelessWidget {
         return 500;
       case 3:
         return 900;
+      case 4:
+        return 1500;
+      case 5:
+        return 2200;
+      case 6:
+        return 3000;
+      case 7:
+        return 3800;
+      case 8:
+        return 4800;
+      case 9:
+        return 6000;
       default:
         return null;
     }
@@ -95,6 +110,12 @@ class StudentProfileScreen extends StatelessWidget {
     final level = profile?.level ?? 1;
     final levelProgress = _levelProgress(xpPoints, level);
     final nextLevel = _nextLevelTarget(level);
+    final badges = profile != null
+        ? appState.getBadgesForStudent(profile.id)
+        : const [];
+    final currentGuild = profile != null
+        ? appState.getGuildForStudent(profile.id)
+        : null;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -268,6 +289,40 @@ class StudentProfileScreen extends StatelessWidget {
                                 .toList(),
                           ),
                         ),
+                      ],
+                      if (currentGuild != null) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        XPSection(
+                          title: 'Guild',
+                          subtitle:
+                              'Your current team, collaboration XP, and shared mission progress.',
+                          action: XPOutlinedButton(
+                            label: 'Open guild',
+                            icon: Icons.groups_rounded,
+                            expand: false,
+                            size: XPButtonSize.small,
+                            onPressed: () => context.pushNamed(
+                              'guildDetail',
+                              pathParameters: {'id': currentGuild.id},
+                            ),
+                          ),
+                          child: GuildPreviewCard(
+                            guild: currentGuild,
+                            members: appState.getGuildMembers(currentGuild.id),
+                            activeMissions:
+                                appState.getActiveGuildMissionCount(
+                                  currentGuild.id,
+                                ),
+                            onTap: () => context.pushNamed(
+                              'guildDetail',
+                              pathParameters: {'id': currentGuild.id},
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (profile != null) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        VerifiedBadgesSection(badges: badges),
                       ],
                       if (reflections.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xl),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app.dart';
+import '../../models/ai_interview.dart';
 import '../../models/application.dart';
 import '../../models/student_profile.dart';
 import '../../theme/app_theme.dart';
@@ -72,7 +73,7 @@ class StudentApplicationsScreen extends StatelessWidget {
       case ApplicationStatus.pending:
         return 'Your note has been delivered. The team is reviewing your fit.';
       case ApplicationStatus.interviewing:
-        return 'You have made it into an active review cycle.';
+        return 'You have made it into an active review cycle. Complete any requested AI interview to keep things moving.';
       case ApplicationStatus.accepted:
         return 'The startup wants to move forward with you.';
       case ApplicationStatus.hired:
@@ -275,6 +276,17 @@ class StudentApplicationsScreen extends StatelessWidget {
 
   String _dateLabel(DateTime date) => '${date.month}/${date.day}/${date.year}';
 
+  String _interviewStatusLabel(AiInterviewStatus status) {
+    switch (status) {
+      case AiInterviewStatus.pending:
+        return 'AI Interview Requested';
+      case AiInterviewStatus.inProgress:
+        return 'Interview in progress';
+      case AiInterviewStatus.completed:
+        return 'Interview Submitted';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
@@ -401,6 +413,9 @@ class StudentApplicationsScreen extends StatelessWidget {
                             final isCompleted =
                                 application.status ==
                                 ApplicationStatus.completed;
+                            final interview = appState.getInterviewForApplication(
+                              application.id,
+                            );
                             final hasReflection =
                                 application.reflectionDid?.isNotEmpty == true ||
                                 application.reflectionLearned?.isNotEmpty ==
@@ -428,6 +443,22 @@ class StudentApplicationsScreen extends StatelessWidget {
                                       label: _dateLabel(application.appliedAt),
                                       icon: Icons.schedule_rounded,
                                     ),
+                                    if (interview != null)
+                                      XPBadge(
+                                        label: _interviewStatusLabel(
+                                          interview.status,
+                                        ),
+                                        icon: interview.status ==
+                                                AiInterviewStatus.completed
+                                            ? Icons.verified_rounded
+                                            : Icons.record_voice_over_rounded,
+                                        color: interview.status ==
+                                                AiInterviewStatus.completed
+                                            ? AppTheme.primarySoft
+                                            : AppTheme.surface.withValues(
+                                                alpha: 0.72,
+                                              ),
+                                      ),
                                     if (application.message?.isNotEmpty == true)
                                       XPBadge(
                                         label: 'Intro note sent',
@@ -451,6 +482,71 @@ class StudentApplicationsScreen extends StatelessWidget {
                                                 color: AppTheme.textSecondary,
                                                 fontStyle: FontStyle.italic,
                                               ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.md),
+                                    ],
+                                    if (interview != null &&
+                                        !isCompleted) ...[
+                                      XPContainer(
+                                        color: interview.status ==
+                                                AiInterviewStatus.completed
+                                            ? AppTheme.primarySoft
+                                            : AppTheme.surface.withValues(
+                                                alpha: 0.72,
+                                              ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _interviewStatusLabel(
+                                                interview.status,
+                                              ),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium,
+                                            ),
+                                            const SizedBox(
+                                              height: AppSpacing.xs,
+                                            ),
+                                            Text(
+                                              interview.status ==
+                                                      AiInterviewStatus
+                                                          .completed
+                                                  ? 'Your founder review summary has been submitted.'
+                                                  : 'Complete the guided AI interview for a faster first review.',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall,
+                                            ),
+                                            const SizedBox(
+                                              height: AppSpacing.md,
+                                            ),
+                                            XPButton(
+                                              label: interview.status ==
+                                                      AiInterviewStatus
+                                                          .completed
+                                                  ? 'View submission'
+                                                  : interview.status ==
+                                                          AiInterviewStatus
+                                                              .inProgress
+                                                      ? 'Continue interview'
+                                                      : 'Start interview',
+                                              icon: interview.status ==
+                                                      AiInterviewStatus
+                                                          .completed
+                                                  ? Icons.visibility_outlined
+                                                  : Icons.record_voice_over_rounded,
+                                              size: XPButtonSize.medium,
+                                              onPressed: () => context.pushNamed(
+                                                'aiInterview',
+                                                pathParameters: {
+                                                  'id': interview.id,
+                                                },
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(height: AppSpacing.md),
