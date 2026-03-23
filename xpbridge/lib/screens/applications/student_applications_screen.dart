@@ -526,7 +526,16 @@ class StudentApplicationsScreen extends StatelessWidget {
                                           student: student,
                                         ),
                                       )
-                                    else if (!isCompleted)
+                                    else if (!isCompleted) ...[
+                                      XPButton(
+                                        label: 'Enter War Room',
+                                        icon: Icons.rocket_launch_rounded,
+                                        onPressed: () => context.pushNamed(
+                                          'warRoom',
+                                          pathParameters: {'id': application.id},
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.md),
                                       XPContainer(
                                         child: Row(
                                           children: [
@@ -540,7 +549,7 @@ class StudentApplicationsScreen extends StatelessWidget {
                                             ),
                                             Expanded(
                                               child: Text(
-                                                'The next update appears here as soon as the startup moves the application forward.',
+                                                'The next formal update appears here, but you can chat with the startup in the War Room.',
                                                 style: Theme.of(
                                                   context,
                                                 ).textTheme.bodySmall,
@@ -549,6 +558,7 @@ class StudentApplicationsScreen extends StatelessWidget {
                                           ],
                                         ),
                                       ),
+                                    ],
                                   ],
                                 ),
                               ),
