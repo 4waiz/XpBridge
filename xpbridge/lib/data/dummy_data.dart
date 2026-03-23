@@ -2,6 +2,7 @@ import '../models/application.dart';
 import '../models/startup_profile.dart';
 import '../models/startup_role.dart';
 import '../models/student_profile.dart';
+import '../models/team_mission_config.dart';
 
 class DummyData {
   static final industries = <String>[
@@ -122,6 +123,15 @@ class DummyData {
           commitment: '10-15 hrs/week • Remote',
           description:
               'Work with our design lead to redesign the student dashboard and craft new onboarding flows.',
+          learningOutcome:
+              'Collaborative product sprint across research, design, and implementation.',
+          teamMissionConfig: TeamMissionConfig(
+            requiredRoles: ['Product', 'Design', 'Dev'],
+            maxMembers: 3,
+            teamSizeMin: 2,
+            sharedLearningOutcome:
+                'Run a compact redesign sprint and document a founder-ready handoff.',
+          ),
         ),
         StartupRole(
           title: 'Research Assistant',
@@ -367,6 +377,32 @@ class DummyData {
           commitment: '12-15 hrs/week • Remote',
           description:
               'Build new features for our Flutter app, including recipe discovery and meal planning.',
+          learningOutcome:
+              'Work as a guild to scope, design, and ship a production-ready mobile sprint.',
+          teamMissionConfig: TeamMissionConfig(
+            requiredRoles: ['Product', 'Design', 'Dev'],
+            maxMembers: 4,
+            teamSizeMin: 3,
+            sharedLearningOutcome:
+                'Ship a cross-functional feature sprint with research insights, UX polish, and Flutter delivery.',
+          ),
+        ),
+        StartupRole(
+          title: 'Meal Planning Sprint Squad',
+          commitment: '4 weeks â€¢ Team Mission',
+          description:
+              'Tackle a focused team sprint spanning UX, product prioritization, and Flutter implementation.',
+          learningOutcome:
+              'Practice cross-functional delivery, async collaboration, and shared ship reviews.',
+          estimatedHours: 24,
+          durationWeeks: 4,
+          teamMissionConfig: TeamMissionConfig(
+            requiredRoles: ['Design', 'Product', 'Dev'],
+            maxMembers: 4,
+            teamSizeMin: 3,
+            sharedLearningOutcome:
+                'Deliver a measurable team sprint from brief to prototype handoff.',
+          ),
         ),
         StartupRole(
           title: 'Backend API Intern',
@@ -394,6 +430,23 @@ class DummyData {
           commitment: '8-10 hrs/week • Remote',
           description:
               'Manage our social presence, create engaging content, and analyze performance metrics.',
+        ),
+        StartupRole(
+          title: 'Creator Growth Pod',
+          commitment: '3 weeks â€¢ Team Mission',
+          description:
+              'Combine content strategy, design, and analytics to launch a creator acquisition experiment.',
+          learningOutcome:
+              'Learn to run a startup growth sprint with clear weekly reporting and shared ownership.',
+          estimatedHours: 18,
+          durationWeeks: 3,
+          teamMissionConfig: TeamMissionConfig(
+            requiredRoles: ['Marketing', 'Design', 'Data'],
+            maxMembers: 4,
+            teamSizeMin: 3,
+            sharedLearningOutcome:
+                'Run a live campaign experiment and synthesize the results into next-step recommendations.',
+          ),
         ),
         StartupRole(
           title: 'Frontend Developer Intern',
