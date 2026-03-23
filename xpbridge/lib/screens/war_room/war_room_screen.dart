@@ -4,9 +4,6 @@ import '../../app.dart';
 import '../../models/application.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
-import '../../widgets/xp_button.dart';
-import '../../widgets/xp_card.dart';
-import '../../widgets/xp_chip.dart';
 import '../../widgets/xp_input.dart';
 import '../../widgets/xp_premium.dart';
 import '../../widgets/xp_section_title.dart';
@@ -344,7 +341,7 @@ class _SystemEventCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: AppSpacing.lg),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(

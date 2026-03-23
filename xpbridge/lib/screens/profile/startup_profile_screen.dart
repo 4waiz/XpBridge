@@ -156,7 +156,8 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
-          builder: (context, setModalState) => XPPremiumSheet(
+          builder: (context, setModalState) {
+            return XPPremiumSheet(
             title: 'Add a role',
             subtitle:
                 'Create a polished opportunity without leaving this screen.',
@@ -347,6 +348,8 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
               ],
             ),
           ),
+          );
+          },
         );
       },
     );

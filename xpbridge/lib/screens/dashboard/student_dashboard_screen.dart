@@ -677,7 +677,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       itemCount: teamMissionEntries.length > 5
                           ? 5
                           : teamMissionEntries.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, separatorIndex) =>
                           const SizedBox(width: AppSpacing.md),
                       itemBuilder: (context, index) {
                         final entry = teamMissionEntries[index];

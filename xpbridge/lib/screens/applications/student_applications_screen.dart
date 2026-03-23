@@ -223,7 +223,7 @@ class StudentApplicationsScreen extends StatelessWidget {
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: selectedDeliverableType,
+                            initialValue: selectedDeliverableType,
                             decoration: const InputDecoration(
                               labelText: 'Proof type',
                             ),

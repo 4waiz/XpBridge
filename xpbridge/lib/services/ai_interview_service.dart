@@ -9,10 +9,10 @@ class AiInterviewService {
     StudentProfile? student,
     StartupProfile? startup,
   }) {
-    final focusSkills = [
+    final focusSkills = <String>{
       ...?student?.skills.take(2),
       ...?startup?.requiredSkills.take(2),
-    ].toSet().toList();
+    }.toList();
     final roleTitle = application.roleTitle ?? 'this mission';
 
     return [

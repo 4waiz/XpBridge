@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
-import 'xp_premium.dart';
 
 class XPBottomNavBar extends StatelessWidget {
   const XPBottomNavBar({
