@@ -27,7 +27,6 @@ class _StartupAiChatScreenState extends State<StartupAiChatScreen> {
   bool _isVoiceMode = false;
   bool _showQuickActions = true;
   List<StudentProfile> _matchedStudents = [];
-  List<String> _searchedSkills = [];
 
   @override
   void initState() {
@@ -69,6 +68,7 @@ class _StartupAiChatScreenState extends State<StartupAiChatScreen> {
       _isLoading = true;
       _isVoiceMode = false;
       _showQuickActions = false;
+      _matchedStudents = [];
     });
     _messageController.clear();
     _scrollToBottom();
@@ -79,7 +79,6 @@ class _StartupAiChatScreenState extends State<StartupAiChatScreen> {
         _isLoading = false;
         if (AiService.lastMatchedStudents.isNotEmpty) {
           _matchedStudents = AiService.lastMatchedStudents.take(6).toList();
-          _searchedSkills = [];
         }
       });
       _addBotMessage(response);
@@ -191,9 +190,7 @@ class _StartupAiChatScreenState extends State<StartupAiChatScreen> {
                             if (_messages.length == 1) ...[
                               Text(
                                 'Find the right\nstudent faster',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displayMedium
+                                style: Theme.of(context).textTheme.displayMedium
                                     ?.copyWith(
                                       color: AppTheme.surface,
                                       fontSize: 44,

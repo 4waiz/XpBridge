@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -23,7 +22,9 @@ class XPAiShell extends StatelessWidget {
         children: [
           Positioned.fill(
             child: DecoratedBox(
-              decoration: const BoxDecoration(gradient: AppTheme.aiShellGradient),
+              decoration: const BoxDecoration(
+                gradient: AppTheme.aiShellGradient,
+              ),
             ),
           ),
           Positioned(
@@ -111,9 +112,7 @@ class _BlurOrb extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          gradient: RadialGradient(
-            colors: [color, color.withValues(alpha: 0)],
-          ),
+          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
         ),
       ),
     );
@@ -312,9 +311,9 @@ class _XPAiVoiceStateState extends State<XPAiVoiceState>
               Text(
                 widget.subtitle!,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
               ),
             ],
           ],
@@ -510,7 +509,8 @@ class _ComposerCircleButton extends StatelessWidget {
           ),
           boxShadow: shadow,
         ),
-        child: child ??
+        child:
+            child ??
             Icon(icon, size: 20, color: foregroundColor ?? AppTheme.text),
       ),
     );
@@ -523,13 +523,11 @@ class XPAiTextBubble extends StatelessWidget {
     required this.text,
     required this.isUser,
     this.isLoading = false,
-    this.timestamp,
   });
 
   final String text;
   final bool isUser;
   final bool isLoading;
-  final DateTime? timestamp;
 
   @override
   Widget build(BuildContext context) {
@@ -555,15 +553,6 @@ class XPAiTextBubble extends StatelessWidget {
                   height: 1.56,
                 ),
               ),
-            if (timestamp != null) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                _formatTime(timestamp!),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.textSecondary.withValues(alpha: 0.72),
-                ),
-              ),
-            ],
           ],
         ),
       );
@@ -601,12 +590,6 @@ class XPAiTextBubble extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatTime(DateTime value) {
-    final hour = value.hour.toString().padLeft(2, '0');
-    final minute = value.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
   }
 }
 
@@ -686,7 +669,9 @@ class XPAiFloatingResultsDeck extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(30),
                 color: AppTheme.surface.withValues(alpha: 0.12),
-                border: Border.all(color: AppTheme.surface.withValues(alpha: 0.18)),
+                border: Border.all(
+                  color: AppTheme.surface.withValues(alpha: 0.18),
+                ),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(30),
@@ -767,9 +752,12 @@ class _FloatingCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
             decoration: BoxDecoration(
               color:
-                  card.backgroundColor ?? AppTheme.surface.withValues(alpha: 0.7),
+                  card.backgroundColor ??
+                  AppTheme.surface.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: AppTheme.surface.withValues(alpha: 0.54)),
+              border: Border.all(
+                color: AppTheme.surface.withValues(alpha: 0.54),
+              ),
               boxShadow: AppTheme.softShadow,
             ),
             child: Column(
