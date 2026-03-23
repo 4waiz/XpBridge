@@ -22,8 +22,10 @@ class StartupDashboardScreen extends StatefulWidget {
 
 class _StartupDashboardScreenState extends State<StartupDashboardScreen>
     with SingleTickerProviderStateMixin {
+  final TextEditingController _searchController = TextEditingController();
   late TabController _tabController;
   String? _selectedSkill;
+  String _query = '';
   bool _statsExpanded = true;
 
   @override
@@ -34,6 +36,7 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
 
   @override
   void dispose() {
+    _searchController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -42,7 +45,22 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
     var students = DummyData.students;
 
     if (_selectedSkill != null) {
-      students = students.where((student) => student.skills.contains(_selectedSkill)).toList();
+      students = students
+          .where((student) => student.skills.contains(_selectedSkill))
+          .toList();
+    }
+
+    if (_query.trim().isNotEmpty) {
+      final query = _query.trim().toLowerCase();
+      students = students.where((student) {
+        final haystack = [
+          student.name,
+          student.education ?? '',
+          student.bio ?? '',
+          ...student.skills,
+        ].join(' ').toLowerCase();
+        return haystack.contains(query);
+      }).toList();
     }
 
     return students;
@@ -50,7 +68,10 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
 
   Future<void> _markApplicationCompleted(Application application) async {
     final appState = AppStateScope.of(context);
-    await appState.updateApplicationStatus(application.id, ApplicationStatus.completed);
+    await appState.updateApplicationStatus(
+      application.id,
+      ApplicationStatus.completed,
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -64,17 +85,32 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
     final appState = AppStateScope.of(context);
     StudentProfile? student;
     try {
-      student = DummyData.students.firstWhere((s) => s.id == application.studentId);
+      student = DummyData.students.firstWhere(
+        (s) => s.id == application.studentId,
+      );
     } catch (_) {
       student = null;
     }
     final skills = student?.skills ?? [];
-    final strengthsOptions = ['Ownership', 'Communication', 'Craft', 'Collaboration', 'Speed'];
-    final growthOptions = ['Planning', 'Documentation', 'Testing', 'Autonomy', 'Focus'];
+    final strengthsOptions = [
+      'Ownership',
+      'Communication',
+      'Craft',
+      'Collaboration',
+      'Speed',
+    ];
+    final growthOptions = [
+      'Planning',
+      'Documentation',
+      'Testing',
+      'Autonomy',
+      'Focus',
+    ];
 
     int rating = application.mentorRating ?? 0;
-    final feedbackController =
-        TextEditingController(text: application.mentorFeedbackText ?? '');
+    final feedbackController = TextEditingController(
+      text: application.mentorFeedbackText ?? '',
+    );
     final selectedStrengths = <String>{...application.strengths};
     final selectedGrowth = <String>{...application.growthAreas};
     final endorsedSkills = <String>{...application.endorsedSkills};
@@ -111,16 +147,17 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                           height: 5,
                           decoration: BoxDecoration(
                             color: AppTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.pillRadius,
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       Text(
                         'Leave mentor feedback',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
@@ -134,7 +171,9 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                           return IconButton(
                             onPressed: () => setModalState(() => rating = star),
                             icon: Icon(
-                              star <= rating ? Icons.star_rounded : Icons.star_border_rounded,
+                              star <= rating
+                                  ? Icons.star_rounded
+                                  : Icons.star_border_rounded,
                               color: AppTheme.primary,
                             ),
                           );
@@ -143,9 +182,8 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         'Strengths',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Wrap(
@@ -170,9 +208,8 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         'Growth areas',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Wrap(
@@ -197,9 +234,8 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         'Endorse up to 2 skills',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Wrap(
@@ -207,7 +243,8 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                         runSpacing: AppSpacing.sm,
                         children: skills.map((skill) {
                           final selected = endorsedSkills.contains(skill);
-                          final canSelect = selected || endorsedSkills.length < 2;
+                          final canSelect =
+                              selected || endorsedSkills.length < 2;
                           return XPChoiceChip(
                             label: skill,
                             selected: selected,
@@ -229,7 +266,8 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                       XPTextField(
                         controller: feedbackController,
                         labelText: 'Feedback note',
-                        hintText: 'What stood out, and what should they focus on next?',
+                        hintText:
+                            'What stood out, and what should they focus on next?',
                         prefixIcon: Icons.feedback_outlined,
                         maxLines: 4,
                         textCapitalization: TextCapitalization.sentences,
@@ -271,6 +309,102 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
     );
   }
 
+  void _showFiltersSheet(List<String> skillsForFilters) {
+    String? selectedSkill = _selectedSkill;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+              boxShadow: AppTheme.elevatedShadow,
+            ),
+            child: StatefulBuilder(
+              builder: (context, setModalState) {
+                return Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 48,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: AppTheme.cardBackground,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.pillRadius,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Filter students',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: [
+                          XPChoiceChip(
+                            label: 'All skills',
+                            selected: selectedSkill == null,
+                            onSelected: (_) =>
+                                setModalState(() => selectedSkill = null),
+                          ),
+                          ...skillsForFilters.map(
+                            (skill) => XPChoiceChip(
+                              label: skill,
+                              selected: selectedSkill == skill,
+                              onSelected: (_) =>
+                                  setModalState(() => selectedSkill = skill),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: XPOutlinedButton(
+                              label: 'Clear',
+                              onPressed: () =>
+                                  setModalState(() => selectedSkill = null),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: XPButton(
+                              label: 'Apply',
+                              onPressed: () {
+                                setState(() => _selectedSkill = selectedSkill);
+                                Navigator.pop(sheetContext);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
@@ -278,8 +412,9 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
     final startupApplications = startupProfile != null
         ? appState.getApplicationsForStartup(startupProfile.id)
         : <Application>[];
-    final applications =
-        startupApplications.isNotEmpty ? startupApplications : appState.applications;
+    final applications = startupApplications.isNotEmpty
+        ? startupApplications
+        : appState.applications;
     final skillsForFilters = startupProfile?.requiredSkills ?? [];
 
     return Scaffold(
@@ -299,9 +434,21 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
           }
         },
         items: const [
-          XPBottomNavItem(label: 'Talent', icon: Icons.people_outline_rounded, activeIcon: Icons.people_rounded),
-          XPBottomNavItem(label: 'Learners', icon: Icons.inbox_outlined, activeIcon: Icons.inbox_rounded),
-          XPBottomNavItem(label: 'Profile', icon: Icons.business_outlined, activeIcon: Icons.business_rounded),
+          XPBottomNavItem(
+            label: 'Talent',
+            icon: Icons.people_outline_rounded,
+            activeIcon: Icons.people_rounded,
+          ),
+          XPBottomNavItem(
+            label: 'Learners',
+            icon: Icons.inbox_outlined,
+            activeIcon: Icons.inbox_rounded,
+          ),
+          XPBottomNavItem(
+            label: 'Profile',
+            icon: Icons.business_outlined,
+            activeIcon: Icons.business_rounded,
+          ),
         ],
       ),
       body: SafeArea(
@@ -317,7 +464,8 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
               XPDashboardAppBar(
                 eyebrow: startupProfile?.companyName ?? 'Your company',
                 title: 'Find talent',
-                subtitle: 'Review aligned students and manage active learner applications.',
+                subtitle:
+                    'Review aligned students and manage active learner applications.',
                 leading: XPAvatar(
                   initial: (startupProfile?.companyName.isNotEmpty == true
                       ? startupProfile!.companyName[0]
@@ -329,24 +477,48 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) => setState(() => _query = value),
+                      decoration: const InputDecoration(
+                        hintText: 'Search students, skills, or profiles',
+                        prefixIcon: Icon(Icons.search_rounded),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  XPHeaderButton(
+                    icon: Icons.tune_rounded,
+                    onTap: () => _showFiltersSheet(skillsForFilters),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
               XPCard(
                 radius: AppTheme.cornerRadiusLarge,
                 child: Column(
                   children: [
                     InkWell(
-                      onTap: () => setState(() => _statsExpanded = !_statsExpanded),
-                      borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                      onTap: () =>
+                          setState(() => _statsExpanded = !_statsExpanded),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.cornerRadiusLarge,
+                      ),
                       child: Row(
                         children: [
                           Text(
                             'Company snapshot',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const Spacer(),
                           Icon(
-                            _statsExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                            _statsExpanded
+                                ? Icons.expand_less_rounded
+                                : Icons.expand_more_rounded,
                             color: AppTheme.textSecondary,
                           ),
                         ],
@@ -394,13 +566,17 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: AppTheme.cardBackground,
-                        borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.cornerRadiusLarge,
+                        ),
                       ),
                       child: TabBar(
                         controller: _tabController,
                         indicator: BoxDecoration(
                           color: AppTheme.primary,
-                          borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cornerRadiusSmall,
+                          ),
                         ),
                         tabs: [
                           Tab(text: 'Students (${_filteredStudents.length})'),
@@ -419,16 +595,21 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                             onTap: () => setState(() => _selectedSkill = null),
                           ),
                           const SizedBox(width: AppSpacing.sm),
-                          ...skillsForFilters.take(8).map(
-                            (skill) => Padding(
-                              padding: const EdgeInsets.only(right: AppSpacing.sm),
-                              child: XPFilterChip(
-                                label: skill,
-                                isSelected: _selectedSkill == skill,
-                                onTap: () => setState(() => _selectedSkill = skill),
+                          ...skillsForFilters
+                              .take(8)
+                              .map(
+                                (skill) => Padding(
+                                  padding: const EdgeInsets.only(
+                                    right: AppSpacing.sm,
+                                  ),
+                                  child: XPFilterChip(
+                                    label: skill,
+                                    isSelected: _selectedSkill == skill,
+                                    onTap: () =>
+                                        setState(() => _selectedSkill = skill),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -475,14 +656,19 @@ class _DashboardMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     return XPCard(
       backgroundColor: AppTheme.cardBackground,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.md,
+      ),
       child: Column(
         children: [
           Icon(icon, size: 18, color: AppTheme.text),
           const SizedBox(height: AppSpacing.xs),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(label, style: Theme.of(context).textTheme.bodySmall),
@@ -514,16 +700,22 @@ class _BrowseStudentsTab extends StatelessWidget {
                   height: 88,
                   decoration: BoxDecoration(
                     color: AppTheme.primaryLight,
-                    borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.cornerRadiusLarge,
+                    ),
                   ),
-                  child: const Icon(Icons.person_search_rounded, size: 34, color: AppTheme.text),
+                  child: const Icon(
+                    Icons.person_search_rounded,
+                    size: 34,
+                    color: AppTheme.text,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
                   'No students match this filter',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ],
             ),
@@ -537,8 +729,9 @@ class _BrowseStudentsTab extends StatelessWidget {
       itemCount: students.length,
       itemBuilder: (context, index) {
         final student = students[index];
-        final matchedSkills =
-            student.skills.where((skill) => startupSkills.contains(skill)).toList();
+        final matchedSkills = student.skills
+            .where((skill) => startupSkills.contains(skill))
+            .toList();
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.lg),
           child: XPCard(
@@ -561,9 +754,8 @@ class _BrowseStudentsTab extends StatelessWidget {
                         children: [
                           Text(
                             student.name,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           if (student.education?.isNotEmpty == true) ...[
                             const SizedBox(height: AppSpacing.xxs),
@@ -599,8 +791,8 @@ class _BrowseStudentsTab extends StatelessWidget {
                   Text(
                     student.bio!,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.md),
@@ -684,16 +876,22 @@ class _ApplicationsTab extends StatelessWidget {
                   height: 88,
                   decoration: BoxDecoration(
                     color: AppTheme.primaryLight,
-                    borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.cornerRadiusLarge,
+                    ),
                   ),
-                  child: const Icon(Icons.inbox_outlined, size: 34, color: AppTheme.text),
+                  child: const Icon(
+                    Icons.inbox_outlined,
+                    size: 34,
+                    color: AppTheme.text,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
                   'No learner applications yet',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ],
             ),
@@ -707,7 +905,8 @@ class _ApplicationsTab extends StatelessWidget {
       itemCount: applications.length,
       itemBuilder: (context, index) {
         final application = applications[index];
-        final canMarkCompleted = application.status != ApplicationStatus.completed;
+        final canMarkCompleted =
+            application.status != ApplicationStatus.completed;
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.lg),
           child: XPCard(
@@ -726,9 +925,8 @@ class _ApplicationsTab extends StatelessWidget {
                         children: [
                           Text(
                             application.studentName,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: AppSpacing.xxs),
                           Text(
@@ -740,7 +938,9 @@ class _ApplicationsTab extends StatelessWidget {
                     ),
                     XPBadge(
                       label: _statusLabel(application.status),
-                      color: _statusColor(application.status).withValues(alpha: 0.16),
+                      color: _statusColor(
+                        application.status,
+                      ).withValues(alpha: 0.16),
                       textColor: _statusColor(application.status),
                     ),
                   ],
@@ -751,8 +951,8 @@ class _ApplicationsTab extends StatelessWidget {
                     child: Text(
                       application.message!,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -766,9 +966,8 @@ class _ApplicationsTab extends StatelessWidget {
                       children: [
                         Text(
                           'Reflection submitted',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         if (application.reflectionDid?.isNotEmpty == true) ...[
                           const SizedBox(height: AppSpacing.xs),
@@ -797,7 +996,9 @@ class _ApplicationsTab extends StatelessWidget {
                             ? Icons.check_circle_outline_rounded
                             : Icons.check_circle_rounded,
                         size: XPButtonSize.medium,
-                        onPressed: canMarkCompleted ? () => onMarkCompleted(application) : null,
+                        onPressed: canMarkCompleted
+                            ? () => onMarkCompleted(application)
+                            : null,
                       ),
                     ),
                   ],

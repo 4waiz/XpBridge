@@ -160,7 +160,9 @@ class AppTheme {
           foregroundColor: text,
           disabledBackgroundColor: cardBackground,
           disabledForegroundColor: textMuted,
-          textStyle: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          textStyle: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(pillRadius),
           ),
@@ -174,7 +176,9 @@ class AppTheme {
           foregroundColor: text,
           side: const BorderSide(color: border),
           backgroundColor: surface,
-          textStyle: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          textStyle: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(pillRadius),
           ),
@@ -208,7 +212,10 @@ class AppTheme {
         labelStyle: textTheme.bodyMedium?.copyWith(color: textSecondary),
         helperStyle: textTheme.bodySmall?.copyWith(color: textSecondary),
         errorStyle: textTheme.bodySmall?.copyWith(color: error),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(fieldRadius),
           borderSide: const BorderSide(color: Colors.transparent),
@@ -219,15 +226,24 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(fieldRadius),
-          borderSide: BorderSide(color: primary.withValues(alpha: 0.45), width: 1.2),
+          borderSide: BorderSide(
+            color: primary.withValues(alpha: 0.45),
+            width: 1.2,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(fieldRadius),
-          borderSide: BorderSide(color: error.withValues(alpha: 0.3), width: 1.2),
+          borderSide: BorderSide(
+            color: error.withValues(alpha: 0.3),
+            width: 1.2,
+          ),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(fieldRadius),
-          borderSide: BorderSide(color: error.withValues(alpha: 0.6), width: 1.2),
+          borderSide: BorderSide(
+            color: error.withValues(alpha: 0.6),
+            width: 1.2,
+          ),
         ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
@@ -252,14 +268,18 @@ class AppTheme {
           return states.contains(WidgetState.selected) ? surface : textMuted;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          return states.contains(WidgetState.selected) ? primary : cardBackground;
+          return states.contains(WidgetState.selected)
+              ? primary
+              : cardBackground;
         }),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
         foregroundColor: text,
         elevation: 0,
-        extendedTextStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+        extendedTextStyle: textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(pillRadius),
         ),
@@ -277,57 +297,55 @@ class AppTheme {
         color: primary,
         linearTrackColor: cardBackground,
       ),
-      dividerTheme: const DividerThemeData(
-        color: border,
-        thickness: 1,
-      ),
+      dividerTheme: const DividerThemeData(color: border, thickness: 1),
       tabBarTheme: TabBarThemeData(
         dividerColor: Colors.transparent,
         labelColor: text,
         unselectedLabelColor: textSecondary,
         indicatorSize: TabBarIndicatorSize.tab,
         labelStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
-        unselectedLabelStyle:
-            textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        unselectedLabelStyle: textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 
   static List<BoxShadow> get cardShadow => [
-        BoxShadow(
-          color: text.withValues(alpha: 0.04),
-          blurRadius: 32,
-          offset: const Offset(0, 16),
-          spreadRadius: -18,
-        ),
-      ];
+    BoxShadow(
+      color: text.withValues(alpha: 0.04),
+      blurRadius: 32,
+      offset: const Offset(0, 16),
+      spreadRadius: -18,
+    ),
+  ];
 
   static List<BoxShadow> get elevatedShadow => [
-        BoxShadow(
-          color: text.withValues(alpha: 0.08),
-          blurRadius: 50,
-          offset: const Offset(0, 26),
-          spreadRadius: -24,
-        ),
-      ];
+    BoxShadow(
+      color: text.withValues(alpha: 0.08),
+      blurRadius: 50,
+      offset: const Offset(0, 26),
+      spreadRadius: -24,
+    ),
+  ];
 
   static List<BoxShadow> get softShadow => [
-        BoxShadow(
-          color: text.withValues(alpha: 0.035),
-          blurRadius: 22,
-          offset: const Offset(0, 10),
-          spreadRadius: -12,
-        ),
-      ];
+    BoxShadow(
+      color: text.withValues(alpha: 0.035),
+      blurRadius: 22,
+      offset: const Offset(0, 10),
+      spreadRadius: -12,
+    ),
+  ];
 
   static List<BoxShadow> get floatingShadow => [
-        BoxShadow(
-          color: text.withValues(alpha: 0.07),
-          blurRadius: 40,
-          offset: const Offset(0, 18),
-          spreadRadius: -18,
-        ),
-      ];
+    BoxShadow(
+      color: text.withValues(alpha: 0.07),
+      blurRadius: 40,
+      offset: const Offset(0, 18),
+      spreadRadius: -18,
+    ),
+  ];
 }
 
 class AppSpacing {

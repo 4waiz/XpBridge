@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-
 import '../../app.dart';
 import '../../data/dummy_data.dart';
 import '../../models/application.dart';
@@ -83,8 +81,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                       ? 'Apply for $roleTitle'
                       : 'Apply to ${_startup?.companyName}',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
@@ -170,8 +168,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
       );
     }
 
-    final matchingSkills =
-        startup.requiredSkills.where((skill) => studentSkills.contains(skill)).toList();
+    final matchingSkills = startup.requiredSkills
+        .where((skill) => studentSkills.contains(skill))
+        .toList();
     StartupRole? nextRoleToApply;
     for (final role in startup.openRoles) {
       if (!_appliedRoleTitles.contains(role.title)) {
@@ -183,10 +182,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: XPAppBar(
-        title: startup.companyName,
-        subtitle: startup.industry,
-      ),
+      appBar: XPAppBar(title: startup.companyName, subtitle: startup.industry),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.page,
@@ -208,12 +204,15 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                         height: 74,
                         decoration: BoxDecoration(
                           color: AppTheme.primary,
-                          borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cornerRadiusLarge,
+                          ),
                         ),
                         child: Center(
                           child: Text(
                             startup.companyName[0].toUpperCase(),
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(
                                   color: AppTheme.text,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -232,17 +231,15 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                             const SizedBox(height: AppSpacing.sm),
                             Text(
                               startup.companyName,
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             if (startup.websiteUrl != null) ...[
                               const SizedBox(height: AppSpacing.xs),
                               Text(
                                 startup.websiteUrl!,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppTheme.textSecondary,
-                                    ),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: AppTheme.textSecondary),
                               ),
                             ],
                           ],
@@ -254,8 +251,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                   Text(
                     startup.description,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -273,7 +270,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                       height: 44,
                       decoration: BoxDecoration(
                         color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.cornerRadiusSmall,
+                        ),
                       ),
                       child: const Icon(
                         Icons.check_rounded,
@@ -287,9 +286,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                         children: [
                           Text(
                             'Strong skill match',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: AppSpacing.xxs),
                           Text(
@@ -326,15 +324,18 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                                 children: [
                                   Text(
                                     role.title,
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                        ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w800),
                                   ),
                                   if (role.commitment?.isNotEmpty == true) ...[
                                     const SizedBox(height: AppSpacing.xxs),
                                     Text(
                                       role.commitment!,
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                   ],
                                 ],
@@ -359,12 +360,12 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                           const SizedBox(height: AppSpacing.sm),
                           Text(
                             role.description!,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.textSecondary),
                           ),
                         ],
-                        if (role.estimatedHours != null || role.durationWeeks != null) ...[
+                        if (role.estimatedHours != null ||
+                            role.durationWeeks != null) ...[
                           const SizedBox(height: AppSpacing.sm),
                           Wrap(
                             spacing: AppSpacing.sm,
@@ -409,8 +410,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                 child: Text(
                   startup.projectDetails!,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ),
             ],
@@ -420,13 +421,19 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
       bottomNavigationBar: XPBottomActionBar(
         child: XPButton(
           label: startup.openRoles.isNotEmpty
-              ? (roleCta != null ? 'Apply for ${roleCta.title}' : 'Applications sent')
+              ? (roleCta != null
+                    ? 'Apply for ${roleCta.title}'
+                    : 'Applications sent')
               : (_hasApplied ? 'Application sent' : 'Apply now'),
           icon: startup.openRoles.isNotEmpty
-              ? (roleCta != null ? Icons.work_outline_rounded : Icons.check_circle_rounded)
+              ? (roleCta != null
+                    ? Icons.work_outline_rounded
+                    : Icons.check_circle_rounded)
               : (_hasApplied ? Icons.check_circle_rounded : Icons.send_rounded),
           onPressed: startup.openRoles.isNotEmpty
-              ? (roleCta != null ? () => _showApplyDialog(context, role: roleCta) : null)
+              ? (roleCta != null
+                    ? () => _showApplyDialog(context, role: roleCta)
+                    : null)
               : (_hasApplied ? null : () => _showApplyDialog(context)),
         ),
       ),

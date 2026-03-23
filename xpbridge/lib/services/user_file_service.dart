@@ -119,7 +119,8 @@ class UserFileService {
           final storedEmail = parts[0].toLowerCase();
           final storedPassword = parts[1];
 
-          if (storedEmail == email.toLowerCase() && storedPassword == password) {
+          if (storedEmail == email.toLowerCase() &&
+              storedPassword == password) {
             return true;
           }
         }

@@ -47,8 +47,8 @@ class XPAppBar extends StatelessWidget implements PreferredSizeWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: AppSpacing.xxs),
@@ -148,16 +148,15 @@ class XPDashboardAppBar extends StatelessWidget {
                     Text(
                       eyebrow.toUpperCase(),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            letterSpacing: 1.2,
-                            color: AppTheme.textSecondary,
-                          ),
+                        letterSpacing: 1.2,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: AppSpacing.xs),
@@ -211,9 +210,9 @@ class XPAvatar extends StatelessWidget {
         child: Text(
           initial.toUpperCase(),
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
-              ),
+            color: AppTheme.text,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     );
@@ -221,10 +220,7 @@ class XPAvatar extends StatelessWidget {
 }
 
 class XPBottomActionBar extends StatelessWidget {
-  const XPBottomActionBar({
-    super.key,
-    required this.child,
-  });
+  const XPBottomActionBar({super.key, required this.child});
 
   final Widget child;
 

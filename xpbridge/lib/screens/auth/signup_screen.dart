@@ -144,23 +144,23 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: AppSpacing.xl),
               Text(
                 'Create your account',
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'Choose your role, set up your profile, and redesign your path into real experience.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xxl),
               Text(
                 'I am joining as',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: AppSpacing.md),
               Row(
@@ -200,9 +200,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   _roleError!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.error,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.error),
                 ),
               ],
               const SizedBox(height: AppSpacing.xl),
@@ -298,7 +298,9 @@ class _RoleCard extends StatelessWidget {
           color: selected ? AppTheme.primaryLight : AppTheme.surface,
           borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
           border: Border.all(
-            color: selected ? AppTheme.primary.withValues(alpha: 0.3) : AppTheme.border,
+            color: selected
+                ? AppTheme.primary.withValues(alpha: 0.3)
+                : AppTheme.border,
           ),
           boxShadow: selected ? AppTheme.softShadow : AppTheme.cardShadow,
         ),
@@ -312,23 +314,17 @@ class _RoleCard extends StatelessWidget {
                 color: selected ? AppTheme.primary : AppTheme.cardBackground,
                 borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
               ),
-              child: Icon(
-                icon,
-                color: AppTheme.text,
-              ),
+              child: Icon(icon, color: AppTheme.text),
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
       ),

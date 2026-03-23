@@ -14,10 +14,7 @@ class LogoImageService {
     required BuildContext context,
     required ImageSource source,
   }) async {
-    final picked = await _picker.pickImage(
-      source: source,
-      imageQuality: 90,
-    );
+    final picked = await _picker.pickImage(source: source, imageQuality: 90);
     if (picked == null) return null;
 
     final cropped = await ImageCropper().cropImage(
@@ -44,10 +41,7 @@ class LogoImageService {
           aspectRatioPickerButtonHidden: true,
           aspectRatioPresets: const [CropAspectRatioPreset.square],
         ),
-        WebUiSettings(
-          context: context,
-          presentStyle: WebPresentStyle.dialog,
-        ),
+        WebUiSettings(context: context, presentStyle: WebPresentStyle.dialog),
       ],
     );
 

@@ -11,8 +11,7 @@ import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
 import '../../widgets/xp_chip.dart';
-
-enum AiState { idle, thinking, responding, error }
+import '../../widgets/xp_section_title.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -29,7 +28,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
   bool _isLoading = false;
   bool _showMatchedRoles = false;
   bool _isInitialized = false;
-  AiState _aiState = AiState.idle;
   bool _showQuickActions = true;
 
   @override
@@ -98,7 +96,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ),
       );
       _isLoading = true;
-      _aiState = AiState.thinking;
     });
 
     _controller.clear();
@@ -115,7 +112,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
           isLoading: true,
         ),
       );
-      _aiState = AiState.responding;
     });
     _scrollToBottom();
 
@@ -133,7 +129,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
         );
         _isLoading = false;
-        _aiState = AiState.idle;
       });
 
       final recommendedRoles = AiService.extractRecommendedRoles(response);
@@ -162,10 +157,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
         );
         _isLoading = false;
-        _aiState = AiState.error;
-      });
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) setState(() => _aiState = AiState.idle);
       });
     }
 
@@ -180,7 +171,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
       _showMatchedRoles = false;
       _isInitialized = false;
       _showQuickActions = true;
-      _aiState = AiState.idle;
     });
     _initializeChat();
   }
@@ -209,21 +199,26 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       AppSpacing.page,
                       AppSpacing.md,
                     ),
-                    itemCount: _messages.length +
+                    itemCount:
+                        _messages.length +
                         (_showQuickActions && _messages.length == 1 ? 1 : 0) +
                         (_showMatchedRoles ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (_showQuickActions && _messages.length == 1 && index == 1) {
-                        return _QuickActions(
-                          onTap: _sendMessage,
-                        );
+                      if (_showQuickActions &&
+                          _messages.length == 1 &&
+                          index == 1) {
+                        return _QuickActions(onTap: _sendMessage);
                       }
 
-                      final adjustedIndex = _showQuickActions && _messages.length == 1 && index > 0
+                      final adjustedIndex =
+                          _showQuickActions &&
+                              _messages.length == 1 &&
+                              index > 0
                           ? index - 1
                           : index;
 
-                      if (_showMatchedRoles && adjustedIndex == _messages.length) {
+                      if (_showMatchedRoles &&
+                          adjustedIndex == _messages.length) {
                         return _MatchedRolesSection(matches: _matchedRoles);
                       }
 
@@ -283,9 +278,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({
-    required this.onTap,
-  });
+  const _QuickActions({required this.onTap});
 
   final Future<void> Function(String) onTap;
 
@@ -359,9 +352,8 @@ class _MatchedRolesSection extends StatelessWidget {
                             children: [
                               Text(
                                 match.role.title,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(height: AppSpacing.xxs),
                               Text(

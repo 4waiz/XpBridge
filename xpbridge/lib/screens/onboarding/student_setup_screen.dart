@@ -37,7 +37,8 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
     super.dispose();
   }
 
-  bool get _canContinue => _nameController.text.trim().isNotEmpty && _skills.length >= 2;
+  bool get _canContinue =>
+      _nameController.text.trim().isNotEmpty && _skills.length >= 2;
 
   Future<void> _saveProfile() async {
     if (!_canContinue) return;
@@ -51,10 +52,14 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
       name: _nameController.text,
       email: email,
       bio: _bioController.text.isNotEmpty ? _bioController.text : null,
-      education: _educationController.text.isNotEmpty ? _educationController.text : null,
+      education: _educationController.text.isNotEmpty
+          ? _educationController.text
+          : null,
       skills: _skills.toList(),
       availabilityHours: _hours,
-      portfolioUrl: _portfolioController.text.isNotEmpty ? _portfolioController.text : null,
+      portfolioUrl: _portfolioController.text.isNotEmpty
+          ? _portfolioController.text
+          : null,
       createdAt: DateTime.now(),
       xpPoints: 0,
       level: 1,
@@ -100,9 +105,8 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
                       children: [
                         Text(
                           'Build your profile',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: AppSpacing.xxs),
                         Text(
@@ -182,7 +186,8 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
                         children: [
                           XPSectionTitle(
                             title: 'Skills',
-                            subtitle: 'Select between 2 and 4 areas you want to be matched on.',
+                            subtitle:
+                                'Select between 2 and 4 areas you want to be matched on.',
                             actionLabel: '${_skills.length}/4',
                           ),
                           const SizedBox(height: AppSpacing.lg),
@@ -217,7 +222,8 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
                         children: [
                           const XPSectionTitle(
                             title: 'Availability',
-                            subtitle: 'Let startups know how much time you can give each week.',
+                            subtitle:
+                                'Let startups know how much time you can give each week.',
                           ),
                           const SizedBox(height: AppSpacing.lg),
                           XPCard(
@@ -229,9 +235,8 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
                               children: [
                                 Text(
                                   '${_hours.round()} hours / week',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
                                 Slider(
@@ -240,7 +245,8 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
                                   divisions: 23,
                                   value: _hours,
                                   label: '${_hours.round()} hrs',
-                                  onChanged: (value) => setState(() => _hours = value),
+                                  onChanged: (value) =>
+                                      setState(() => _hours = value),
                                 ),
                               ],
                             ),

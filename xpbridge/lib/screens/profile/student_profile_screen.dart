@@ -8,7 +8,6 @@ import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_card.dart';
 import '../../widgets/xp_chip.dart';
-import '../../widgets/xp_section_title.dart';
 
 class StudentProfileScreen extends StatelessWidget {
   const StudentProfileScreen({super.key});
@@ -65,8 +64,9 @@ class StudentProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final profile = appState.studentProfile;
-    final applications =
-        profile != null ? appState.getApplicationsForStudent(profile.id) : <Application>[];
+    final applications = profile != null
+        ? appState.getApplicationsForStudent(profile.id)
+        : <Application>[];
     final reflections = applications
         .where(
           (app) =>
@@ -77,13 +77,15 @@ class StudentProfileScreen extends StatelessWidget {
     final feedbackEntries = applications
         .where(
           (app) =>
-              app.mentorRating != null || app.mentorFeedbackText?.isNotEmpty == true,
+              app.mentorRating != null ||
+              app.mentorFeedbackText?.isNotEmpty == true,
         )
         .toList();
     final portfolioItems = applications
         .where(
           (app) =>
-              (app.status == ApplicationStatus.completed || app.completedAt != null) &&
+              (app.status == ApplicationStatus.completed ||
+                  app.completedAt != null) &&
               app.deliverableUrl?.isNotEmpty == true,
         )
         .toList();
@@ -125,8 +127,11 @@ class StudentProfileScreen extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        profile?.name.isNotEmpty == true ? profile!.name[0].toUpperCase() : '?',
-                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        profile?.name.isNotEmpty == true
+                            ? profile!.name[0].toUpperCase()
+                            : '?',
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(
                               color: AppTheme.text,
                               fontWeight: FontWeight.w800,
                             ),
@@ -137,12 +142,15 @@ class StudentProfileScreen extends StatelessWidget {
                   Text(
                     profile?.name ?? 'Student',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   if (profile?.education?.isNotEmpty == true) ...[
                     const SizedBox(height: AppSpacing.xs),
-                    Text(profile!.education!, style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      profile!.education!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   Row(
@@ -155,9 +163,8 @@ class StudentProfileScreen extends StatelessWidget {
                             children: [
                               Text(
                                 'L$level',
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(height: AppSpacing.xxs),
                               const Text('Current level'),
@@ -174,9 +181,8 @@ class StudentProfileScreen extends StatelessWidget {
                             children: [
                               Text(
                                 '$xpPoints',
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(height: AppSpacing.xxs),
                               const Text('XP earned'),
@@ -205,8 +211,8 @@ class StudentProfileScreen extends StatelessWidget {
                 child: Text(
                   profile!.bio!,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ),
             ],
@@ -217,7 +223,9 @@ class StudentProfileScreen extends StatelessWidget {
                 child: Wrap(
                   spacing: AppSpacing.sm,
                   runSpacing: AppSpacing.sm,
-                  children: profile!.skills.map((skill) => XPSkillTag(label: skill)).toList(),
+                  children: profile!.skills
+                      .map((skill) => XPSkillTag(label: skill))
+                      .toList(),
                 ),
               ),
             ],
@@ -236,9 +244,8 @@ class StudentProfileScreen extends StatelessWidget {
                           children: [
                             Text(
                               '${app.roleTitle ?? 'Mission'} • ${app.startupName}',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             if (app.reflectionDid?.isNotEmpty == true) ...[
                               const SizedBox(height: AppSpacing.xs),
@@ -284,9 +291,8 @@ class StudentProfileScreen extends StatelessWidget {
                           children: [
                             Text(
                               '${app.roleTitle ?? 'Mission'} • ${app.startupName}',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             if (app.mentorRating != null) ...[
                               const SizedBox(height: AppSpacing.xs),
@@ -316,7 +322,12 @@ class StudentProfileScreen extends StatelessWidget {
                                 spacing: AppSpacing.xs,
                                 runSpacing: AppSpacing.xs,
                                 children: app.endorsedSkills
-                                    .map((skill) => XPSkillTag(label: skill, isMatched: true))
+                                    .map(
+                                      (skill) => XPSkillTag(
+                                        label: skill,
+                                        isMatched: true,
+                                      ),
+                                    )
                                     .toList(),
                               ),
                             ],
@@ -343,12 +354,14 @@ class StudentProfileScreen extends StatelessWidget {
                           children: [
                             Text(
                               app.roleTitle ?? 'Mission',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             const SizedBox(height: AppSpacing.xxs),
-                            Text(app.startupName, style: Theme.of(context).textTheme.bodySmall),
+                            Text(
+                              app.startupName,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                             const SizedBox(height: AppSpacing.sm),
                             XPBadge(
                               label: app.deliverableUrl ?? '',
@@ -376,10 +389,12 @@ class StudentProfileScreen extends StatelessWidget {
                 title: Text(
                   'Share XP updates',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                subtitle: const Text('Show my first name in the XP community feed'),
+                subtitle: const Text(
+                  'Show my first name in the XP community feed',
+                ),
                 contentPadding: EdgeInsets.zero,
               ),
             ),
@@ -387,7 +402,8 @@ class StudentProfileScreen extends StatelessWidget {
             XPSection(
               title: 'Availability',
               child: XPBadge(
-                label: '${profile?.availabilityHours.round() ?? 0} hours per week',
+                label:
+                    '${profile?.availabilityHours.round() ?? 0} hours per week',
                 icon: Icons.schedule_rounded,
                 color: AppTheme.primaryLight,
               ),

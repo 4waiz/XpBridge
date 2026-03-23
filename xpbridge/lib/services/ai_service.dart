@@ -7,9 +7,12 @@ import '../data/dummy_data.dart';
 
 class AiService {
   // Constants
-  static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+  static const String _baseUrl =
+      'https://generativelanguage.googleapis.com/v1beta';
   static const String _model = 'gemini-2.5-flash';
-  static const Map<String, String> _headers = {'Content-Type': 'application/json'};
+  static const Map<String, String> _headers = {
+    'Content-Type': 'application/json',
+  };
 
   // State
   static String? _apiKey;
@@ -77,21 +80,23 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
       'function_declarations': [
         {
           'name': 'search_students',
-          'description': 'Search for students based on their skills. Call this function whenever the user mentions any skills, technologies, or job roles they are looking for.',
+          'description':
+              'Search for students based on their skills. Call this function whenever the user mentions any skills, technologies, or job roles they are looking for.',
           'parameters': {
             'type': 'object',
             'properties': {
               'skills': {
                 'type': 'array',
                 'items': {'type': 'string'},
-                'description': 'List of skills to search for (e.g., ["Flutter", "React", "Python", "UI/UX"])'
-              }
+                'description':
+                    'List of skills to search for (e.g., ["Flutter", "React", "Python", "UI/UX"])',
+              },
             },
-            'required': ['skills']
-          }
-        }
-      ]
-    }
+            'required': ['skills'],
+          },
+        },
+      ],
+    },
   ];
 
   // Initialization
@@ -111,24 +116,26 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
 
   // Helper methods
   static Uri _buildUrl([String? suffix]) => Uri.parse(
-    '$_baseUrl/models/$_model:generateContent?key=$_apiKey${suffix ?? ''}'
+    '$_baseUrl/models/$_model:generateContent?key=$_apiKey${suffix ?? ''}',
   );
 
   static Map<String, dynamic> _createMessage(String role, String text) => {
     'role': role,
-    'parts': [{'text': text}]
+    'parts': [
+      {'text': text},
+    ],
   };
 
-  static Map<String, dynamic> _createGenerationConfig(int maxTokens, {double temperature = 0.7}) => {
-    'temperature': temperature,
-    'maxOutputTokens': maxTokens,
-  };
+  static Map<String, dynamic> _createGenerationConfig(
+    int maxTokens, {
+    double temperature = 0.7,
+  }) => {'temperature': temperature, 'maxOutputTokens': maxTokens};
 
   static String? _extractTextFromResponse(Map<String, dynamic> data) =>
-    data['candidates']?[0]?['content']?['parts']?[0]?['text'];
+      data['candidates']?[0]?['content']?['parts']?[0]?['text'];
 
   static Future<http.Response> _post(Uri url, Map<String, dynamic> body) =>
-    http.post(url, headers: _headers, body: jsonEncode(body));
+      http.post(url, headers: _headers, body: jsonEncode(body));
 
   // Reset methods
   static void resetChat() => _chatHistory.clear();
@@ -157,7 +164,10 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
     }
   }
 
-  static Future<String> sendMessageWithContext(String message, StudentProfile? profile) async {
+  static Future<String> sendMessageWithContext(
+    String message,
+    StudentProfile? profile,
+  ) async {
     await _ensureInitialized();
 
     final fullMessage = (_chatHistory.isEmpty && profile != null)
@@ -174,7 +184,8 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
     }
   }
 
-  static String _buildStudentContext(StudentProfile profile, String message) => '''
+  static String _buildStudentContext(StudentProfile profile, String message) =>
+      '''
 [Student Profile Context - Use this to personalize your advice]
 Name: ${profile.name}
 Education: ${profile.education ?? 'Not specified'}
@@ -193,7 +204,12 @@ Now respond to their message: $message
 
   static Future<String> _callGeminiApi() async {
     final contents = _chatHistory.length == 1
-        ? [_createMessage('user', '$_studentSystemPrompt\n\n${_chatHistory.first['parts'][0]['text']}')]
+        ? [
+            _createMessage(
+              'user',
+              '$_studentSystemPrompt\n\n${_chatHistory.first['parts'][0]['text']}',
+            ),
+          ]
         : List<Map<String, dynamic>>.from(_chatHistory);
 
     final response = await _post(_buildUrl(), {
@@ -203,17 +219,25 @@ Now respond to their message: $message
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final text = _extractTextFromResponse(data) ?? 'Sorry, I could not generate a response.';
+      final text =
+          _extractTextFromResponse(data) ??
+          'Sorry, I could not generate a response.';
       _chatHistory.add(_createMessage('model', text));
       return text;
     } else {
       final error = jsonDecode(response.body);
-      throw Exception(error['error']?['message'] ?? 'API request failed: ${response.statusCode}');
+      throw Exception(
+        error['error']?['message'] ??
+            'API request failed: ${response.statusCode}',
+      );
     }
   }
 
   // Startup chat methods
-  static Future<String> sendMessageForStartup(String message, StartupProfile? profile) async {
+  static Future<String> sendMessageForStartup(
+    String message,
+    StartupProfile? profile,
+  ) async {
     await _ensureInitialized();
 
     final fullMessage = (_startupChatHistory.isEmpty && profile != null)
@@ -230,7 +254,8 @@ Now respond to their message: $message
     }
   }
 
-  static String _buildStartupContext(StartupProfile profile, String message) => '''
+  static String _buildStartupContext(StartupProfile profile, String message) =>
+      '''
 [Startup Profile Context]
 Company: ${profile.companyName}
 Industry: ${profile.industry}
@@ -244,7 +269,12 @@ Help this startup find suitable student talent. Respond to: $message
     final url = _buildUrl();
 
     final contents = _startupChatHistory.length == 1
-        ? [_createMessage('user', '$_startupSystemPrompt\n\n${_startupChatHistory.first['parts'][0]['text']}')]
+        ? [
+            _createMessage(
+              'user',
+              '$_startupSystemPrompt\n\n${_startupChatHistory.first['parts'][0]['text']}',
+            ),
+          ]
         : List<Map<String, dynamic>>.from(_startupChatHistory);
 
     final response = await _post(url, {
@@ -255,7 +285,10 @@ Help this startup find suitable student talent. Respond to: $message
 
     if (response.statusCode != 200) {
       final error = jsonDecode(response.body);
-      throw Exception(error['error']?['message'] ?? 'API request failed: ${response.statusCode}');
+      throw Exception(
+        error['error']?['message'] ??
+            'API request failed: ${response.statusCode}',
+      );
     }
 
     final data = jsonDecode(response.body);
@@ -277,14 +310,19 @@ Help this startup find suitable student talent. Respond to: $message
     return text;
   }
 
-  static Future<String> _handleFunctionCall(Uri url, Map<String, dynamic> functionCall) async {
+  static Future<String> _handleFunctionCall(
+    Uri url,
+    Map<String, dynamic> functionCall,
+  ) async {
     final skills = List<String>.from(functionCall['args']['skills'] ?? []);
     final searchResults = _executeSearchStudents(skills);
     lastMatchedStudents = searchResults;
 
     _startupChatHistory.add({
       'role': 'model',
-      'parts': [{'functionCall': functionCall}]
+      'parts': [
+        {'functionCall': functionCall},
+      ],
     });
 
     return await _getFinalResponseWithResults(url, searchResults, functionCall);
@@ -294,12 +332,15 @@ Help this startup find suitable student talent. Respond to: $message
     final skillsLower = skills.map((s) => s.toLowerCase()).toList();
 
     final matches = DummyData.students.where((student) {
-      final studentSkillsLower = student.skills.map((s) => s.toLowerCase()).toList();
-      return skillsLower.any((skill) =>
-        studentSkillsLower.any((s) => s.contains(skill) || skill.contains(s))
+      final studentSkillsLower = student.skills
+          .map((s) => s.toLowerCase())
+          .toList();
+      return skillsLower.any(
+        (skill) => studentSkillsLower.any(
+          (s) => s.contains(skill) || skill.contains(s),
+        ),
       );
-    }).toList()
-      ..sort((a, b) => b.xpPoints.compareTo(a.xpPoints));
+    }).toList()..sort((a, b) => b.xpPoints.compareTo(a.xpPoints));
 
     return matches.take(10).toList();
   }
@@ -311,16 +352,23 @@ Help this startup find suitable student talent. Respond to: $message
   ) async {
     final resultSummary = results.isEmpty
         ? 'No students found matching those skills.'
-        : results.map((s) => '${s.name}: ${s.skills.take(4).join(", ")} (${s.xpPoints} XP)').join('\n');
+        : results
+              .map(
+                (s) =>
+                    '${s.name}: ${s.skills.take(4).join(", ")} (${s.xpPoints} XP)',
+              )
+              .join('\n');
 
     _startupChatHistory.add({
       'role': 'user',
-      'parts': [{
-        'functionResponse': {
-          'name': functionCall['name'],
-          'response': {'count': results.length, 'students': resultSummary}
-        }
-      }]
+      'parts': [
+        {
+          'functionResponse': {
+            'name': functionCall['name'],
+            'response': {'count': results.length, 'students': resultSummary},
+          },
+        },
+      ],
     });
 
     final response = await _post(url, {
@@ -330,8 +378,9 @@ Help this startup find suitable student talent. Respond to: $message
     });
 
     if (response.statusCode == 200) {
-      final text = _extractTextFromResponse(jsonDecode(response.body))
-          ?? 'Found ${results.length} matching students!';
+      final text =
+          _extractTextFromResponse(jsonDecode(response.body)) ??
+          'Found ${results.length} matching students!';
       _startupChatHistory.add(_createMessage('model', text));
       return text;
     }
@@ -341,7 +390,8 @@ Help this startup find suitable student talent. Respond to: $message
 
   static List<String> extractRecommendedRoles(String response) {
     final roleRegex = RegExp(r'\*\*([^*]+)\*\*');
-    return response.split('\n')
+    return response
+        .split('\n')
         .map((line) => roleRegex.firstMatch(line)?.group(1)?.trim())
         .whereType<String>()
         .toList();

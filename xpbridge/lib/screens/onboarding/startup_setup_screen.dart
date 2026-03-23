@@ -112,9 +112,12 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
       industry: _selectedIndustry!,
       requiredSkills: _requiredSkills.toList(),
       openRoles: _openRoles.toList(),
-      websiteUrl: _websiteController.text.isNotEmpty ? _websiteController.text : null,
-      projectDetails:
-          _projectDetailsController.text.isNotEmpty ? _projectDetailsController.text : null,
+      websiteUrl: _websiteController.text.isNotEmpty
+          ? _websiteController.text
+          : null,
+      projectDetails: _projectDetailsController.text.isNotEmpty
+          ? _projectDetailsController.text
+          : null,
       createdAt: DateTime.now(),
     );
 
@@ -161,9 +164,8 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                       children: [
                         Text(
                           'Set up your startup',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: AppSpacing.xxs),
                         Text(
@@ -227,7 +229,8 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                           XPTextField(
                             controller: _projectDetailsController,
                             labelText: 'Project details',
-                            hintText: 'What kind of work or learning opportunity are you offering?',
+                            hintText:
+                                'What kind of work or learning opportunity are you offering?',
                             prefixIcon: Icons.lightbulb_outline_rounded,
                             maxLines: 4,
                             textCapitalization: TextCapitalization.sentences,
@@ -243,7 +246,8 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                         children: [
                           XPSectionTitle(
                             title: 'Industry',
-                            subtitle: 'Pick the category that best fits your company.',
+                            subtitle:
+                                'Pick the category that best fits your company.',
                             actionLabel: _selectedIndustry,
                           ),
                           const SizedBox(height: AppSpacing.lg),
@@ -270,7 +274,8 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                         children: [
                           XPSectionTitle(
                             title: 'Required skills',
-                            subtitle: 'Select between 2 and 4 skills students should have.',
+                            subtitle:
+                                'Select between 2 and 4 skills students should have.',
                             actionLabel: '${_requiredSkills.length}/4',
                           ),
                           const SizedBox(height: AppSpacing.lg),
@@ -305,7 +310,8 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                         children: [
                           const XPSectionTitle(
                             title: 'Open roles',
-                            subtitle: 'Draft roles students can apply for right away.',
+                            subtitle:
+                                'Draft roles students can apply for right away.',
                           ),
                           const SizedBox(height: AppSpacing.lg),
                           XPTextField(
@@ -380,40 +386,54 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                             Column(
                               children: _openRoles.map((role) {
                                 return Padding(
-                                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.md,
+                                  ),
                                   child: XPCard(
-                                    padding: const EdgeInsets.all(AppSpacing.lg),
+                                    padding: const EdgeInsets.all(
+                                      AppSpacing.lg,
+                                    ),
                                     backgroundColor: AppTheme.cardBackground,
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           role.title,
                                           style: Theme.of(context)
                                               .textTheme
                                               .titleMedium
-                                              ?.copyWith(fontWeight: FontWeight.w800),
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                              ),
                                         ),
                                         if (role.commitment != null) ...[
                                           const SizedBox(height: AppSpacing.xs),
                                           Text(
                                             role.commitment!,
-                                            style: Theme.of(context).textTheme.bodySmall,
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.bodySmall,
                                           ),
                                         ],
                                         const SizedBox(height: AppSpacing.sm),
                                         Text(
                                           role.learningOutcome,
-                                          style: Theme.of(context).textTheme.bodyMedium,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodyMedium,
                                         ),
-                                        if (role.description?.isNotEmpty == true) ...[
+                                        if (role.description?.isNotEmpty ==
+                                            true) ...[
                                           const SizedBox(height: AppSpacing.xs),
                                           Text(
                                             role.description!,
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall
-                                                ?.copyWith(color: AppTheme.textSecondary),
+                                                ?.copyWith(
+                                                  color: AppTheme.textSecondary,
+                                                ),
                                           ),
                                         ],
                                       ],

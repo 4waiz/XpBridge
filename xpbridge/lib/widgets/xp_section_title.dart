@@ -42,9 +42,9 @@ class XPSectionTitle extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: AppSpacing.xxs),
@@ -58,9 +58,9 @@ class XPSectionTitle extends StatelessWidget {
             onPressed: onActionTap,
             child: Text(
               actionLabel!,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: AppTheme.textSecondary),
             ),
           ),
       ],
@@ -84,10 +84,7 @@ class XPDivider extends StatelessWidget {
         const Expanded(child: Divider()),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: Text(
-            label!,
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
+          child: Text(label!, style: Theme.of(context).textTheme.labelSmall),
         ),
         const Expanded(child: Divider()),
       ],

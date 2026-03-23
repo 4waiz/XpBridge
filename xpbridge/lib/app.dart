@@ -115,7 +115,10 @@ class AppState extends ChangeNotifier {
         try {
           final decoded = jsonDecode(rolesJson) as List<dynamic>;
           roles = decoded
-              .map((item) => StartupRole.fromMap(Map<String, dynamic>.from(item as Map)))
+              .map(
+                (item) =>
+                    StartupRole.fromMap(Map<String, dynamic>.from(item as Map)),
+              )
               .toList();
         } catch (_) {
           roles = [];
@@ -178,9 +181,8 @@ class AppState extends ChangeNotifier {
         final decodedEvents = jsonDecode(storedEvents) as List<dynamic>;
         _eventLog = decodedEvents
             .map(
-              (item) => EventLogEntry.fromMap(
-                Map<String, dynamic>.from(item as Map),
-              ),
+              (item) =>
+                  EventLogEntry.fromMap(Map<String, dynamic>.from(item as Map)),
             )
             .toList();
       } catch (_) {
@@ -192,9 +194,8 @@ class AppState extends ChangeNotifier {
         final decoded = jsonDecode(stored) as List<dynamic>;
         _applications = decoded
             .map(
-              (item) => Application.fromMap(
-                Map<String, dynamic>.from(item as Map),
-              ),
+              (item) =>
+                  Application.fromMap(Map<String, dynamic>.from(item as Map)),
             )
             .toList();
       } catch (_) {
@@ -267,7 +268,8 @@ class AppState extends ChangeNotifier {
     if (completedCount > 0) {
       xp += 50; // first completion bonus
     }
-    xp += completed
+    xp +=
+        completed
             .where(
               (app) =>
                   app.reflectionDid?.isNotEmpty == true ||
@@ -275,7 +277,8 @@ class AppState extends ChangeNotifier {
             )
             .length *
         15;
-    xp += completed
+    xp +=
+        completed
             .where(
               (app) =>
                   app.mentorRating != null ||

@@ -45,10 +45,15 @@ class XPBottomNavBar extends StatelessWidget {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
                       curve: Curves.easeOut,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: isActive ? AppTheme.primary : Colors.transparent,
-                        borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.cornerRadiusSmall,
+                        ),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -56,15 +61,22 @@ class XPBottomNavBar extends StatelessWidget {
                           Icon(
                             isActive ? item.activeIcon ?? item.icon : item.icon,
                             size: 20,
-                            color: isActive ? AppTheme.text : AppTheme.textMuted,
+                            color: isActive
+                                ? AppTheme.text
+                                : AppTheme.textMuted,
                           ),
                           const SizedBox(height: 6),
                           Text(
                             item.label,
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: isActive ? AppTheme.text : AppTheme.textMuted,
-                                  fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: isActive
+                                      ? AppTheme.text
+                                      : AppTheme.textMuted,
+                                  fontWeight: isActive
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
                                 ),
                           ),
                         ],

@@ -182,7 +182,9 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                       height: 5,
                       decoration: BoxDecoration(
                         color: AppTheme.cardBackground,
-                        borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.pillRadius,
+                        ),
                       ),
                     ),
                   ),
@@ -190,8 +192,8 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                   Text(
                     'Add a role',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   XPTextField(
@@ -261,14 +263,17 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                         return;
                       }
                       final hours = int.tryParse(hoursController.text.trim());
-                      final duration = int.tryParse(durationController.text.trim());
+                      final duration = int.tryParse(
+                        durationController.text.trim(),
+                      );
 
                       final role = StartupRole(
                         title: title,
                         commitment: commitmentController.text.trim().isNotEmpty
                             ? commitmentController.text.trim()
                             : null,
-                        description: descriptionController.text.trim().isNotEmpty
+                        description:
+                            descriptionController.text.trim().isNotEmpty
                             ? descriptionController.text.trim()
                             : null,
                         learningOutcome: outcome,
@@ -339,7 +344,9 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                         height: 118,
                         decoration: BoxDecoration(
                           color: AppTheme.primary,
-                          borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cornerRadiusLarge,
+                          ),
                           image: logoBytes != null
                               ? DecorationImage(
                                   image: MemoryImage(logoBytes),
@@ -354,7 +361,10 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                                   profile?.companyName.isNotEmpty == true
                                       ? profile!.companyName[0].toUpperCase()
                                       : '?',
-                                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .displaySmall
+                                      ?.copyWith(
                                         color: AppTheme.text,
                                         fontWeight: FontWeight.w800,
                                       ),
@@ -370,7 +380,9 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                                 AppTheme.cornerRadiusLarge,
                               ),
                             ),
-                            child: const Center(child: CircularProgressIndicator()),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
                           ),
                         ),
                       if (profile != null)
@@ -389,8 +401,8 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                     profile?.companyName ?? 'Company',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   XPBadge(
@@ -405,9 +417,9 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
               title: 'About company',
               child: Text(
                 profile?.description ?? 'No description',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondary),
               ),
             ),
             if (profile?.websiteUrl?.isNotEmpty == true) ...[
@@ -441,8 +453,8 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                 child: Text(
                   profile!.projectDetails!,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ),
             ],
@@ -468,15 +480,16 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                               children: [
                                 Text(
                                   role.title,
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                                 if (role.commitment?.isNotEmpty == true) ...[
                                   const SizedBox(height: AppSpacing.xs),
                                   Text(
                                     role.commitment!,
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                 ],
                                 const SizedBox(height: AppSpacing.sm),
@@ -488,10 +501,10 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                                   const SizedBox(height: AppSpacing.xs),
                                   Text(
                                     role.description!,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(color: AppTheme.textSecondary),
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                        ),
                                   ),
                                 ],
                                 if (role.estimatedHours != null ||

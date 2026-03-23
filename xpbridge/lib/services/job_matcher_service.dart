@@ -82,8 +82,11 @@ class JobMatcherService {
     // Check skill overlap
     if (userSkills != null && userSkills.isNotEmpty) {
       final matchingSkills = userSkills
-          .where((skill) => startup.requiredSkills
-              .any((req) => req.toLowerCase() == skill.toLowerCase()))
+          .where(
+            (skill) => startup.requiredSkills.any(
+              (req) => req.toLowerCase() == skill.toLowerCase(),
+            ),
+          )
           .toList();
 
       if (matchingSkills.isNotEmpty) {
@@ -108,8 +111,18 @@ class JobMatcherService {
   static List<String> _extractKeywords(String text) {
     // Common job-related keywords to look for
     final commonWords = {
-      'intern', 'junior', 'senior', 'lead', 'manager',
-      'the', 'a', 'an', 'and', 'or', 'for', 'with',
+      'intern',
+      'junior',
+      'senior',
+      'lead',
+      'manager',
+      'the',
+      'a',
+      'an',
+      'and',
+      'or',
+      'for',
+      'with',
     };
 
     return text
@@ -123,20 +136,26 @@ class JobMatcherService {
 
     for (final startup in DummyData.startups) {
       final matchingSkills = skills
-          .where((skill) => startup.requiredSkills
-              .any((req) => req.toLowerCase() == skill.toLowerCase()))
+          .where(
+            (skill) => startup.requiredSkills.any(
+              (req) => req.toLowerCase() == skill.toLowerCase(),
+            ),
+          )
           .toList();
 
       if (matchingSkills.isNotEmpty) {
-        final matchRatio = matchingSkills.length / startup.requiredSkills.length;
+        final matchRatio =
+            matchingSkills.length / startup.requiredSkills.length;
 
         for (final role in startup.openRoles) {
-          matches.add(MatchedRole(
-            startup: startup,
-            role: role,
-            matchScore: matchRatio,
-            matchReason: 'Your skills: ${matchingSkills.join(", ")}',
-          ));
+          matches.add(
+            MatchedRole(
+              startup: startup,
+              role: role,
+              matchScore: matchRatio,
+              matchReason: 'Your skills: ${matchingSkills.join(", ")}',
+            ),
+          );
         }
       }
     }

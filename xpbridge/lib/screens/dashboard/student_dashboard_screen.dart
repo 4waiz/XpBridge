@@ -21,8 +21,10 @@ class StudentDashboardScreen extends StatefulWidget {
 }
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
+  final TextEditingController _searchController = TextEditingController();
   String? _selectedIndustry;
   String? _selectedSkill;
+  String _query = '';
   bool _feedExpanded = false;
   bool _statsExpanded = true;
 
@@ -30,7 +32,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     var startups = DummyData.startups;
 
     if (_selectedIndustry != null) {
-      startups = startups.where((startup) => startup.industry == _selectedIndustry).toList();
+      startups = startups
+          .where((startup) => startup.industry == _selectedIndustry)
+          .toList();
     }
 
     if (_selectedSkill != null) {
@@ -39,7 +43,27 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           .toList();
     }
 
+    if (_query.trim().isNotEmpty) {
+      final query = _query.trim().toLowerCase();
+      startups = startups.where((startup) {
+        final haystack = [
+          startup.companyName,
+          startup.description,
+          startup.industry,
+          ...startup.requiredSkills,
+          ...startup.openRoles.map((role) => role.title),
+        ].join(' ').toLowerCase();
+        return haystack.contains(query);
+      }).toList();
+    }
+
     return startups;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   int _levelBase(int level) {
@@ -127,7 +151,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       height: 5,
                       decoration: BoxDecoration(
                         color: AppTheme.cardBackground,
-                        borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.pillRadius,
+                        ),
                       ),
                     ),
                   ),
@@ -135,30 +161,186 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   Text(
                     'Level $level • ${_levelName(level)}',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   XPProgressBar(progress: nextLevel != null ? progress : 1),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    nextLevel != null ? '$xpInLevel / $xpNeeded XP in this level' : 'Max level reached',
+                    nextLevel != null
+                        ? '$xpInLevel / $xpNeeded XP in this level'
+                        : 'Max level reached',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
                     'How to earn XP',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  const _XpEarnRow(icon: Icons.rocket_launch_rounded, label: 'Complete a mission', xp: '+100'),
-                  const _XpEarnRow(icon: Icons.edit_note_rounded, label: 'Submit a reflection', xp: '+15'),
-                  const _XpEarnRow(icon: Icons.feedback_outlined, label: 'Receive startup feedback', xp: '+25'),
-                  const _XpEarnRow(icon: Icons.star_rounded, label: 'First mission bonus', xp: '+50'),
+                  const _XpEarnRow(
+                    icon: Icons.rocket_launch_rounded,
+                    label: 'Complete a mission',
+                    xp: '+100',
+                  ),
+                  const _XpEarnRow(
+                    icon: Icons.edit_note_rounded,
+                    label: 'Submit a reflection',
+                    xp: '+15',
+                  ),
+                  const _XpEarnRow(
+                    icon: Icons.feedback_outlined,
+                    label: 'Receive startup feedback',
+                    xp: '+25',
+                  ),
+                  const _XpEarnRow(
+                    icon: Icons.star_rounded,
+                    label: 'First mission bonus',
+                    xp: '+50',
+                  ),
                 ],
               ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFiltersSheet(List<String> studentSkills) {
+    String? selectedIndustry = _selectedIndustry;
+    String? selectedSkill = _selectedSkill;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+              boxShadow: AppTheme.elevatedShadow,
+            ),
+            child: StatefulBuilder(
+              builder: (context, setModalState) {
+                return Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 48,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: AppTheme.cardBackground,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.pillRadius,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Filter missions',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Industry',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: [
+                          XPChoiceChip(
+                            label: 'All industries',
+                            selected: selectedIndustry == null,
+                            onSelected: (_) =>
+                                setModalState(() => selectedIndustry = null),
+                          ),
+                          ...DummyData.industries.map(
+                            (industry) => XPChoiceChip(
+                              label: industry,
+                              selected: selectedIndustry == industry,
+                              onSelected: (_) => setModalState(
+                                () => selectedIndustry = industry,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Skills',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: [
+                          XPChoiceChip(
+                            label: 'All skills',
+                            selected: selectedSkill == null,
+                            onSelected: (_) =>
+                                setModalState(() => selectedSkill = null),
+                          ),
+                          ...studentSkills.map(
+                            (skill) => XPChoiceChip(
+                              label: skill,
+                              selected: selectedSkill == skill,
+                              onSelected: (_) =>
+                                  setModalState(() => selectedSkill = skill),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: XPOutlinedButton(
+                              label: 'Clear',
+                              onPressed: () {
+                                setModalState(() {
+                                  selectedIndustry = null;
+                                  selectedSkill = null;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: XPButton(
+                              label: 'Apply',
+                              onPressed: () {
+                                setState(() {
+                                  _selectedIndustry = selectedIndustry;
+                                  _selectedSkill = selectedSkill;
+                                });
+                                Navigator.pop(sheetContext);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         );
@@ -177,6 +359,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     final feedEvents = appState.eventLog;
     final feedOptOut = appState.xpFeedOptOut;
     final hasFilters = _selectedIndustry != null || _selectedSkill != null;
+    final studentSkills = studentProfile?.skills ?? <String>[];
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -192,7 +375,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             XPDashboardAppBar(
               eyebrow: 'Hello',
               title: _firstName(studentProfile?.name),
-              subtitle: 'Discover startup missions that match your skills and growth goals.',
+              subtitle:
+                  'Discover startup missions that match your skills and growth goals.',
               leading: XPAvatar(initial: _firstName(studentProfile?.name)[0]),
               trailing: XPHeaderButton(
                 icon: Icons.person_outline_rounded,
@@ -213,9 +397,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           const Spacer(),
                           Text(
                             '$xpPoints XP',
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ],
                       ),
@@ -234,26 +417,50 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _query = value),
+                    decoration: const InputDecoration(
+                      hintText: 'Search missions, companies, or skills',
+                      prefixIcon: Icon(Icons.search_rounded),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                XPHeaderButton(
+                  icon: Icons.tune_rounded,
+                  onTap: () => _showFiltersSheet(studentSkills),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
             XPCard(
               radius: AppTheme.cornerRadiusLarge,
               child: Column(
                 children: [
                   InkWell(
-                    onTap: () => setState(() => _statsExpanded = !_statsExpanded),
-                    borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                    onTap: () =>
+                        setState(() => _statsExpanded = !_statsExpanded),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.cornerRadiusLarge,
+                    ),
                     child: Padding(
                       padding: EdgeInsets.zero,
                       child: Row(
                         children: [
                           Text(
                             'Your snapshot',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const Spacer(),
                           Icon(
-                            _statsExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                            _statsExpanded
+                                ? Icons.expand_less_rounded
+                                : Icons.expand_more_rounded,
                             color: AppTheme.textSecondary,
                           ),
                         ],
@@ -283,7 +490,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         Expanded(
                           child: _MetricCard(
                             label: 'Hours',
-                            value: '${studentProfile?.availabilityHours.round() ?? 0}',
+                            value:
+                                '${studentProfile?.availabilityHours.round() ?? 0}',
                             icon: Icons.schedule_rounded,
                           ),
                         ),
@@ -348,16 +556,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           onTap: () => setState(() => _selectedIndustry = null),
                         ),
                         const SizedBox(width: AppSpacing.sm),
-                        ...DummyData.industries.take(6).map(
-                          (industry) => Padding(
-                            padding: const EdgeInsets.only(right: AppSpacing.sm),
-                            child: XPFilterChip(
-                              label: industry,
-                              isSelected: _selectedIndustry == industry,
-                              onTap: () => setState(() => _selectedIndustry = industry),
+                        ...DummyData.industries
+                            .take(6)
+                            .map(
+                              (industry) => Padding(
+                                padding: const EdgeInsets.only(
+                                  right: AppSpacing.sm,
+                                ),
+                                child: XPFilterChip(
+                                  label: industry,
+                                  isSelected: _selectedIndustry == industry,
+                                  onTap: () => setState(
+                                    () => _selectedIndustry = industry,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -372,13 +586,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           onTap: () => setState(() => _selectedSkill = null),
                         ),
                         const SizedBox(width: AppSpacing.sm),
-                        ...?studentProfile?.skills.map(
+                        ...studentSkills.map(
                           (skill) => Padding(
-                            padding: const EdgeInsets.only(right: AppSpacing.sm),
+                            padding: const EdgeInsets.only(
+                              right: AppSpacing.sm,
+                            ),
                             child: XPFilterChip(
                               label: skill,
                               isSelected: _selectedSkill == skill,
-                              onTap: () => setState(() => _selectedSkill = skill),
+                              onTap: () =>
+                                  setState(() => _selectedSkill = skill),
                             ),
                           ),
                         ),
@@ -393,13 +610,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               XPSection(
                 title: 'XP Happening Now',
                 action: TextButton(
-                  onPressed: () => setState(() => _feedExpanded = !_feedExpanded),
+                  onPressed: () =>
+                      setState(() => _feedExpanded = !_feedExpanded),
                   child: Text(_feedExpanded ? 'Hide' : 'Show'),
                 ),
                 child: Column(
-                  children: (_feedExpanded ? feedEvents.take(4) : feedEvents.take(2))
-                      .map((event) => _FeedRow(event: event))
-                      .toList(),
+                  children:
+                      (_feedExpanded ? feedEvents.take(4) : feedEvents.take(2))
+                          .map((event) => _FeedRow(event: event))
+                          .toList(),
                 ),
               ),
             ],
@@ -415,16 +634,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       height: 88,
                       decoration: BoxDecoration(
                         color: AppTheme.primaryLight,
-                        borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.cornerRadiusLarge,
+                        ),
                       ),
-                      child: const Icon(Icons.search_off_rounded, size: 34, color: AppTheme.text),
+                      child: const Icon(
+                        Icons.search_off_rounded,
+                        size: 34,
+                        color: AppTheme.text,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     Text(
                       'No matching missions',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
@@ -474,10 +699,26 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           }
         },
         items: const [
-          XPBottomNavItem(label: 'Discover', icon: Icons.home_outlined, activeIcon: Icons.home_rounded),
-          XPBottomNavItem(label: 'AI Chat', icon: Icons.auto_awesome_outlined, activeIcon: Icons.auto_awesome_rounded),
-          XPBottomNavItem(label: 'Apps', icon: Icons.description_outlined, activeIcon: Icons.description_rounded),
-          XPBottomNavItem(label: 'Profile', icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded),
+          XPBottomNavItem(
+            label: 'Discover',
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home_rounded,
+          ),
+          XPBottomNavItem(
+            label: 'AI Chat',
+            icon: Icons.auto_awesome_outlined,
+            activeIcon: Icons.auto_awesome_rounded,
+          ),
+          XPBottomNavItem(
+            label: 'Apps',
+            icon: Icons.description_outlined,
+            activeIcon: Icons.description_rounded,
+          ),
+          XPBottomNavItem(
+            label: 'Profile',
+            icon: Icons.person_outline_rounded,
+            activeIcon: Icons.person_rounded,
+          ),
         ],
       ),
     );
@@ -499,14 +740,19 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return XPCard(
       backgroundColor: AppTheme.cardBackground,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.md,
+      ),
       child: Column(
         children: [
           Icon(icon, color: AppTheme.text, size: 18),
           const SizedBox(height: AppSpacing.xs),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(label, style: Theme.of(context).textTheme.bodySmall),
@@ -547,9 +793,9 @@ class _QuickActionCard extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -569,7 +815,10 @@ class _FeedRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         children: [
-          XPAvatar(initial: event.firstName.isNotEmpty ? event.firstName[0] : '?', size: 42),
+          XPAvatar(
+            initial: event.firstName.isNotEmpty ? event.firstName[0] : '?',
+            size: 42,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -577,9 +826,9 @@ class _FeedRow extends StatelessWidget {
               children: [
                 Text(
                   event.displayText,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
@@ -608,8 +857,9 @@ class _StartupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final matchCount =
-        startup.requiredSkills.where((skill) => studentSkills.contains(skill)).length;
+    final matchCount = startup.requiredSkills
+        .where((skill) => studentSkills.contains(skill))
+        .length;
     final matchPercentage = startup.requiredSkills.isNotEmpty
         ? ((matchCount / startup.requiredSkills.length) * 100).round()
         : 0;
@@ -628,14 +878,16 @@ class _StartupCard extends StatelessWidget {
                 height: 60,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryLight,
-                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                  borderRadius: BorderRadius.circular(
+                    AppTheme.cornerRadiusLarge,
+                  ),
                 ),
                 child: Center(
                   child: Text(
                     startup.companyName[0].toUpperCase(),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
@@ -647,11 +899,14 @@ class _StartupCard extends StatelessWidget {
                     Text(
                       startup.companyName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xxs),
-                    Text(startup.industry, style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      startup.industry,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -665,9 +920,9 @@ class _StartupCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             startup.description,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           if (startup.openRoles.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
@@ -676,7 +931,12 @@ class _StartupCard extends StatelessWidget {
               runSpacing: AppSpacing.sm,
               children: startup.openRoles
                   .take(2)
-                  .map((role) => XPBadge(label: role.title, color: AppTheme.cardBackground))
+                  .map(
+                    (role) => XPBadge(
+                      label: role.title,
+                      color: AppTheme.cardBackground,
+                    ),
+                  )
                   .toList(),
             ),
           ],
@@ -706,11 +966,7 @@ class _StartupCard extends StatelessWidget {
 }
 
 class _XpEarnRow extends StatelessWidget {
-  const _XpEarnRow({
-    required this.icon,
-    required this.label,
-    required this.xp,
-  });
+  const _XpEarnRow({required this.icon, required this.label, required this.xp});
 
   final IconData icon;
   final String label;
@@ -735,9 +991,9 @@ class _XpEarnRow extends StatelessWidget {
           Expanded(child: Text(label)),
           Text(
             xp,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
         ],
       ),

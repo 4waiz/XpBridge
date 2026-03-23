@@ -24,7 +24,9 @@ class ChatBubble extends StatelessWidget {
           bottom: AppSpacing.md,
         ),
         child: Column(
-          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isUser
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Container(
               padding: const EdgeInsets.symmetric(
@@ -36,8 +38,12 @@ class ChatBubble extends StatelessWidget {
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(AppTheme.cornerRadius),
                   topRight: const Radius.circular(AppTheme.cornerRadius),
-                  bottomLeft: Radius.circular(isUser ? AppTheme.cornerRadius : 8),
-                  bottomRight: Radius.circular(isUser ? 8 : AppTheme.cornerRadius),
+                  bottomLeft: Radius.circular(
+                    isUser ? AppTheme.cornerRadius : 8,
+                  ),
+                  bottomRight: Radius.circular(
+                    isUser ? 8 : AppTheme.cornerRadius,
+                  ),
                 ),
                 boxShadow: AppTheme.cardShadow,
               ),
@@ -45,9 +51,9 @@ class ChatBubble extends StatelessWidget {
                   ? const _TypingIndicator()
                   : Text(
                       message.content,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.text,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: AppTheme.text),
                     ),
             ),
             const SizedBox(height: AppSpacing.xxs),
@@ -107,7 +113,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           children: List.generate(3, (index) {
             final delay = index * 0.2;
             final value = (_controller.value + delay) % 1.0;
-            final opacity = (value < 0.5 ? value * 2 : 2 - value * 2).clamp(0.3, 1.0);
+            final opacity = (value < 0.5 ? value * 2 : 2 - value * 2).clamp(
+              0.3,
+              1.0,
+            );
 
             return Padding(
               padding: EdgeInsets.only(right: index < 2 ? 4 : 0),

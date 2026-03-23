@@ -28,7 +28,9 @@ class XPChoiceChip extends StatelessWidget {
           color: selected ? AppTheme.primaryLight : AppTheme.surface,
           borderRadius: BorderRadius.circular(AppTheme.pillRadius),
           border: Border.all(
-            color: selected ? AppTheme.primary.withValues(alpha: 0.26) : AppTheme.border,
+            color: selected
+                ? AppTheme.primary.withValues(alpha: 0.26)
+                : AppTheme.border,
           ),
           boxShadow: selected ? AppTheme.softShadow : null,
         ),
@@ -46,9 +48,9 @@ class XPChoiceChip extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: selected ? AppTheme.text : AppTheme.textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: selected ? AppTheme.text : AppTheme.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -101,9 +103,9 @@ class XPFilterChip extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: isSelected ? AppTheme.text : AppTheme.textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: isSelected ? AppTheme.text : AppTheme.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -142,9 +144,9 @@ class XPSkillTag extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppTheme.text,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

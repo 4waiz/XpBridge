@@ -61,7 +61,11 @@ class XPTextField extends StatelessWidget {
             ? null
             : Padding(
                 padding: EdgeInsets.only(bottom: maxLines > 1 ? 54 : 0),
-                child: Icon(prefixIcon, color: AppTheme.textSecondary, size: 20),
+                child: Icon(
+                  prefixIcon,
+                  color: AppTheme.textSecondary,
+                  size: 20,
+                ),
               ),
         suffixIcon: suffixIcon == null
             ? null

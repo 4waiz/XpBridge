@@ -88,8 +88,7 @@ class AppRouter {
       GoRoute(
         name: 'studentProfile',
         path: '/student/profile',
-        pageBuilder: (context, state) =>
-            _slide(const StudentProfileScreen()),
+        pageBuilder: (context, state) => _slide(const StudentProfileScreen()),
       ),
       GoRoute(
         name: 'aiChat',
@@ -119,8 +118,7 @@ class AppRouter {
       GoRoute(
         name: 'startupProfile',
         path: '/startup/profile',
-        pageBuilder: (context, state) =>
-            _slide(const StartupProfileScreen()),
+        pageBuilder: (context, state) => _slide(const StartupProfileScreen()),
       ),
       GoRoute(
         name: 'startupAiChat',

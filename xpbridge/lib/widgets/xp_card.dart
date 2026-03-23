@@ -40,11 +40,7 @@ class XPCard extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: borderRadius,
-        child: content,
-      ),
+      child: InkWell(onTap: onTap, borderRadius: borderRadius, child: content),
     );
   }
 }
@@ -88,9 +84,8 @@ class XPSection extends StatelessWidget {
                       if (title != null)
                         Text(
                           title!,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                       if (subtitle != null) ...[
                         const SizedBox(height: AppSpacing.xs),
@@ -134,7 +129,9 @@ class XPContainer extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color ?? AppTheme.cardBackground,
-        borderRadius: BorderRadius.circular(borderRadius ?? AppTheme.cornerRadiusSmall),
+        borderRadius: BorderRadius.circular(
+          borderRadius ?? AppTheme.cornerRadiusSmall,
+        ),
       ),
       child: child,
     );
@@ -176,9 +173,9 @@ class XPBadge extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: foreground,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -225,9 +222,9 @@ class XPProgressBar extends StatelessWidget {
           Text(
             '${(progress * 100).round()}%',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textSecondary,
-                ),
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textSecondary,
+            ),
           ),
         ],
       ],

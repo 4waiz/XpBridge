@@ -37,8 +37,9 @@ class StudentDetailScreen extends StatelessWidget {
       );
     }
 
-    final matchingSkills =
-        student.skills.where((skill) => startupSkills.contains(skill)).toList();
+    final matchingSkills = student.skills
+        .where((skill) => startupSkills.contains(skill))
+        .toList();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -67,12 +68,15 @@ class StudentDetailScreen extends StatelessWidget {
                         height: 80,
                         decoration: BoxDecoration(
                           color: AppTheme.primary,
-                          borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cornerRadiusLarge,
+                          ),
                         ),
                         child: Center(
                           child: Text(
                             student.name[0].toUpperCase(),
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(
                                   color: AppTheme.text,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -86,9 +90,8 @@ class StudentDetailScreen extends StatelessWidget {
                           children: [
                             Text(
                               student.name,
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             if (student.education?.isNotEmpty == true) ...[
                               const SizedBox(height: AppSpacing.xxs),
@@ -99,7 +102,8 @@ class StudentDetailScreen extends StatelessWidget {
                             ],
                             const SizedBox(height: AppSpacing.sm),
                             XPBadge(
-                              label: '${student.availabilityHours.round()} hrs / week',
+                              label:
+                                  '${student.availabilityHours.round()} hrs / week',
                               icon: Icons.schedule_rounded,
                               color: AppTheme.primaryLight,
                             ),
@@ -113,8 +117,8 @@ class StudentDetailScreen extends StatelessWidget {
                     Text(
                       student.bio!,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                   if (student.portfolioUrl?.isNotEmpty == true) ...[
@@ -141,9 +145,14 @@ class StudentDetailScreen extends StatelessWidget {
                       height: 44,
                       decoration: BoxDecoration(
                         color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.cornerRadiusSmall,
+                        ),
                       ),
-                      child: const Icon(Icons.check_rounded, color: AppTheme.text),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: AppTheme.text,
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
@@ -152,9 +161,8 @@ class StudentDetailScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Relevant skill match',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: AppSpacing.xxs),
                           Text(

@@ -54,14 +54,21 @@ class StudentApplicationsScreen extends StatelessWidget {
     required AppState appState,
     required StudentProfile? student,
   }) {
-    final didController = TextEditingController(text: application.reflectionDid);
-    final learnedController = TextEditingController(text: application.reflectionLearned);
-    final hoursController =
-        TextEditingController(text: application.hoursSpent?.toString() ?? '');
-    final deliverableController =
-        TextEditingController(text: application.deliverableUrl ?? '');
+    final didController = TextEditingController(
+      text: application.reflectionDid,
+    );
+    final learnedController = TextEditingController(
+      text: application.reflectionLearned,
+    );
+    final hoursController = TextEditingController(
+      text: application.hoursSpent?.toString() ?? '',
+    );
+    final deliverableController = TextEditingController(
+      text: application.deliverableUrl ?? '',
+    );
     final selectedSkills = <String>{...application.skillsPracticed};
-    String selectedDeliverableType = application.deliverableType?.isNotEmpty == true
+    String selectedDeliverableType =
+        application.deliverableType?.isNotEmpty == true
         ? application.deliverableType!
         : 'other';
 
@@ -97,16 +104,17 @@ class StudentApplicationsScreen extends StatelessWidget {
                           height: 5,
                           decoration: BoxDecoration(
                             color: AppTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.pillRadius,
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       Text(
                         'Submit reflection',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
@@ -130,9 +138,8 @@ class StudentApplicationsScreen extends StatelessWidget {
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         'Skills practiced',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Wrap(
@@ -168,19 +175,33 @@ class StudentApplicationsScreen extends StatelessWidget {
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: selectedDeliverableType,
+                              initialValue: selectedDeliverableType,
                               decoration: const InputDecoration(
                                 labelText: 'Type',
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'design', child: Text('Design')),
-                                DropdownMenuItem(value: 'code', child: Text('Code')),
-                                DropdownMenuItem(value: 'doc', child: Text('Doc')),
-                                DropdownMenuItem(value: 'other', child: Text('Other')),
+                                DropdownMenuItem(
+                                  value: 'design',
+                                  child: Text('Design'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'code',
+                                  child: Text('Code'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'doc',
+                                  child: Text('Doc'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'other',
+                                  child: Text('Other'),
+                                ),
                               ],
                               onChanged: (value) {
                                 if (value != null) {
-                                  setModalState(() => selectedDeliverableType = value);
+                                  setModalState(
+                                    () => selectedDeliverableType = value,
+                                  );
                                 }
                               },
                             ),
@@ -204,14 +225,18 @@ class StudentApplicationsScreen extends StatelessWidget {
                               learnedController.text.trim().isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Please fill in what you did and learned.'),
+                                content: Text(
+                                  'Please fill in what you did and learned.',
+                                ),
                                 backgroundColor: AppTheme.error,
                               ),
                             );
                             return;
                           }
 
-                          final hours = int.tryParse(hoursController.text.trim());
+                          final hours = int.tryParse(
+                            hoursController.text.trim(),
+                          );
 
                           await appState.saveReflection(
                             application.id,
@@ -219,12 +244,14 @@ class StudentApplicationsScreen extends StatelessWidget {
                             learned: learnedController.text.trim(),
                             skillsPracticed: selectedSkills.toList(),
                             hoursSpent: hours,
-                            deliverableUrl: deliverableController.text.trim().isNotEmpty
+                            deliverableUrl:
+                                deliverableController.text.trim().isNotEmpty
                                 ? deliverableController.text.trim()
                                 : null,
                             deliverableType: selectedDeliverableType,
                           );
-                          if (application.status != ApplicationStatus.completed) {
+                          if (application.status !=
+                              ApplicationStatus.completed) {
                             await appState.updateApplicationStatus(
                               application.id,
                               ApplicationStatus.completed,
@@ -258,8 +285,9 @@ class StudentApplicationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final student = appState.studentProfile;
-    final applications =
-        student != null ? appState.getApplicationsForStudent(student.id) : <Application>[];
+    final applications = student != null
+        ? appState.getApplicationsForStudent(student.id)
+        : <Application>[];
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -276,249 +304,270 @@ class StudentApplicationsScreen extends StatelessWidget {
               ),
             )
           : applications.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.page),
-                    child: XPSection(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 88,
-                            height: 88,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryLight,
-                              borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
-                            ),
-                            child: const Icon(
-                              Icons.description_outlined,
-                              size: 36,
-                              color: AppTheme.text,
-                            ),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.page),
+                child: XPSection(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 88,
+                        height: 88,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryLight,
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cornerRadiusLarge,
                           ),
-                          const SizedBox(height: AppSpacing.lg),
-                          Text(
-                            'No applications yet',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            'Once you apply to missions, they will show up here with progress updates and reflection prompts.',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
-                          XPButton(
-                            label: 'Discover missions',
-                            icon: Icons.arrow_forward_rounded,
-                            onPressed: () => context.goNamed('studentDashboard'),
-                          ),
-                        ],
+                        ),
+                        child: const Icon(
+                          Icons.description_outlined,
+                          size: 36,
+                          color: AppTheme.text,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'No applications yet',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'Once you apply to missions, they will show up here with progress updates and reflection prompts.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      XPButton(
+                        label: 'Discover missions',
+                        icon: Icons.arrow_forward_rounded,
+                        onPressed: () => context.goNamed('studentDashboard'),
+                      ),
+                    ],
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.page,
-                    AppSpacing.md,
-                    AppSpacing.page,
-                    AppSpacing.page,
-                  ),
-                  itemCount: applications.length,
-                  itemBuilder: (context, index) {
-                    final application = applications[index];
-                    final isCompleted = application.status == ApplicationStatus.completed;
-                    final hasReflection = application.reflectionDid?.isNotEmpty == true ||
-                        application.reflectionLearned?.isNotEmpty == true;
+                ),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.page,
+                AppSpacing.md,
+                AppSpacing.page,
+                AppSpacing.page,
+              ),
+              itemCount: applications.length,
+              itemBuilder: (context, index) {
+                final application = applications[index];
+                final isCompleted =
+                    application.status == ApplicationStatus.completed;
+                final hasReflection =
+                    application.reflectionDid?.isNotEmpty == true ||
+                    application.reflectionLearned?.isNotEmpty == true;
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                      child: XPCard(
-                        elevated: true,
-                        radius: AppTheme.cornerRadiusLarge,
-                        child: Column(
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  child: XPCard(
+                    elevated: true,
+                    radius: AppTheme.cornerRadiusLarge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 58,
-                                  height: 58,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryLight,
-                                    borderRadius: BorderRadius.circular(
-                                      AppTheme.cornerRadiusSmall,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      application.startupName.isNotEmpty
-                                          ? application.startupName[0].toUpperCase()
-                                          : '?',
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                    ),
-                                  ),
+                            Container(
+                              width: 58,
+                              height: 58,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryLight,
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.cornerRadiusSmall,
                                 ),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        application.roleTitle ??
-                                            'Mission with ${application.startupName}',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                      ),
-                                      const SizedBox(height: AppSpacing.xxs),
-                                      Text(
-                                        application.startupName,
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                      ),
-                                    ],
-                                  ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  application.startupName.isNotEmpty
+                                      ? application.startupName[0].toUpperCase()
+                                      : '?',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
-                                XPBadge(
-                                  label: _statusText(application.status),
-                                  color: _statusColor(application.status).withValues(alpha: 0.16),
-                                  textColor: _statusColor(application.status),
-                                ),
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.md),
-                            XPContainer(
-                              child: Row(
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(
-                                    Icons.schedule_rounded,
-                                    size: 16,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                  const SizedBox(width: AppSpacing.xs),
                                   Text(
-                                    'Applied ${_dateLabel(application.appliedAt)}',
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    application.roleTitle ??
+                                        'Mission with ${application.startupName}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: AppSpacing.xxs),
+                                  Text(
+                                    application.startupName,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                 ],
                               ),
                             ),
-                            if (application.message?.isNotEmpty == true) ...[
-                              const SizedBox(height: AppSpacing.md),
-                              XPContainer(
-                                child: Text(
-                                  '"${application.message}"',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: AppTheme.textSecondary,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                ),
-                              ),
-                            ],
-                            if (isCompleted && hasReflection) ...[
-                              const SizedBox(height: AppSpacing.md),
-                              XPContainer(
-                                color: AppTheme.primaryLight,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Reflection',
-                                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                    ),
-                                    if (application.reflectionDid?.isNotEmpty == true) ...[
-                                      const SizedBox(height: AppSpacing.xs),
-                                      Text(application.reflectionDid!),
-                                    ],
-                                    if (application.reflectionLearned?.isNotEmpty == true) ...[
-                                      const SizedBox(height: AppSpacing.xs),
-                                      Text(
-                                        application.reflectionLearned!,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(color: AppTheme.textSecondary),
-                                      ),
-                                    ],
-                                    if (application.skillsPracticed.isNotEmpty) ...[
-                                      const SizedBox(height: AppSpacing.sm),
-                                      Wrap(
-                                        spacing: AppSpacing.xs,
-                                        runSpacing: AppSpacing.xs,
-                                        children: application.skillsPracticed
-                                            .map((skill) => XPSkillTag(label: skill))
-                                            .toList(),
-                                      ),
-                                    ],
-                                    if (application.hoursSpent != null ||
-                                        application.deliverableUrl?.isNotEmpty == true) ...[
-                                      const SizedBox(height: AppSpacing.sm),
-                                      Wrap(
-                                        spacing: AppSpacing.sm,
-                                        runSpacing: AppSpacing.sm,
-                                        children: [
-                                          if (application.hoursSpent != null)
-                                            XPBadge(
-                                              label: '${application.hoursSpent} hrs',
-                                              icon: Icons.timer_outlined,
-                                            ),
-                                          if (application.deliverableUrl?.isNotEmpty == true)
-                                            XPBadge(
-                                              label: 'Deliverable linked',
-                                              icon: Icons.link_rounded,
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: AppSpacing.md),
-                            if (isCompleted && !hasReflection)
-                              XPButton(
-                                label: 'Submit reflection',
-                                icon: Icons.note_add_outlined,
-                                onPressed: () => _showReflectionSheet(
-                                  context,
-                                  application: application,
-                                  appState: appState,
-                                  student: student,
-                                ),
-                              )
-                            else if (!isCompleted)
-                              XPContainer(
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.hourglass_bottom_rounded,
-                                      size: 16,
-                                      color: AppTheme.textSecondary,
-                                    ),
-                                    const SizedBox(width: AppSpacing.xs),
-                                    Expanded(
-                                      child: Text(
-                                        'Waiting for the startup to mark this mission complete.',
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            XPBadge(
+                              label: _statusText(application.status),
+                              color: _statusColor(
+                                application.status,
+                              ).withValues(alpha: 0.16),
+                              textColor: _statusColor(application.status),
+                            ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
+                        const SizedBox(height: AppSpacing.md),
+                        XPContainer(
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.schedule_rounded,
+                                size: 16,
+                                color: AppTheme.textSecondary,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                'Applied ${_dateLabel(application.appliedAt)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (application.message?.isNotEmpty == true) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          XPContainer(
+                            child: Text(
+                              '"${application.message}"',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                            ),
+                          ),
+                        ],
+                        if (isCompleted && hasReflection) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          XPContainer(
+                            color: AppTheme.primaryLight,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Reflection',
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                if (application.reflectionDid?.isNotEmpty ==
+                                    true) ...[
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(application.reflectionDid!),
+                                ],
+                                if (application.reflectionLearned?.isNotEmpty ==
+                                    true) ...[
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    application.reflectionLearned!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                  ),
+                                ],
+                                if (application.skillsPracticed.isNotEmpty) ...[
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Wrap(
+                                    spacing: AppSpacing.xs,
+                                    runSpacing: AppSpacing.xs,
+                                    children: application.skillsPracticed
+                                        .map(
+                                          (skill) => XPSkillTag(label: skill),
+                                        )
+                                        .toList(),
+                                  ),
+                                ],
+                                if (application.hoursSpent != null ||
+                                    application.deliverableUrl?.isNotEmpty ==
+                                        true) ...[
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Wrap(
+                                    spacing: AppSpacing.sm,
+                                    runSpacing: AppSpacing.sm,
+                                    children: [
+                                      if (application.hoursSpent != null)
+                                        XPBadge(
+                                          label:
+                                              '${application.hoursSpent} hrs',
+                                          icon: Icons.timer_outlined,
+                                        ),
+                                      if (application
+                                              .deliverableUrl
+                                              ?.isNotEmpty ==
+                                          true)
+                                        XPBadge(
+                                          label: 'Deliverable linked',
+                                          icon: Icons.link_rounded,
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.md),
+                        if (isCompleted && !hasReflection)
+                          XPButton(
+                            label: 'Submit reflection',
+                            icon: Icons.note_add_outlined,
+                            onPressed: () => _showReflectionSheet(
+                              context,
+                              application: application,
+                              appState: appState,
+                              student: student,
+                            ),
+                          )
+                        else if (!isCompleted)
+                          XPContainer(
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.hourglass_bottom_rounded,
+                                  size: 16,
+                                  color: AppTheme.textSecondary,
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
+                                Expanded(
+                                  child: Text(
+                                    'Waiting for the startup to mark this mission complete.',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

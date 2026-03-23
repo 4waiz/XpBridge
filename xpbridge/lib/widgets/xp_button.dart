@@ -44,10 +44,12 @@ class _XPButtonState extends State<XPButton> {
           color: isDisabled
               ? AppTheme.cardBackground
               : widget.tonal
-                  ? AppTheme.primaryLight
-                  : AppTheme.primary,
+              ? AppTheme.primaryLight
+              : AppTheme.primary,
           borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-          boxShadow: isDisabled || widget.tonal ? null : AppTheme.floatingShadow,
+          boxShadow: isDisabled || widget.tonal
+              ? null
+              : AppTheme.floatingShadow,
         ),
         child: Material(
           color: Colors.transparent,
@@ -55,10 +57,14 @@ class _XPButtonState extends State<XPButton> {
             onTap: widget.onPressed,
             borderRadius: BorderRadius.circular(AppTheme.pillRadius),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: style.horizontalPadding),
+              padding: EdgeInsets.symmetric(
+                horizontal: style.horizontalPadding,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
+                mainAxisSize: widget.expand
+                    ? MainAxisSize.max
+                    : MainAxisSize.min,
                 children: [
                   if (widget.icon != null) ...[
                     Icon(
@@ -73,10 +79,10 @@ class _XPButtonState extends State<XPButton> {
                       widget.label,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            fontSize: style.fontSize,
-                            fontWeight: FontWeight.w800,
-                            color: isDisabled ? AppTheme.textMuted : AppTheme.text,
-                          ),
+                        fontSize: style.fontSize,
+                        fontWeight: FontWeight.w800,
+                        color: isDisabled ? AppTheme.textMuted : AppTheme.text,
+                      ),
                     ),
                   ),
                 ],
@@ -91,7 +97,9 @@ class _XPButtonState extends State<XPButton> {
       onPointerDown: (_) => setState(() => _pressed = true),
       onPointerUp: (_) => setState(() => _pressed = false),
       onPointerCancel: (_) => setState(() => _pressed = false),
-      child: widget.expand ? SizedBox(width: double.infinity, child: button) : button,
+      child: widget.expand
+          ? SizedBox(width: double.infinity, child: button)
+          : button,
     );
   }
 }
@@ -151,10 +159,10 @@ class XPOutlinedButton extends StatelessWidget {
                     label,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontSize: style.fontSize,
-                          fontWeight: FontWeight.w700,
-                          color: isDisabled ? AppTheme.textMuted : AppTheme.text,
-                        ),
+                      fontSize: style.fontSize,
+                      fontWeight: FontWeight.w700,
+                      color: isDisabled ? AppTheme.textMuted : AppTheme.text,
+                    ),
                   ),
                 ),
               ],

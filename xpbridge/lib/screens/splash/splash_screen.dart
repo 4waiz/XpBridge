@@ -89,9 +89,8 @@ class _SplashScreenState extends State<SplashScreen>
                             const SizedBox(height: AppSpacing.xl),
                             Text(
                               'XPBridge',
-                              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              style: Theme.of(context).textTheme.displayMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             Container(
@@ -108,9 +107,8 @@ class _SplashScreenState extends State<SplashScreen>
                               ),
                               child: Text(
                                 'Learn. Build. Grow.',
-                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                      color: AppTheme.textSecondary,
-                                    ),
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(color: AppTheme.textSecondary),
                               ),
                             ),
                           ],
@@ -146,9 +144,7 @@ class _SplashBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _SplashBackdropPainter(),
-    );
+    return CustomPaint(painter: _SplashBackdropPainter());
   }
 }
 
@@ -162,9 +158,21 @@ class _SplashBackdropPainter extends CustomPainter {
       ..color = AppTheme.text.withValues(alpha: 0.04)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 90);
 
-    canvas.drawCircle(Offset(size.width * 0.25, size.height * 0.22), 120, tealPaint);
-    canvas.drawCircle(Offset(size.width * 0.78, size.height * 0.3), 100, neutralPaint);
-    canvas.drawCircle(Offset(size.width * 0.55, size.height * 0.78), 140, tealPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.25, size.height * 0.22),
+      120,
+      tealPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.78, size.height * 0.3),
+      100,
+      neutralPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.55, size.height * 0.78),
+      140,
+      tealPaint,
+    );
 
     final dotPaint = Paint()..color = AppTheme.border;
     for (double x = 24; x < size.width; x += 34) {

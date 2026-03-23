@@ -1,4 +1,11 @@
-enum ApplicationStatus { pending, accepted, rejected, interviewing, hired, completed }
+enum ApplicationStatus {
+  pending,
+  accepted,
+  rejected,
+  interviewing,
+  hired,
+  completed,
+}
 
 class Application {
   final String id;
