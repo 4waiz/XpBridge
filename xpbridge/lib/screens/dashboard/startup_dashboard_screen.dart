@@ -754,28 +754,44 @@ class _ApplicationsTab extends StatelessWidget {
                   ),
               ],
             ),
-            footer: Row(
+            footer: Column(
               children: [
-                Expanded(
-                  child: XPOutlinedButton(
-                    label: 'Leave feedback',
-                    icon: Icons.feedback_outlined,
-                    size: XPButtonSize.medium,
-                    onPressed: () => onLeaveFeedback(application),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: XPButton(
-                    label: canMarkCompleted ? 'Mark complete' : 'Completed',
-                    icon: canMarkCompleted
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.check_circle_rounded,
-                    size: XPButtonSize.medium,
-                    onPressed: canMarkCompleted
-                        ? () => onMarkCompleted(application)
-                        : null,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: XPOutlinedButton(
+                        label: 'Feedback',
+                        icon: Icons.feedback_outlined,
+                        size: XPButtonSize.medium,
+                        onPressed: () => onLeaveFeedback(application),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: XPOutlinedButton(
+                        label: 'War Room',
+                        icon: Icons.rocket_launch_rounded,
+                        size: XPButtonSize.medium,
+                        onPressed: () => context.pushNamed(
+                          'warRoom',
+                          pathParameters: {'id': application.id},
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: XPButton(
+                        label: canMarkCompleted ? 'Finish' : 'Done',
+                        icon: canMarkCompleted
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.check_circle_rounded,
+                        size: XPButtonSize.medium,
+                        onPressed: canMarkCompleted
+                            ? () => onMarkCompleted(application)
+                            : null,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
