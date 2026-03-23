@@ -146,6 +146,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
     final matchingSkills = startup.requiredSkills
         .where((skill) => studentSkills.contains(skill))
         .toList();
+    final missingSkills = startup.requiredSkills
+        .where((skill) => !studentSkills.contains(skill))
+        .toList();
     final matchProgress = _matchProgress(startup, studentSkills);
     StartupRole? nextRoleToApply;
     for (final role in startup.openRoles) {
@@ -246,6 +249,87 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                                       XPSkillTag(label: skill, isMatched: true),
                                 )
                                 .toList(),
+                          ),
+                        ),
+                      ],
+                      if (missingSkills.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        XPGlassPanel(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          backgroundColor: AppTheme.primaryDeep.withValues(
+                            alpha: 0.05,
+                          ),
+                          borderColor:
+                              AppTheme.primaryDeep.withValues(alpha: 0.15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome_rounded,
+                                    color: AppTheme.primaryDeep,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Text(
+                                    'AI Skill Gap Bridge',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: AppTheme.primaryDeep,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                'You’re missing ${missingSkills.length} key skills for this role. Bridge the gap with these recommended micro-tasks:',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              ...missingSkills.map(
+                                (skill) => Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.sm,
+                                  ),
+                                  child: XPCard(
+                                    padding: const EdgeInsets.all(AppSpacing.sm),
+                                    backgroundColor: AppTheme.surface
+                                        .withValues(alpha: 0.6),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.play_circle_outline_rounded,
+                                          size: 20,
+                                          color: AppTheme.primary,
+                                        ),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Expanded(
+                                          child: Text(
+                                            'Learn $skill: 15-min interactive tutorial',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        XPBadge(
+                                          label: '+5 XP',
+                                          color: AppTheme.primaryDeep,
+                                          textColor: AppTheme.surface,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

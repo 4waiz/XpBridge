@@ -592,6 +592,97 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       )
                       .toList(),
                 ),
+                const SizedBox(height: AppSpacing.xl),
+                XPSectionTitle(
+                  title: 'Ultra Micro Missions',
+                  subtitle:
+                      'Short, targeted tasks (2-5 hrs) to build XP quickly.',
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: DummyData.startups
+                        .where(
+                          (s) => s.openRoles.any(
+                            (r) =>
+                                r.estimatedHours != null &&
+                                r.estimatedHours! <= 5,
+                          ),
+                        )
+                        .map((startup) {
+                      final microRole = startup.openRoles.firstWhere(
+                        (r) =>
+                            r.estimatedHours != null && r.estimatedHours! <= 5,
+                      );
+                      return Padding(
+                        padding: const EdgeInsets.only(right: AppSpacing.md),
+                        child: SizedBox(
+                          width: 280,
+                          child: XPCard(
+                            onTap: () => context.pushNamed(
+                              'startupDetail',
+                              pathParameters: {'id': startup.id},
+                            ),
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            backgroundColor: AppTheme.surface.withValues(
+                              alpha: 0.52,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 42,
+                                      height: 42,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primary.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.bolt_rounded,
+                                        color: AppTheme.primary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    XPBadge(
+                                      label: '${microRole.estimatedHours}h',
+                                      color: AppTheme.primaryDeep,
+                                      textColor: AppTheme.surface,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                Text(
+                                  microRole.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: AppSpacing.xxs),
+                                Text(
+                                  startup.companyName,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                Text(
+                                  microRole.description ?? '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
                 if (secondaryStartups.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.xl),
                   XPSectionTitle(

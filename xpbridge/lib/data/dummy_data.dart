@@ -129,6 +129,14 @@ class DummyData {
           description:
               'Help us run usability tests with students and synthesize insights into actionable recommendations.',
         ),
+        StartupRole(
+          title: 'Landing Page Polish',
+          commitment: 'Ultra Micro Mission • 4 hrs',
+          estimatedHours: 4,
+          description:
+              'Refine the CSS and layout of our new landing page for mobile responsiveness.',
+          learningOutcome: 'Responsive web design and CSS optimization.',
+        ),
       ],
       websiteUrl: 'https://brightseed.io',
       projectDetails:
@@ -167,6 +175,14 @@ class DummyData {
           description:
               'Work on cutting-edge NLP research and help implement new model architectures.',
         ),
+        StartupRole(
+          title: 'Fine-tune Prompt',
+          commitment: 'Ultra Micro Mission • 2 hrs',
+          estimatedHours: 2,
+          description:
+              'Review and improve our chatbot prompt for a more professional tone.',
+          learningOutcome: 'Prompt engineering and tone consistency.',
+        ),
       ],
       websiteUrl: 'https://nova-ai.com',
       projectDetails:
@@ -193,6 +209,14 @@ class DummyData {
           commitment: '6-8 hrs/week',
           description:
               'Craft empathetic in-app copy and support lifecycle campaigns for our wellness programs.',
+        ),
+        StartupRole(
+          title: 'Patient Onboarding Review',
+          commitment: 'Ultra Micro Mission • 3 hrs',
+          estimatedHours: 3,
+          description:
+              'Walk through our patient onboarding and identify 3 UI friction points.',
+          learningOutcome: 'Heuristic evaluation and user experience analysis.',
         ),
       ],
       websiteUrl: 'https://pulsehealth.co',

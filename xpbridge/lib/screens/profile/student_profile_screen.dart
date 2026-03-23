@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_card.dart';
 import '../../widgets/xp_chip.dart';
+import '../../widgets/xp_button.dart';
 import '../../widgets/xp_premium.dart';
 
 class StudentProfileScreen extends StatelessWidget {
@@ -238,6 +239,12 @@ class StudentProfileScreen extends StatelessWidget {
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      XPButton(
+                        label: 'Proof of Work Portfolio',
+                        icon: Icons.auto_fix_high_rounded,
+                        onPressed: () => context.pushNamed('portfolioGenerator'),
                       ),
                       if (profile?.bio?.isNotEmpty == true) ...[
                         const SizedBox(height: AppSpacing.xl),

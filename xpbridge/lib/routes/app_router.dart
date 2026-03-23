@@ -13,6 +13,7 @@ import '../screens/onboarding/startup_setup_screen.dart';
 import '../screens/onboarding/student_setup_screen.dart';
 import '../screens/profile/startup_profile_screen.dart';
 import '../screens/profile/student_profile_screen.dart';
+import '../screens/profile/portfolio_generator_screen.dart';
 import '../screens/onboarding/intro_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/chat/ai_chat_screen.dart';
@@ -89,6 +90,11 @@ class AppRouter {
         name: 'studentProfile',
         path: '/student/profile',
         pageBuilder: (context, state) => _slide(const StudentProfileScreen()),
+      ),
+      GoRoute(
+        name: 'portfolioGenerator',
+        path: '/student/portfolio-generator',
+        pageBuilder: (context, state) => _slide(const PortfolioGeneratorScreen()),
       ),
       GoRoute(
         name: 'aiChat',
