@@ -21,23 +21,15 @@ class StartupDashboardScreen extends StatefulWidget {
   State<StartupDashboardScreen> createState() => _StartupDashboardScreenState();
 }
 
-class _StartupDashboardScreenState extends State<StartupDashboardScreen>
-    with SingleTickerProviderStateMixin {
+class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
-  late TabController _tabController;
+  int _bottomNavIndex = 0;
   String? _selectedSkill;
   String _query = '';
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -393,18 +385,13 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.pushNamed('startupAiChat'),
-        icon: const Icon(Icons.auto_awesome_rounded),
-        label: const Text('AI Search'),
-      ),
       bottomNavigationBar: XPBottomNavBar(
-        currentIndex: 0,
+        currentIndex: _bottomNavIndex,
         onTap: (index) {
-          if (index == 1) {
-            _tabController.animateTo(1);
-          } else if (index == 2) {
+          if (index == 2) {
             context.pushNamed('startupProfile');
+          } else {
+            setState(() => _bottomNavIndex = index);
           }
         },
         items: const [
@@ -441,8 +428,6 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                     XPDashboardAppBar(
                       eyebrow: startupProfile?.companyName ?? 'Your company',
                       title: 'Talent',
-                      subtitle:
-                          'Search for aligned students and manage active learner applications.',
                       leading: XPAvatar(
                         initial: (startupProfile?.companyName.isNotEmpty == true
                             ? startupProfile!.companyName[0]
@@ -458,108 +443,79 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen>
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: XPPremiumSearchBar(
-                            controller: _searchController,
-                            hintText: 'Search students, skills, or profiles',
-                            onChanged: (value) =>
-                                setState(() => _query = value),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        XPHeaderButton(
-                          icon: Icons.tune_rounded,
-                          onTap: () => _showFiltersSheet(skillsForFilters),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    XPGlassPanel(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      backgroundColor: AppTheme.surface.withValues(alpha: 0.64),
-                      child: Column(
+                    XPPremiumSearchBar(
+                      controller: _searchController,
+                      hintText: 'Search students, skills, or profiles',
+                      onChanged: (value) => setState(() => _query = value),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primarySoft,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: TabBar(
-                              controller: _tabController,
-                              indicator: BoxDecoration(
-                                gradient: AppTheme.primaryGlowGradient,
-                                borderRadius: BorderRadius.circular(26),
-                              ),
-                              labelColor: AppTheme.surface,
-                              unselectedLabelColor: AppTheme.textSecondary,
-                              tabs: [
-                                Tab(
-                                  text:
-                                      'Students (${_filteredStudents.length})',
-                                ),
-                                Tab(text: 'Learners (${applications.length})'),
-                              ],
+                          IconButton(
+                            onPressed: () => _showFiltersSheet(skillsForFilters),
+                            icon: const Icon(
+                              Icons.tune_rounded,
+                              color: AppTheme.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.md),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                XPFilterChip(
-                                  label: 'All skills',
-                                  isSelected: _selectedSkill == null,
-                                  onTap: () =>
-                                      setState(() => _selectedSkill = null),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                ...skillsForFilters
-                                    .take(8)
-                                    .map(
-                                      (skill) => Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: AppSpacing.sm,
-                                        ),
-                                        child: XPFilterChip(
-                                          label: skill,
-                                          isSelected: _selectedSkill == skill,
-                                          onTap: () => setState(
-                                            () => _selectedSkill = skill,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                              ],
+                          IconButton(
+                            onPressed: () => context.pushNamed('startupAiChat'),
+                            icon: const Icon(
+                              Icons.auto_awesome_rounded,
+                              color: AppTheme.primaryDark,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (_bottomNavIndex == 0)
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            XPFilterChip(
+                              label: 'All skills',
+                              isSelected: _selectedSkill == null,
+                              onTap: () => setState(() => _selectedSkill = null),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            ...skillsForFilters
+                                .take(8)
+                                .map(
+                                  (skill) => Padding(
+                                    padding: const EdgeInsets.only(
+                                      right: AppSpacing.sm,
+                                    ),
+                                    child: XPFilterChip(
+                                      label: skill,
+                                      isSelected: _selectedSkill == skill,
+                                      onTap: () => setState(
+                                        () => _selectedSkill = skill,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
               Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _BrowseStudentsTab(
-                      students: _filteredStudents,
-                      startupSkills: skillsForFilters,
-                    ),
-                    _ApplicationsTab(
-                      applications: applications,
-                      statusColor: _statusColor,
-                      statusLabel: _statusLabel,
-                      statusProgress: _statusProgress,
-                      onMarkCompleted: _markApplicationCompleted,
-                      onLeaveFeedback: _showFeedbackSheet,
-                    ),
-                  ],
-                ),
+                child: _bottomNavIndex == 0
+                    ? _BrowseStudentsTab(
+                        students: _filteredStudents,
+                        startupSkills: skillsForFilters,
+                      )
+                    : _ApplicationsTab(
+                        applications: applications,
+                        statusColor: _statusColor,
+                        statusLabel: _statusLabel,
+                        statusProgress: _statusProgress,
+                        onMarkCompleted: _markApplicationCompleted,
+                        onLeaveFeedback: _showFeedbackSheet,
+                      ),
               ),
             ],
           ),
@@ -638,6 +594,7 @@ class _BrowseStudentsTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     XPAvatar(initial: student.name[0]),
                     const SizedBox(width: AppSpacing.md),
@@ -645,9 +602,27 @@ class _BrowseStudentsTab extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            student.name,
-                            style: Theme.of(context).textTheme.titleLarge,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  student.name,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              XPBadge(
+                                label: '${student.availabilityHours.round()} h/w',
+                                icon: Icons.schedule_rounded,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              XPBadge(
+                                label: '${student.xpPoints} XP',
+                                icon: Icons.auto_awesome_rounded,
+                                color: AppTheme.primarySoft,
+                              ),
+                            ],
                           ),
                           if (student.education?.isNotEmpty == true) ...[
                             const SizedBox(height: AppSpacing.xxs),
@@ -661,30 +636,14 @@ class _BrowseStudentsTab extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    XPBadge(
-                      label: '${student.availabilityHours.round()} hrs/week',
-                      icon: Icons.schedule_rounded,
-                    ),
-                    XPBadge(
-                      label: '${student.xpPoints} XP',
-                      icon: Icons.auto_awesome_rounded,
-                      color: AppTheme.primarySoft,
-                    ),
-                  ],
-                ),
                 if (student.bio?.isNotEmpty == true) ...[
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     student.bio!,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: AppSpacing.sm,
                   runSpacing: AppSpacing.sm,

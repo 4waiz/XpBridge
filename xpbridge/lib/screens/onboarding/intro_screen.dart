@@ -181,66 +181,68 @@ class _IntroScreenState extends State<IntroScreen> {
                               ),
                               boxShadow: AppTheme.cardShadow,
                             ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  page.title,
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  page.description,
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(color: AppTheme.textSecondary),
-                                ),
-                                const Spacer(),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(
-                                    _pages.length,
-                                    (index) => AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 220,
-                                      ),
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                      ),
-                                      width: _currentPage == index ? 28 : 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        color: _currentPage == index
-                                            ? AppTheme.primary
-                                            : AppTheme.cardBackground,
-                                        borderRadius: BorderRadius.circular(
-                                          AppTheme.pillRadius,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  Text(
+                                    page.title,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    page.description,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context).textTheme.bodyMedium
+                                        ?.copyWith(color: AppTheme.textSecondary),
+                                  ),
+                                  const SizedBox(height: AppSpacing.lg),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: List.generate(
+                                      _pages.length,
+                                      (index) => AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 220,
+                                        ),
+                                        margin: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                        ),
+                                        width: _currentPage == index ? 28 : 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: _currentPage == index
+                                              ? AppTheme.primary
+                                              : AppTheme.cardBackground,
+                                          borderRadius: BorderRadius.circular(
+                                            AppTheme.pillRadius,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: AppSpacing.lg),
-                                XPButton(
-                                  label: isLastPage
-                                      ? 'Get Started'
-                                      : 'Continue',
-                                  icon: Icons.arrow_forward_rounded,
-                                  onPressed: _nextPage,
-                                ),
-                                if (isLastPage) ...[
-                                  const SizedBox(height: AppSpacing.md),
-                                  TextButton(
-                                    onPressed: _completeOnboarding,
-                                    child: const Text(
-                                      'I already have an account',
-                                    ),
+                                  const SizedBox(height: AppSpacing.lg),
+                                  XPButton(
+                                    label: isLastPage
+                                        ? 'Get Started'
+                                        : 'Continue',
+                                    icon: Icons.arrow_forward_rounded,
+                                    onPressed: _nextPage,
                                   ),
+                                  if (isLastPage) ...[
+                                    const SizedBox(height: AppSpacing.md),
+                                    TextButton(
+                                      onPressed: _completeOnboarding,
+                                      child: const Text(
+                                        'I already have an account',
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         ),

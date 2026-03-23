@@ -71,27 +71,26 @@ class AppTheme {
 
   static ThemeData get light {
     final baseTextTheme = GoogleFonts.manropeTextTheme();
-    final display = GoogleFonts.cormorantGaramondTextTheme();
     final textTheme = baseTextTheme.copyWith(
-      displayLarge: display.displayLarge?.copyWith(
+      displayLarge: baseTextTheme.displayLarge?.copyWith(
         color: text,
         fontWeight: FontWeight.w700,
         height: 0.96,
         letterSpacing: -1.1,
       ),
-      displayMedium: display.displayMedium?.copyWith(
+      displayMedium: baseTextTheme.displayMedium?.copyWith(
         color: text,
         fontWeight: FontWeight.w700,
         height: 0.98,
         letterSpacing: -0.9,
       ),
-      headlineLarge: display.headlineLarge?.copyWith(
+      headlineLarge: baseTextTheme.headlineLarge?.copyWith(
         color: text,
         fontWeight: FontWeight.w700,
         height: 1,
         letterSpacing: -0.7,
       ),
-      headlineMedium: display.headlineMedium?.copyWith(
+      headlineMedium: baseTextTheme.headlineMedium?.copyWith(
         color: text,
         fontWeight: FontWeight.w700,
         height: 1.04,
