@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../app.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_button.dart';
 
@@ -70,26 +71,94 @@ class _IntroScreenState extends State<IntroScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isCompactWidth = constraints.maxWidth < 360;
-            final isCompactHeight = constraints.maxHeight < 700;
-            final isTinyHeight = constraints.maxHeight < 580;
-            final isUltraTinyHeight = constraints.maxHeight < 350; // New threshold for extreme resize
-            final horizontalPadding = isCompactWidth ? 16.0 : 20.0;
-            final bottomPadding = isCompactWidth ? 16.0 : 24.0;
-            final pageIndicatorSpacing = isTinyHeight ? 12.0 : (isCompactHeight ? 16.0 : 24.0);
+        child: Stack(
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompactWidth = constraints.maxWidth < 360;
+                final isCompactHeight = constraints.maxHeight < 700;
+                final isTinyHeight = constraints.maxHeight < 580;
+                final isUltraTinyHeight = constraints.maxHeight < 350; // New threshold for extreme resize
+                final horizontalPadding = isCompactWidth ? 16.0 : 20.0;
+                final bottomPadding = isCompactWidth ? 16.0 : 24.0;
+                final pageIndicatorSpacing = isTinyHeight ? 12.0 : (isCompactHeight ? 16.0 : 24.0);
 
-            // Use scrollable layout for extreme constraints to avoid vertical overflow
-            if (isUltraTinyHeight) {
-              return SingleChildScrollView(
-                padding: EdgeInsets.zero,
-                child: Column(
+                // Use scrollable layout for extreme constraints to avoid vertical overflow
+                if (isUltraTinyHeight) {
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        // Fixed height for PageView in scroll mode
+                        SizedBox(
+                          height: 240, 
+                          child: PageView.builder(
+                            controller: _pageController,
+                            onPageChanged: (index) {
+                              setState(() => _currentPage = index);
+                            },
+                            itemCount: _pages.length,
+                            itemBuilder: (context, index) {
+                              final page = _pages[index];
+                              return _buildPage(page);
+                            },
+                          ),
+                        ),
+                        _buildBottomSection(
+                          isTinyHeight: true,
+                          isCompactWidth: isCompactWidth,
+                          bottomPadding: bottomPadding,
+                          pageIndicatorSpacing: pageIndicatorSpacing,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Column(
                   children: [
-                    const SizedBox(height: 16),
-                    // Fixed height for PageView in scroll mode
-                    SizedBox(
-                      height: 240, 
+                    if (!isTinyHeight)
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: isCompactHeight ? 4 : 12,
+                        ),
+                        child: SizedBox(
+                          width: constraints.maxWidth - (horizontalPadding * 2),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.center,
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.cardBackground,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '${_currentPage + 1} / ${_pages.length}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: isCompactWidth ? 100 : 160),
+                                const SizedBox(width: 60),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 8),
+                    Expanded(
                       child: PageView.builder(
                         controller: _pageController,
                         onPageChanged: (index) {
@@ -103,92 +172,96 @@ class _IntroScreenState extends State<IntroScreen> {
                       ),
                     ),
                     _buildBottomSection(
-                      isTinyHeight: true,
+                      isTinyHeight: isTinyHeight,
                       isCompactWidth: isCompactWidth,
                       bottomPadding: bottomPadding,
                       pageIndicatorSpacing: pageIndicatorSpacing,
                     ),
                   ],
-                ),
-              );
-            }
+                );
+              },
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: PopupMenuButton<UserRole>(
+                onSelected: (role) async {
+                  final appState = AppStateScope.of(context);
+                  final prefs = await SharedPreferences.getInstance();
+                  
+                  await prefs.setBool('is_logged_in', true);
+                  await prefs.setString('user_role', role == UserRole.student ? 'student' : 'startup');
+                  
+                  if (role == UserRole.student) {
+                    if (prefs.getString('profile_name') == null) {
+                      await prefs.setString('profile_name', 'Demo Student');
+                      await prefs.setString('user_email', 'student@demo.com');
+                      await prefs.setStringList('profile_skills', ['Flutter', 'Dart', 'Design']);
+                    }
+                  } else {
+                    if (prefs.getString('startup_name') == null) {
+                      await prefs.setString('startup_name', 'Demo Startup');
+                      await prefs.setString('user_email', 'startup@demo.com');
+                    }
+                  }
 
-            return Column(
-              children: [
-                if (!isTinyHeight)
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding,
-                      vertical: isCompactHeight ? 4 : 12,
+                  await appState.loadUserSession();
+                  
+                  if (mounted) {
+                    if (role == UserRole.student) {
+                      context.goNamed('studentDashboard');
+                    } else {
+                      context.goNamed('startupDashboard');
+                    }
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: UserRole.student,
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_outline, color: AppTheme.primary, size: 20),
+                        SizedBox(width: 12),
+                        Text('Skip as Student'),
+                      ],
                     ),
-                    child: SizedBox(
-                      width: constraints.maxWidth - (horizontalPadding * 2),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.center,
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.cardBackground,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '${_currentPage + 1} / ${_pages.length}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: isCompactWidth ? 40 : 100),
-                            if (!isLastPage)
-                              TextButton(
-                                onPressed: _completeOnboarding,
-                                child: Text(
-                                  'Skip',
-                                  style: TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              )
-                            else
-                              const SizedBox(width: 60),
-                          ],
+                  ),
+                  const PopupMenuItem(
+                    value: UserRole.startup,
+                    child: Row(
+                      children: [
+                        Icon(Icons.business_outlined, color: AppTheme.primary, size: 20),
+                        SizedBox(width: 12),
+                        Text('Skip as Startup'),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Skip',
+                        style: TextStyle(
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
                         ),
                       ),
-                    ),
-                  )
-                else
-                  const SizedBox(height: 8),
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() => _currentPage = index);
-                    },
-                    itemCount: _pages.length,
-                    itemBuilder: (context, index) {
-                      final page = _pages[index];
-                      return _buildPage(page);
-                    },
+                      SizedBox(width: 4),
+                      Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primary, size: 18),
+                    ],
                   ),
                 ),
-                _buildBottomSection(
-                  isTinyHeight: isTinyHeight,
-                  isCompactWidth: isCompactWidth,
-                  bottomPadding: bottomPadding,
-                  pageIndicatorSpacing: pageIndicatorSpacing,
-                ),
-              ],
-            );
-          },
+              ),
+            ),
+          ],
         ),
       ),
     );
