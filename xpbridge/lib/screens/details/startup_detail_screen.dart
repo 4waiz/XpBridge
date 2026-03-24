@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app.dart';
 import '../../data/dummy_data.dart';
@@ -6,6 +7,7 @@ import '../../models/application.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/team_mission_widgets.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
@@ -52,25 +54,89 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
 
   void _showApplyDialog(BuildContext context, {StartupRole? role}) {
     final roleTitle = role?.title;
+    final appState = AppStateScope.of(context);
+    final student = appState.studentProfile;
+    final guild = student != null ? appState.getGuildForStudent(student.id) : null;
+    final isTeamMission = role?.teamMissionConfig != null;
+
+    if (isTeamMission && guild == null) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => XPPremiumSheet(
+          title: 'Guild required',
+          subtitle:
+              'This is a team mission. Join or create a guild before applying.',
+          footer: XPButton(
+            label: 'Open guilds',
+            icon: Icons.groups_rounded,
+            onPressed: () {
+              Navigator.pop(sheetContext);
+              context.pushNamed('guilds');
+            },
+          ),
+          child: role?.teamMissionConfig != null
+              ? TeamMissionHighlights(config: role!.teamMissionConfig!)
+              : const SizedBox.shrink(),
+        ),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => XPPremiumSheet(
         title: roleTitle != null
-            ? 'Apply for $roleTitle'
+            ? isTeamMission
+                ? 'Apply as guild'
+                : 'Apply for $roleTitle'
             : 'Apply to ${_startup?.companyName}',
         subtitle: roleTitle != null
-            ? 'Share a short note on why you are the right fit.'
+            ? isTeamMission
+                ? 'Send a short team note explaining how your guild will cover the mission.'
+                : 'Share a short note on why you are the right fit.'
             : 'Introduce yourself and explain why this company stands out.',
         footer: XPButton(
-          label: 'Send application',
+          label: isTeamMission ? 'Send guild application' : 'Send application',
           icon: Icons.arrow_upward_rounded,
           onPressed: () async {
-            final appState = AppStateScope.of(context);
-            final student = appState.studentProfile;
+            if (_startup == null) return;
+            if (isTeamMission && guild != null && roleTitle != null) {
+              final guildApplication = await appState.submitGuildApplication(
+                guildId: guild.id,
+                startupId: _startup!.id,
+                startupName: _startup!.companyName,
+                missionTitle: roleTitle,
+                message: _messageController.text.isNotEmpty
+                    ? _messageController.text
+                    : 'Our guild is ready to take this team mission on.',
+              );
+              if (guildApplication == null) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Your guild already applied to this mission'),
+                  ),
+                );
+                return;
+              }
+              _messageController.clear();
+              if (!sheetContext.mounted) return;
+              Navigator.pop(sheetContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Guild application sent for $roleTitle at ${_startup!.companyName}',
+                  ),
+                  backgroundColor: AppTheme.successDark,
+                ),
+              );
+              return;
+            }
 
-            if (student != null && _startup != null) {
+            if (student != null) {
               final application = Application(
                 id: 'app_${DateTime.now().millisecondsSinceEpoch}',
                 studentId: student.id,
@@ -108,13 +174,43 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
             }
           },
         ),
-        child: XPTextField(
-          controller: _messageController,
-          labelText: 'Message',
-          hintText: 'Why are you interested in this opportunity?',
-          prefixIcon: Icons.chat_bubble_outline_rounded,
-          maxLines: 5,
-          textCapitalization: TextCapitalization.sentences,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isTeamMission && role?.teamMissionConfig != null) ...[
+              XPContainer(
+                color: AppTheme.primarySoft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const TeamMissionBadge(compact: true),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          guild?.name ?? 'Guild',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TeamMissionHighlights(config: role!.teamMissionConfig!),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            XPTextField(
+              controller: _messageController,
+              labelText: isTeamMission ? 'Guild note' : 'Message',
+              hintText: isTeamMission
+                  ? 'How will your team split the work and communicate progress?'
+                  : 'Why are you interested in this opportunity?',
+              prefixIcon: Icons.chat_bubble_outline_rounded,
+              maxLines: 5,
+              textCapitalization: TextCapitalization.sentences,
+            ),
+          ],
         ),
       ),
     );
@@ -150,6 +246,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
         .where((skill) => !studentSkills.contains(skill))
         .toList();
     final matchProgress = _matchProgress(startup, studentSkills);
+    final currentGuild = appState.studentProfile != null
+        ? appState.getGuildForStudent(appState.studentProfile!.id)
+        : null;
     StartupRole? nextRoleToApply;
     for (final role in startup.openRoles) {
       if (!_appliedRoleTitles.contains(role.title)) {
@@ -342,9 +441,19 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         ...startup.openRoles.map((role) {
-                          final alreadyApplied = _appliedRoleTitles.contains(
-                            role.title,
-                          );
+                          final alreadyApplied = role.teamMissionConfig == null
+                              ? _appliedRoleTitles.contains(role.title)
+                              : (currentGuild != null &&
+                                  appState
+                                      .getGuildApplicationsForGuild(
+                                        currentGuild.id,
+                                      )
+                                      .any(
+                                        (application) =>
+                                            application.startupId == startup.id &&
+                                            application.missionTitle ==
+                                                role.title,
+                                      ));
                           return Padding(
                             padding: const EdgeInsets.only(
                               bottom: AppSpacing.md,
@@ -364,6 +473,12 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
+                                            if (role.teamMissionConfig != null) ...[
+                                              const TeamMissionBadge(compact: true),
+                                              const SizedBox(
+                                                height: AppSpacing.sm,
+                                              ),
+                                            ],
                                             Text(
                                               role.title,
                                               style: Theme.of(
@@ -387,7 +502,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                                       XPOutlinedButton(
                                         label: alreadyApplied
                                             ? 'Applied'
-                                            : 'Apply',
+                                            : role.teamMissionConfig != null
+                                                ? 'Apply as guild'
+                                                : 'Apply',
                                         expand: false,
                                         size: XPButtonSize.small,
                                         onPressed: alreadyApplied
@@ -414,6 +531,12 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                                       style: Theme.of(
                                         context,
                                       ).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                  if (role.teamMissionConfig != null) ...[
+                                    const SizedBox(height: AppSpacing.md),
+                                    TeamMissionHighlights(
+                                      config: role.teamMissionConfig!,
                                     ),
                                   ],
                                   if (role.estimatedHours != null ||
@@ -476,12 +599,18 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
         child: XPButton(
           label: startup.openRoles.isNotEmpty
               ? (roleCta != null
-                    ? 'Quick apply for ${roleCta.title}'
+                    ? roleCta.teamMissionConfig != null && currentGuild == null
+                        ? 'Join a guild to apply'
+                        : roleCta.teamMissionConfig != null
+                            ? 'Apply as guild for ${roleCta.title}'
+                            : 'Quick apply for ${roleCta.title}'
                     : 'Applications sent')
               : (_hasApplied ? 'Application sent' : 'Apply now'),
           icon: startup.openRoles.isNotEmpty
               ? (roleCta != null
-                    ? Icons.auto_awesome_rounded
+                    ? roleCta.teamMissionConfig != null
+                        ? Icons.groups_rounded
+                        : Icons.auto_awesome_rounded
                     : Icons.check_circle_rounded)
               : (_hasApplied ? Icons.check_circle_rounded : Icons.send_rounded),
           onPressed: startup.openRoles.isNotEmpty

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
+import '../../models/team_mission_config.dart';
 import '../../services/logo_image_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
@@ -26,6 +27,15 @@ class StartupProfileScreen extends StatefulWidget {
 }
 
 class _StartupProfileScreenState extends State<StartupProfileScreen> {
+  static const List<String> _teamRoleOptions = [
+    'Product',
+    'Design',
+    'Dev',
+    'Marketing',
+    'Data',
+    'Operations',
+  ];
+
   bool _savingLogo = false;
 
   Future<void> _handleLogout(BuildContext context) async {
@@ -135,17 +145,23 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
     final outcomeController = TextEditingController();
     final hoursController = TextEditingController();
     final durationController = TextEditingController();
+    final minMembersController = TextEditingController(text: '2');
+    final maxMembersController = TextEditingController(text: '4');
+    final selectedRoles = <String>{};
+    bool isTeamMission = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return XPPremiumSheet(
-          title: 'Add a role',
-          subtitle:
-              'Create a polished opportunity without leaving this screen.',
-          footer: XPButton(
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return XPPremiumSheet(
+            title: 'Add a role',
+            subtitle:
+                'Create a polished opportunity without leaving this screen.',
+            footer: XPButton(
             label: 'Add role',
             icon: Icons.add_rounded,
             onPressed: () async {
@@ -156,6 +172,10 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
               }
               final hours = int.tryParse(hoursController.text.trim());
               final duration = int.tryParse(durationController.text.trim());
+              final minMembers =
+                  int.tryParse(minMembersController.text.trim()) ?? 2;
+              final maxMembers =
+                  int.tryParse(maxMembersController.text.trim()) ?? 4;
 
               final role = StartupRole(
                 title: title,
@@ -168,6 +188,14 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                 learningOutcome: outcome,
                 estimatedHours: hours,
                 durationWeeks: duration,
+                teamMissionConfig: isTeamMission
+                    ? TeamMissionConfig(
+                        requiredRoles: selectedRoles.toList(),
+                        maxMembers: maxMembers,
+                        teamSizeMin: minMembers,
+                        sharedLearningOutcome: outcome,
+                      )
+                    : null,
               );
 
               final updated = profile.copyWith(
@@ -185,8 +213,8 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                 );
               }
             },
-          ),
-          child: SingleChildScrollView(
+            ),
+            child: SingleChildScrollView(
             child: Column(
               children: [
                 XPTextField(
@@ -206,13 +234,85 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                 const SizedBox(height: AppSpacing.md),
                 XPTextField(
                   controller: outcomeController,
-                  labelText: 'Learning outcome',
+                  labelText: isTeamMission
+                      ? 'Shared learning outcome'
+                      : 'Learning outcome',
                   hintText: 'What will the student learn or own?',
                   prefixIcon: Icons.rocket_launch_outlined,
                   maxLines: 2,
                   textCapitalization: TextCapitalization.sentences,
                 ),
                 const SizedBox(height: AppSpacing.md),
+                SwitchListTile(
+                  value: isTeamMission,
+                  onChanged: (value) =>
+                      setModalState(() => isTeamMission = value),
+                  title: Text(
+                    isTeamMission ? 'Team mission' : 'Solo mission',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  subtitle: Text(
+                    isTeamMission
+                        ? 'Guilds can apply as a team.'
+                        : 'Single students apply directly.',
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                if (isTeamMission) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Required roles',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: _teamRoleOptions.map((role) {
+                      return XPChoiceChip(
+                        label: role,
+                        selected: selectedRoles.contains(role),
+                        onSelected: (selected) {
+                          setModalState(() {
+                            if (selected) {
+                              selectedRoles.add(role);
+                            } else {
+                              selectedRoles.remove(role);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: XPTextField(
+                          controller: minMembersController,
+                          labelText: 'Min members',
+                          hintText: '2',
+                          prefixIcon: Icons.group_outlined,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: XPTextField(
+                          controller: maxMembersController,
+                          labelText: 'Max members',
+                          hintText: '4',
+                          prefixIcon: Icons.groups_rounded,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 XPTextField(
                   controller: descriptionController,
                   labelText: 'Description',
@@ -248,6 +348,8 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
               ],
             ),
           ),
+          );
+          },
         );
       },
     );
@@ -466,6 +568,17 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                                               context,
                                             ).textTheme.titleLarge,
                                           ),
+                                          if (role.teamMissionConfig != null) ...[
+                                            const SizedBox(
+                                              height: AppSpacing.xs,
+                                            ),
+                                            XPBadge(
+                                              label: 'Team Mission',
+                                              icon: Icons.groups_rounded,
+                                              color: AppTheme.primaryDeep,
+                                              textColor: AppTheme.surface,
+                                            ),
+                                          ],
                                           if (role.commitment?.isNotEmpty ==
                                               true) ...[
                                             const SizedBox(
@@ -493,6 +606,31 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                                               style: Theme.of(
                                                 context,
                                               ).textTheme.bodySmall,
+                                            ),
+                                          ],
+                                          if (role.teamMissionConfig != null) ...[
+                                            const SizedBox(
+                                              height: AppSpacing.sm,
+                                            ),
+                                            Wrap(
+                                              spacing: AppSpacing.sm,
+                                              runSpacing: AppSpacing.sm,
+                                              children: [
+                                                XPBadge(
+                                                  label:
+                                                      '${role.teamMissionConfig!.teamSizeMin}-${role.teamMissionConfig!.maxMembers} members',
+                                                  icon: Icons.group_outlined,
+                                                ),
+                                                ...role.teamMissionConfig!
+                                                    .requiredRoles
+                                                    .map(
+                                                      (item) => XPBadge(
+                                                        label: item,
+                                                        color:
+                                                            AppTheme.primarySoft,
+                                                      ),
+                                                    ),
+                                              ],
                                             ),
                                           ],
                                           if (role.estimatedHours != null ||

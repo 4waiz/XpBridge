@@ -4,6 +4,7 @@ import '../../app.dart';
 import '../../data/dummy_data.dart';
 import '../../models/student_profile.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/verified_badges_section.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
@@ -50,6 +51,7 @@ class StudentDetailScreen extends StatelessWidget {
     final matchingSkills = student.skills
         .where((skill) => startupSkills.contains(skill))
         .toList();
+    final badges = appState.getBadgesForStudent(student.id);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -199,6 +201,15 @@ class StudentDetailScreen extends StatelessWidget {
                                 )
                                 .toList(),
                           ),
+                        ),
+                      ],
+                      if (badges.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        XPSection(
+                          title: 'Verified badges',
+                          subtitle:
+                              'Non-transferable milestone credentials that add trust to founder review.',
+                          child: VerifiedBadgeStrip(badges: badges),
                         ),
                       ],
                       const SizedBox(height: AppSpacing.xl),

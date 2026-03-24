@@ -8,6 +8,7 @@ import '../../app.dart';
 import '../../data/dummy_data.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
+import '../../models/team_mission_config.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
@@ -24,6 +25,15 @@ class StartupSetupScreen extends StatefulWidget {
 }
 
 class _StartupSetupScreenState extends State<StartupSetupScreen> {
+  static const List<String> _teamRoleOptions = [
+    'Product',
+    'Design',
+    'Dev',
+    'Marketing',
+    'Data',
+    'Operations',
+  ];
+
   final _companyNameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _projectDetailsController = TextEditingController();
@@ -34,9 +44,13 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
   final _roleOutcomeController = TextEditingController();
   final _roleHoursController = TextEditingController();
   final _roleDurationController = TextEditingController();
+  final _teamMinMembersController = TextEditingController(text: '2');
+  final _teamMaxMembersController = TextEditingController(text: '4');
   String? _selectedIndustry;
   final Set<String> _requiredSkills = {};
   final List<StartupRole> _openRoles = [];
+  final Set<String> _teamRequiredRoles = {};
+  bool _isTeamMission = false;
 
   @override
   void initState() {
@@ -56,6 +70,8 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
     _roleOutcomeController.dispose();
     _roleHoursController.dispose();
     _roleDurationController.dispose();
+    _teamMinMembersController.dispose();
+    _teamMaxMembersController.dispose();
     super.dispose();
   }
 
@@ -72,6 +88,8 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
     final outcome = _roleOutcomeController.text.trim();
     final estimatedHours = int.tryParse(_roleHoursController.text.trim());
     final durationWeeks = int.tryParse(_roleDurationController.text.trim());
+    final minMembers = int.tryParse(_teamMinMembersController.text.trim()) ?? 2;
+    final maxMembers = int.tryParse(_teamMaxMembersController.text.trim()) ?? 4;
 
     if (title.isEmpty || outcome.isEmpty) {
       return;
@@ -84,6 +102,14 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
       learningOutcome: outcome,
       estimatedHours: estimatedHours,
       durationWeeks: durationWeeks,
+      teamMissionConfig: _isTeamMission
+          ? TeamMissionConfig(
+              requiredRoles: _teamRequiredRoles.toList(),
+              maxMembers: maxMembers,
+              teamSizeMin: minMembers,
+              sharedLearningOutcome: outcome,
+            )
+          : null,
     );
 
     setState(() {
@@ -94,6 +120,10 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
       _roleOutcomeController.clear();
       _roleHoursController.clear();
       _roleDurationController.clear();
+      _teamMinMembersController.text = '2';
+      _teamMaxMembersController.text = '4';
+      _teamRequiredRoles.clear();
+      _isTeamMission = false;
     });
   }
 
@@ -122,6 +152,7 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
     );
 
     await prefs.setString('startup_name', _companyNameController.text);
+    await prefs.setString('startup_id', profile.id);
     await prefs.setString('startup_description', _descriptionController.text);
     await prefs.setString('startup_industry', _selectedIndustry!);
     await prefs.setStringList('startup_skills', _requiredSkills.toList());
@@ -333,13 +364,87 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                           const SizedBox(height: AppSpacing.md),
                           XPTextField(
                             controller: _roleOutcomeController,
-                            labelText: 'Learning outcome',
+                            labelText: _isTeamMission
+                                ? 'Shared learning outcome'
+                                : 'Learning outcome',
                             hintText: 'What will the student walk away with?',
                             prefixIcon: Icons.rocket_launch_outlined,
                             textCapitalization: TextCapitalization.sentences,
                             onChanged: (_) => setState(() {}),
                           ),
                           const SizedBox(height: AppSpacing.md),
+                          SwitchListTile(
+                            value: _isTeamMission,
+                            onChanged: (value) =>
+                                setState(() => _isTeamMission = value),
+                            title: Text(
+                              _isTeamMission
+                                  ? 'Team mission'
+                                  : 'Solo mission',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            subtitle: Text(
+                              _isTeamMission
+                                  ? 'Guilds can apply to this mission together.'
+                                  : 'Single students can apply directly.',
+                            ),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          if (_isTeamMission) ...[
+                            const SizedBox(height: AppSpacing.md),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Required roles',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: _teamRoleOptions.map((role) {
+                                return XPChoiceChip(
+                                  label: role,
+                                  selected: _teamRequiredRoles.contains(role),
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        _teamRequiredRoles.add(role);
+                                      } else {
+                                        _teamRequiredRoles.remove(role);
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: XPTextField(
+                                    controller: _teamMinMembersController,
+                                    labelText: 'Min members',
+                                    hintText: '2',
+                                    prefixIcon: Icons.group_outlined,
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: XPTextField(
+                                    controller: _teamMaxMembersController,
+                                    labelText: 'Max members',
+                                    hintText: '4',
+                                    prefixIcon: Icons.groups_rounded,
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                          ],
                           XPTextField(
                             controller: _roleDescriptionController,
                             labelText: 'Role description',
@@ -417,6 +522,17 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                                           ),
                                         ],
                                         const SizedBox(height: AppSpacing.sm),
+                                        if (role.teamMissionConfig != null) ...[
+                                          XPBadge(
+                                            label: 'Team Mission',
+                                            icon: Icons.groups_rounded,
+                                            color: AppTheme.primaryDeep,
+                                            textColor: AppTheme.surface,
+                                          ),
+                                          const SizedBox(
+                                            height: AppSpacing.sm,
+                                          ),
+                                        ],
                                         Text(
                                           role.learningOutcome,
                                           style: Theme.of(
@@ -434,6 +550,31 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                                                 ?.copyWith(
                                                   color: AppTheme.textSecondary,
                                                 ),
+                                          ),
+                                        ],
+                                        if (role.teamMissionConfig != null) ...[
+                                          const SizedBox(
+                                            height: AppSpacing.sm,
+                                          ),
+                                          Wrap(
+                                            spacing: AppSpacing.sm,
+                                            runSpacing: AppSpacing.sm,
+                                            children: [
+                                              XPBadge(
+                                                label:
+                                                    '${role.teamMissionConfig!.teamSizeMin}-${role.teamMissionConfig!.maxMembers} members',
+                                                icon: Icons.group_outlined,
+                                              ),
+                                              ...role.teamMissionConfig!
+                                                  .requiredRoles
+                                                  .map(
+                                                    (item) => XPBadge(
+                                                      label: item,
+                                                      color:
+                                                          AppTheme.primarySoft,
+                                                    ),
+                                                  ),
+                                            ],
                                           ),
                                         ],
                                       ],

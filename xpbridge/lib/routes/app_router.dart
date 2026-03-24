@@ -18,6 +18,10 @@ import '../screens/onboarding/intro_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/chat/ai_chat_screen.dart';
 import '../screens/chat/startup_ai_chat_screen.dart';
+import '../screens/guilds/guild_detail_screen.dart';
+import '../screens/guilds/guilds_screen.dart';
+import '../screens/interview/ai_interview_screen.dart';
+import '../screens/war_room/war_room_screen.dart';
 
 class AppRouter {
   AppRouter({required this.appState});
@@ -87,6 +91,27 @@ class AppRouter {
             _slide(const StudentApplicationsScreen()),
       ),
       GoRoute(
+        name: 'guilds',
+        path: '/student/guilds',
+        pageBuilder: (context, state) => _slide(const GuildsScreen()),
+      ),
+      GoRoute(
+        name: 'guildDetail',
+        path: '/student/guilds/:id',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return _slide(GuildDetailScreen(guildId: id));
+        },
+      ),
+      GoRoute(
+        name: 'aiInterview',
+        path: '/student/interview/:id',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return _slide(AiInterviewScreen(interviewId: id));
+        },
+      ),
+      GoRoute(
         name: 'studentProfile',
         path: '/student/profile',
         pageBuilder: (context, state) => _slide(const StudentProfileScreen()),
@@ -130,6 +155,14 @@ class AppRouter {
         name: 'startupAiChat',
         path: '/startup/ai-chat',
         pageBuilder: (context, state) => _slide(const StartupAiChatScreen()),
+      ),
+      GoRoute(
+        name: 'warRoom',
+        path: '/war-room/:id',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return _slide(WarRoomScreen(applicationId: id));
+        },
       ),
     ],
   );

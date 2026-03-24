@@ -8,11 +8,18 @@ import 'package:xpbridge/routes/app_router.dart';
 import 'package:xpbridge/theme/app_theme.dart';
 
 import 'data/dummy_data.dart';
+import 'models/ai_interview.dart';
 import 'models/application.dart';
 import 'models/event_log_entry.dart';
+import 'models/guild.dart';
+import 'models/guild_application.dart';
+import 'models/skill_badge.dart';
 import 'models/student_profile.dart';
 import 'models/startup_profile.dart';
 import 'models/startup_role.dart';
+import 'services/ai_interview_service.dart';
+import 'services/badge_service.dart';
+import 'services/guild_service.dart';
 
 enum UserRole { student, startup }
 
@@ -24,6 +31,10 @@ class AppState extends ChangeNotifier {
   List<Application> _applications = List<Application>.from(
     DummyData.applications,
   );
+  List<AiInterview> _aiInterviews = [];
+  List<Guild> _guilds = [];
+  List<GuildApplication> _guildApplications = [];
+  List<SkillBadge> _skillBadges = [];
   List<EventLogEntry> _eventLog = [];
   bool _xpFeedOptOut = false;
 
@@ -32,6 +43,10 @@ class AppState extends ChangeNotifier {
   StudentProfile? get studentProfile => _studentProfile;
   StartupProfile? get startupProfile => _startupProfile;
   List<Application> get applications => _applications;
+  List<AiInterview> get aiInterviews => _aiInterviews;
+  List<Guild> get guilds => _guilds;
+  List<GuildApplication> get guildApplications => _guildApplications;
+  List<SkillBadge> get skillBadges => _skillBadges;
   List<EventLogEntry> get eventLog => _eventLog;
   bool get xpFeedOptOut => _xpFeedOptOut;
 
@@ -53,6 +68,10 @@ class AppState extends ChangeNotifier {
     _studentProfile = null;
     _startupProfile = null;
     _applications = [];
+    _aiInterviews = [];
+    _guilds = [];
+    _guildApplications = [];
+    _skillBadges = [];
     _eventLog = [];
     _xpFeedOptOut = false;
 
@@ -88,7 +107,9 @@ class AppState extends ChangeNotifier {
       if (name.isEmpty) return false;
 
       _studentProfile = StudentProfile(
-        id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+        id:
+            prefs.getString('profile_id') ??
+            'user_${DateTime.now().millisecondsSinceEpoch}',
         name: name,
         email: email,
         bio: bio,
@@ -126,7 +147,9 @@ class AppState extends ChangeNotifier {
       }
 
       _startupProfile = StartupProfile(
-        id: 'startup_${DateTime.now().millisecondsSinceEpoch}',
+        id:
+            prefs.getString('startup_id') ??
+            'startup_${DateTime.now().millisecondsSinceEpoch}',
         companyName: companyName,
         email: email,
         description: description ?? '',
@@ -156,7 +179,7 @@ class AppState extends ChangeNotifier {
 
   void saveStudentProfile(StudentProfile profile) {
     _studentProfile = profile;
-    _recalculateStudentProgress();
+    _refreshDerivedState();
     notifyListeners();
   }
 
@@ -175,6 +198,10 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString('applications');
     final storedEvents = prefs.getString('xp_event_log');
+    final storedInterviews = prefs.getString('ai_interviews');
+    final storedGuilds = prefs.getString('guilds');
+    final storedGuildApplications = prefs.getString('guild_applications');
+    final storedBadges = prefs.getString('skill_badges');
     _xpFeedOptOut = prefs.getBool('xp_feed_opt_out') ?? false;
     if (storedEvents != null && storedEvents.isNotEmpty) {
       try {
@@ -202,7 +229,60 @@ class AppState extends ChangeNotifier {
         _applications = List<Application>.from(DummyData.applications);
       }
     }
-    _recalculateStudentProgress();
+    if (storedInterviews != null && storedInterviews.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(storedInterviews) as List<dynamic>;
+        _aiInterviews = decoded
+            .map(
+              (item) => AiInterview.fromMap(Map<String, dynamic>.from(item as Map)),
+            )
+            .toList();
+      } catch (_) {
+        _aiInterviews = [];
+      }
+    }
+    if (storedGuilds != null && storedGuilds.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(storedGuilds) as List<dynamic>;
+        _guilds = decoded
+            .map((item) => Guild.fromMap(Map<String, dynamic>.from(item as Map)))
+            .toList();
+      } catch (_) {
+        _guilds = GuildService.seededGuilds();
+      }
+    } else {
+      _guilds = GuildService.seededGuilds();
+    }
+    if (storedGuildApplications != null && storedGuildApplications.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(storedGuildApplications) as List<dynamic>;
+        _guildApplications = decoded
+            .map(
+              (item) => GuildApplication.fromMap(
+                Map<String, dynamic>.from(item as Map),
+              ),
+            )
+            .toList();
+      } catch (_) {
+        _guildApplications = GuildService.seededApplications();
+      }
+    } else {
+      _guildApplications = GuildService.seededApplications();
+    }
+    if (storedBadges != null && storedBadges.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(storedBadges) as List<dynamic>;
+        _skillBadges = decoded
+            .map(
+              (item) =>
+                  SkillBadge.fromMap(Map<String, dynamic>.from(item as Map)),
+            )
+            .toList();
+      } catch (_) {
+        _skillBadges = [];
+      }
+    }
+    _refreshDerivedState();
     notifyListeners();
   }
 
@@ -211,6 +291,38 @@ class AppState extends ChangeNotifier {
     await prefs.setString(
       'applications',
       jsonEncode(_applications.map((app) => app.toMap()).toList()),
+    );
+  }
+
+  Future<void> _persistAiInterviews() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'ai_interviews',
+      jsonEncode(_aiInterviews.map((item) => item.toMap()).toList()),
+    );
+  }
+
+  Future<void> _persistGuilds() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'guilds',
+      jsonEncode(_guilds.map((item) => item.toMap()).toList()),
+    );
+  }
+
+  Future<void> _persistGuildApplications() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'guild_applications',
+      jsonEncode(_guildApplications.map((item) => item.toMap()).toList()),
+    );
+  }
+
+  Future<void> _persistSkillBadges() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'skill_badges',
+      jsonEncode(_skillBadges.map((item) => item.toMap()).toList()),
     );
   }
 
@@ -243,10 +355,175 @@ class AppState extends ChangeNotifier {
   }
 
   int _levelForXp(int xp) {
+    if (xp >= 6000) return 10;
+    if (xp >= 4800) return 9;
+    if (xp >= 3800) return 8;
+    if (xp >= 3000) return 7;
+    if (xp >= 2200) return 6;
+    if (xp >= 1500) return 5;
     if (xp >= 900) return 4;
     if (xp >= 500) return 3;
     if (xp >= 200) return 2;
     return 1;
+  }
+
+  List<StudentProfile> get allStudents {
+    final students = [...DummyData.students];
+    final current = _studentProfile;
+    if (current != null && students.every((item) => item.id != current.id)) {
+      students.insert(0, current);
+    }
+    return students;
+  }
+
+  List<StartupProfile> get allStartups {
+    final startups = [...DummyData.startups];
+    final current = _startupProfile;
+    if (current != null && startups.every((item) => item.id != current.id)) {
+      startups.insert(0, current);
+    }
+    return startups;
+  }
+
+  StudentProfile? getStudentById(String studentId) {
+    try {
+      return allStudents.firstWhere((student) => student.id == studentId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  StartupProfile? getStartupById(String startupId) {
+    try {
+      return allStartups.firstWhere((startup) => startup.id == startupId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  StartupRole? getStartupRole(String startupId, String roleTitle) {
+    final startup = getStartupById(startupId);
+    if (startup == null) return null;
+    try {
+      return startup.openRoles.firstWhere((role) => role.title == roleTitle);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Guild? getGuildById(String guildId) {
+    try {
+      return _guilds.firstWhere((guild) => guild.id == guildId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Guild? getGuildForStudent(String studentId) {
+    try {
+      return _guilds.firstWhere((guild) => guild.memberIds.contains(studentId));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<GuildApplication> getGuildApplicationsForStartup(String startupId) {
+    return _guildApplications
+        .where((application) => application.startupId == startupId)
+        .toList();
+  }
+
+  List<GuildApplication> getGuildApplicationsForGuild(String guildId) {
+    return _guildApplications
+        .where((application) => application.guildId == guildId)
+        .toList();
+  }
+
+  int getActiveGuildMissionCount(String guildId) {
+    return _guildApplications.where((application) {
+      return application.guildId == guildId &&
+          application.status != ApplicationStatus.completed &&
+          application.status != ApplicationStatus.rejected;
+    }).length;
+  }
+
+  AiInterview? getInterviewById(String interviewId) {
+    try {
+      return _aiInterviews.firstWhere((item) => item.id == interviewId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  AiInterview? getInterviewForApplication(String applicationId) {
+    try {
+      return _aiInterviews.firstWhere(
+        (interview) => interview.applicationId == applicationId,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<AiInterview> getInterviewsForStartup(String startupId) {
+    return _aiInterviews
+        .where((interview) => interview.startupId == startupId)
+        .toList();
+  }
+
+  List<SkillBadge> getBadgesForStudent(String studentId) {
+    return _skillBadges
+        .where((badge) => badge.studentId == studentId)
+        .toList()
+      ..sort((a, b) => b.issuedAt.compareTo(a.issuedAt));
+  }
+
+  List<StudentProfile> getGuildMembers(String guildId) {
+    final guild = getGuildById(guildId);
+    if (guild == null) return [];
+    return guild.memberIds
+        .map(getStudentById)
+        .whereType<StudentProfile>()
+        .toList();
+  }
+
+  void _refreshDerivedState() {
+    _recalculateStudentProgress();
+    final previousBadgeIds = _skillBadges.map((badge) => badge.id).toSet();
+    _skillBadges = BadgeService.issueEligibleBadges(
+      students: allStudents,
+      applications: _applications,
+      guilds: _guilds,
+      guildApplications: _guildApplications,
+      existingBadges: _skillBadges,
+    );
+    final currentStudent = _studentProfile;
+    if (currentStudent != null) {
+      final newCurrentBadge = _skillBadges.firstWhere(
+        (badge) =>
+            badge.studentId == currentStudent.id &&
+            !previousBadgeIds.contains(badge.id),
+        orElse: () => SkillBadge(
+          id: '',
+          studentId: '',
+          title: '',
+          description: '',
+          issuedAt: DateTime(2000),
+          badgeType: SkillBadgeType.level10Achieved,
+          earnedFrom: '',
+          verificationStatus: SkillBadgeVerificationStatus.pending,
+          tokenIdOrReference: '',
+        ),
+      );
+      if (newCurrentBadge.id.isNotEmpty) {
+        _logEvent(
+          'badge_issued',
+          'Earned ${newCurrentBadge.title}',
+          _firstName(currentStudent.name),
+        );
+      }
+    }
+    unawaited(_persistSkillBadges());
   }
 
   void _recalculateStudentProgress() {
@@ -264,6 +541,7 @@ class AppState extends ChangeNotifier {
         .toList();
 
     final completedCount = completed.length;
+    final currentGuild = getGuildForStudent(profile.id);
     var xp = completedCount * 100;
     if (completedCount > 0) {
       xp += 50; // first completion bonus
@@ -286,6 +564,9 @@ class AppState extends ChangeNotifier {
             )
             .length *
         25;
+    if (currentGuild != null) {
+      xp += (currentGuild.collaborationXp * 0.35).round();
+    }
 
     final newLevel = _levelForXp(xp);
     _studentProfile = profile.copyWith(
@@ -304,7 +585,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> addApplication(Application application) async {
     _applications = [..._applications, application];
-    _recalculateStudentProgress();
+    _refreshDerivedState();
     notifyListeners();
     await _persistApplications();
   }
@@ -328,7 +609,7 @@ class AppState extends ChangeNotifier {
       }
       return app;
     }).toList();
-    _recalculateStudentProgress();
+    _refreshDerivedState();
     notifyListeners();
     await _persistApplications();
     if (status == ApplicationStatus.completed && updatedApplication != null) {
@@ -367,7 +648,7 @@ class AppState extends ChangeNotifier {
       }
       return app;
     }).toList();
-    _recalculateStudentProgress();
+    _refreshDerivedState();
     notifyListeners();
     await _persistApplications();
     if (updatedApp != null) {
@@ -404,7 +685,7 @@ class AppState extends ChangeNotifier {
       }
       return app;
     }).toList();
-    _recalculateStudentProgress();
+    _refreshDerivedState();
     notifyListeners();
     await _persistApplications();
     if (updatedApp != null) {
@@ -430,6 +711,226 @@ class AppState extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<AiInterview?> requestAiInterview(String applicationId) async {
+    final existing = getInterviewForApplication(applicationId);
+    if (existing != null) {
+      return existing;
+    }
+    final application = getApplicationById(applicationId);
+    if (application == null) return null;
+
+    final interview = AiInterviewService.createInterview(
+      application: application,
+      student: getStudentById(application.studentId),
+      startup: getStartupById(application.startupId),
+    );
+    _aiInterviews = [interview, ..._aiInterviews];
+    _applications = _applications.map((app) {
+      if (app.id == applicationId && app.status == ApplicationStatus.pending) {
+        return app.copyWith(
+          status: ApplicationStatus.interviewing,
+          updatedAt: DateTime.now(),
+        );
+      }
+      return app;
+    }).toList();
+    notifyListeners();
+    await _persistAiInterviews();
+    await _persistApplications();
+    return interview;
+  }
+
+  Future<void> startAiInterview(String interviewId) async {
+    _aiInterviews = _aiInterviews.map((interview) {
+      if (interview.id == interviewId) {
+        return interview.copyWith(status: AiInterviewStatus.inProgress);
+      }
+      return interview;
+    }).toList();
+    notifyListeners();
+    await _persistAiInterviews();
+  }
+
+  Future<AiInterview?> submitAiInterview(
+    String interviewId,
+    List<AiInterviewResponse> responses,
+  ) async {
+    AiInterview? updatedInterview;
+    _aiInterviews = _aiInterviews.map((interview) {
+      if (interview.id == interviewId) {
+        updatedInterview = AiInterviewService.evaluateInterview(
+          interview,
+          responses,
+        );
+        return updatedInterview!;
+      }
+      return interview;
+    }).toList();
+    notifyListeners();
+    await _persistAiInterviews();
+    return updatedInterview;
+  }
+
+  Future<Guild?> createGuild({
+    required String name,
+    required String description,
+    List<String> skillTags = const [],
+  }) async {
+    final student = _studentProfile;
+    if (student == null) return null;
+
+    final existing = getGuildForStudent(student.id);
+    if (existing != null) {
+      await leaveGuild(existing.id, student.id);
+    }
+
+    final guild = GuildService.createGuild(
+      name: name,
+      description: description,
+      owner: student,
+      skillTags: skillTags,
+    );
+    _guilds = [guild, ..._guilds];
+    _refreshDerivedState();
+    notifyListeners();
+    await _persistGuilds();
+    return guild;
+  }
+
+  Future<void> joinGuild(String guildId, String studentId) async {
+    final student = getStudentById(studentId);
+    if (student == null) return;
+
+    final existing = getGuildForStudent(studentId);
+    if (existing != null && existing.id != guildId) {
+      await leaveGuild(existing.id, studentId);
+    }
+
+    _guilds = _guilds.map((guild) {
+      if (guild.id != guildId || guild.memberIds.contains(studentId)) {
+        return guild;
+      }
+      final updatedGuild = guild.copyWith(
+        memberIds: [...guild.memberIds, studentId],
+      );
+      return GuildService.mergeMemberSkills(updatedGuild, getGuildMembers(guildId)..add(student));
+    }).toList();
+    _refreshDerivedState();
+    notifyListeners();
+    await _persistGuilds();
+  }
+
+  Future<void> leaveGuild(String guildId, String studentId) async {
+    _guilds = _guilds
+        .map((guild) {
+          if (guild.id != guildId) return guild;
+          final remainingMembers = guild.memberIds
+              .where((memberId) => memberId != studentId)
+              .toList();
+          if (remainingMembers.isEmpty) {
+            return guild.copyWith(memberIds: const []);
+          }
+          return GuildService.mergeMemberSkills(
+            guild.copyWith(
+              ownerStudentId: guild.ownerStudentId == studentId
+                  ? remainingMembers.first
+                  : guild.ownerStudentId,
+              memberIds: remainingMembers,
+            ),
+            remainingMembers
+                .map(getStudentById)
+                .whereType<StudentProfile>()
+                .toList(),
+          );
+        })
+        .where((guild) => guild.memberIds.isNotEmpty)
+        .toList();
+    _refreshDerivedState();
+    notifyListeners();
+    await _persistGuilds();
+  }
+
+  Future<GuildApplication?> submitGuildApplication({
+    required String guildId,
+    required String startupId,
+    required String startupName,
+    required String missionTitle,
+    required String message,
+  }) async {
+    final exists = _guildApplications.any(
+      (application) =>
+          application.guildId == guildId &&
+          application.missionTitle == missionTitle &&
+          application.startupId == startupId &&
+          application.status != ApplicationStatus.rejected,
+    );
+    if (exists) return null;
+
+    final application = GuildService.createGuildApplication(
+      guildId: guildId,
+      startupId: startupId,
+      startupName: startupName,
+      missionTitle: missionTitle,
+      message: message,
+    );
+    _guildApplications = [application, ..._guildApplications];
+    _refreshDerivedState();
+    notifyListeners();
+    await _persistGuildApplications();
+    return application;
+  }
+
+  Future<void> advanceGuildApplication(String guildApplicationId) async {
+    _guildApplications = _guildApplications.map((application) {
+      if (application.id == guildApplicationId) {
+        return application.copyWith(
+          status: GuildService.nextStatus(application.status),
+          updatedAt: DateTime.now(),
+        );
+      }
+      return application;
+    }).toList();
+    await _applyGuildRewards();
+  }
+
+  Future<void> completeGuildApplication(String guildApplicationId) async {
+    _guildApplications = _guildApplications.map((application) {
+      if (application.id == guildApplicationId) {
+        return application.copyWith(
+          status: ApplicationStatus.completed,
+          updatedAt: DateTime.now(),
+        );
+      }
+      return application;
+    }).toList();
+    await _applyGuildRewards();
+  }
+
+  Future<void> _applyGuildRewards() async {
+    _guilds = _guilds.map((guild) {
+      final completedForGuild = _guildApplications.where(
+        (application) =>
+            application.guildId == guild.id &&
+            application.status == ApplicationStatus.completed,
+      );
+      final activeForGuild = _guildApplications.where(
+        (application) =>
+            application.guildId == guild.id &&
+            application.status != ApplicationStatus.completed &&
+            application.status != ApplicationStatus.rejected,
+      );
+      return guild.copyWith(
+        collaborationXp:
+            (completedForGuild.length * 120) + (activeForGuild.length * 35),
+        completedTeamMissionsCount: completedForGuild.length,
+      );
+    }).toList();
+    _refreshDerivedState();
+    notifyListeners();
+    await _persistGuildApplications();
+    await _persistGuilds();
   }
 }
 

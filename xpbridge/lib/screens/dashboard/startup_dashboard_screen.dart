@@ -3,9 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../app.dart';
 import '../../data/dummy_data.dart';
+import '../../models/ai_interview.dart';
 import '../../models/application.dart';
+import '../../models/guild_application.dart';
 import '../../models/student_profile.dart';
+import '../../services/ai_interview_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/team_mission_widgets.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
@@ -380,6 +384,9 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
     final applications = startupApplications.isNotEmpty
         ? startupApplications
         : appState.applications;
+    final guildApplications = startupProfile != null
+        ? appState.getGuildApplicationsForStartup(startupProfile.id)
+        : <GuildApplication>[];
     final skillsForFilters = startupProfile?.requiredSkills ?? [];
 
     return Scaffold(
@@ -509,7 +516,9 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                         startupSkills: skillsForFilters,
                       )
                     : _ApplicationsTab(
+                        appState: appState,
                         applications: applications,
+                        guildApplications: guildApplications,
                         statusColor: _statusColor,
                         statusLabel: _statusLabel,
                         statusProgress: _statusProgress,
@@ -668,7 +677,9 @@ class _BrowseStudentsTab extends StatelessWidget {
 
 class _ApplicationsTab extends StatelessWidget {
   const _ApplicationsTab({
+    required this.appState,
     required this.applications,
+    required this.guildApplications,
     required this.statusColor,
     required this.statusLabel,
     required this.statusProgress,
@@ -676,7 +687,9 @@ class _ApplicationsTab extends StatelessWidget {
     required this.onLeaveFeedback,
   });
 
+  final AppState appState;
   final List<Application> applications;
+  final List<GuildApplication> guildApplications;
   final Color Function(ApplicationStatus status) statusColor;
   final String Function(ApplicationStatus status) statusLabel;
   final double Function(ApplicationStatus status) statusProgress;
@@ -685,7 +698,7 @@ class _ApplicationsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (applications.isEmpty) {
+    if (applications.isEmpty && guildApplications.isEmpty) {
       return ListView(
         padding: const EdgeInsets.all(AppSpacing.page),
         children: [
@@ -718,70 +731,257 @@ class _ApplicationsTab extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.page,
         0,
         AppSpacing.page,
         120,
       ),
-      itemCount: applications.length,
-      itemBuilder: (context, index) {
-        final application = applications[index];
-        final canMarkCompleted =
-            application.status != ApplicationStatus.completed;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-          child: XPApplicationStatusCard(
-            title: application.studentName,
-            subtitle: application.roleTitle ?? 'Mission application',
-            statusLabel: statusLabel(application.status),
-            statusColor: statusColor(application.status),
-            progress: statusProgress(application.status),
-            summary: application.message?.isNotEmpty == true
-                ? application.message!
-                : 'Open the learner profile, leave feedback, or mark the mission complete.',
-            trailing: Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                if (application.reflectionDid?.isNotEmpty == true ||
-                    application.reflectionLearned?.isNotEmpty == true)
-                  XPBadge(
-                    label: 'Reflection submitted',
-                    icon: Icons.auto_stories_rounded,
-                    color: AppTheme.primarySoft,
+      children: [
+        ...applications.map((application) {
+          final canMarkCompleted =
+              application.status != ApplicationStatus.completed;
+          final interview = appState.getInterviewForApplication(application.id);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+            child: XPApplicationStatusCard(
+              title: application.studentName,
+              subtitle: application.roleTitle ?? 'Mission application',
+              statusLabel: statusLabel(application.status),
+              statusColor: statusColor(application.status),
+              progress: statusProgress(application.status),
+              summary: application.message?.isNotEmpty == true
+                  ? application.message!
+                  : 'Open the learner profile, leave feedback, or move this mission forward.',
+              trailing: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  if (interview != null)
+                    XPBadge(
+                      label: interview.status == AiInterviewStatus.completed
+                          ? 'AI interview complete'
+                          : interview.status == AiInterviewStatus.inProgress
+                              ? 'AI interview live'
+                              : 'AI interview requested',
+                      icon: interview.status == AiInterviewStatus.completed
+                          ? Icons.verified_rounded
+                          : Icons.record_voice_over_rounded,
+                      color: interview.status == AiInterviewStatus.completed
+                          ? AppTheme.primarySoft
+                          : AppTheme.surface.withValues(alpha: 0.72),
+                    ),
+                  if (application.reflectionDid?.isNotEmpty == true ||
+                      application.reflectionLearned?.isNotEmpty == true)
+                    XPBadge(
+                      label: 'Reflection submitted',
+                      icon: Icons.auto_stories_rounded,
+                      color: AppTheme.primarySoft,
+                    ),
+                ],
+              ),
+              footer: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (interview == null) ...[
+                    XPContainer(
+                      color: AppTheme.primarySoft,
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.record_voice_over_rounded,
+                            color: AppTheme.primaryDark,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              'Trigger a short AI interview before manual review.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          XPButton(
+                            label: 'Request',
+                            icon: Icons.auto_awesome_rounded,
+                            expand: false,
+                            size: XPButtonSize.small,
+                            onPressed: () => appState.requestAiInterview(
+                              application.id,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ] else if (interview.status == AiInterviewStatus.completed) ...[
+                    XPContainer(
+                      color: AppTheme.primarySoft,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'AI interview summary',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const Spacer(),
+                              XPBadge(
+                                label: interview.recommendation == null
+                                    ? 'Ready'
+                                    : AiInterviewService.recommendationLabel(
+                                        interview.recommendation!,
+                                      ),
+                                color: AppTheme.primaryDeep,
+                                textColor: AppTheme.surface,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              XPBadge(
+                                label:
+                                    'Communication ${interview.communicationScore ?? 0}',
+                              ),
+                              XPBadge(
+                                label:
+                                    'Confidence ${interview.confidenceScore ?? 0}',
+                              ),
+                              XPBadge(
+                                label:
+                                    'Relevance ${interview.relevanceScore ?? 0}',
+                              ),
+                            ],
+                          ),
+                          if (interview.summary?.isNotEmpty == true) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              interview.summary!,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: XPOutlinedButton(
+                          label: 'Feedback',
+                          icon: Icons.feedback_outlined,
+                          size: XPButtonSize.medium,
+                          onPressed: () => onLeaveFeedback(application),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: XPButton(
+                          label: canMarkCompleted ? 'Finish' : 'Done',
+                          icon: canMarkCompleted
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.check_circle_rounded,
+                          size: XPButtonSize.medium,
+                          onPressed: canMarkCompleted
+                              ? () => onMarkCompleted(application)
+                              : null,
+                        ),
+                      ),
+                    ],
                   ),
-              ],
+                ],
+              ),
             ),
-            footer: Row(
-              children: [
-                Expanded(
-                  child: XPOutlinedButton(
-                    label: 'Leave feedback',
-                    icon: Icons.feedback_outlined,
-                    size: XPButtonSize.medium,
-                    onPressed: () => onLeaveFeedback(application),
+          );
+        }),
+        if (guildApplications.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          XPSection(
+            title: 'Guild applications',
+            subtitle:
+                'Review cross-functional team submissions alongside individual learners.',
+            child: Column(
+              children: guildApplications.map((guildApplication) {
+                final guild = appState.getGuildById(guildApplication.guildId);
+                final members = appState.getGuildMembers(guildApplication.guildId);
+                if (guild == null) {
+                  return const SizedBox.shrink();
+                }
+                final role = appState.getStartupRole(
+                  guildApplication.startupId,
+                  guildApplication.missionTitle,
+                );
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: GuildPreviewCard(
+                    guild: guild,
+                    members: members,
+                    activeMissions: appState.getActiveGuildMissionCount(guild.id),
+                    footer: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (role?.teamMissionConfig != null) ...[
+                          TeamMissionHighlights(
+                            config: role!.teamMissionConfig!,
+                            showOutcome: false,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                        ],
+                        Text(
+                          '${guildApplication.missionTitle} • ${guildApplication.startupName}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          guildApplication.message,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: XPOutlinedButton(
+                                label: 'Advance',
+                                icon: Icons.trending_up_rounded,
+                                size: XPButtonSize.medium,
+                                onPressed: () => appState.advanceGuildApplication(
+                                  guildApplication.id,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: XPButton(
+                                label: guildApplication.status ==
+                                        ApplicationStatus.completed
+                                    ? 'Completed'
+                                    : 'Complete',
+                                icon: Icons.check_circle_outline_rounded,
+                                size: XPButtonSize.medium,
+                                onPressed: guildApplication.status ==
+                                        ApplicationStatus.completed
+                                    ? null
+                                    : () => appState.completeGuildApplication(
+                                          guildApplication.id,
+                                        ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: XPButton(
-                    label: canMarkCompleted ? 'Mark complete' : 'Completed',
-                    icon: canMarkCompleted
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.check_circle_rounded,
-                    size: XPButtonSize.medium,
-                    onPressed: canMarkCompleted
-                        ? () => onMarkCompleted(application)
-                        : null,
-                  ),
-                ),
-              ],
+                );
+              }).toList(),
             ),
           ),
-        );
-      },
+        ],
+      ],
     );
   }
 }
