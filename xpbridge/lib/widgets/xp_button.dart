@@ -13,6 +13,7 @@ class XPButton extends StatefulWidget {
     this.tonal = false,
     this.expand = true,
     this.size = XPButtonSize.large,
+    this.loading = false,
   });
 
   final String label;
@@ -21,6 +22,7 @@ class XPButton extends StatefulWidget {
   final bool tonal;
   final bool expand;
   final XPButtonSize size;
+  final bool loading;
 
   @override
   State<XPButton> createState() => _XPButtonState();
@@ -67,38 +69,53 @@ class _XPButtonState extends State<XPButton> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: widget.onPressed,
+            onTap: widget.loading ? null : widget.onPressed,
             borderRadius: BorderRadius.circular(AppTheme.pillRadius),
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: style.horizontalPadding,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: widget.expand
-                    ? MainAxisSize.max
-                    : MainAxisSize.min,
-                children: [
-                  if (widget.icon != null) ...[
-                    Icon(
-                      widget.icon,
-                      size: style.iconSize,
-                      color: isDisabled ? AppTheme.textMuted : foreground,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                  ],
-                  Flexible(
-                    child: Text(
-                      widget.label,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontSize: style.fontSize,
-                        color: isDisabled ? AppTheme.textMuted : foreground,
+              child: widget.loading
+                  ? Center(
+                      child: SizedBox(
+                        width: style.iconSize,
+                        height: style.iconSize,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: foreground,
+                        ),
                       ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize:
+                          widget.expand ? MainAxisSize.max : MainAxisSize.min,
+                      children: [
+                        if (widget.icon != null) ...[
+                          Icon(
+                            widget.icon,
+                            size: style.iconSize,
+                            color: isDisabled ? AppTheme.textMuted : foreground,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                        ],
+                        Flexible(
+                          child: Text(
+                            widget.label,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  fontSize: style.fontSize,
+                                  color: isDisabled
+                                      ? AppTheme.textMuted
+                                      : foreground,
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),

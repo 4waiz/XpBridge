@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app.dart';
 import '../../data/dummy_data.dart';
 import '../../models/student_profile.dart';
+import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
@@ -44,39 +45,65 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
     if (!_canContinue) return;
 
     final appState = AppStateScope.of(context);
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('user_email') ?? '';
+    final user = SupabaseService.currentUser;
+    if (user == null) {
+      context.goNamed('login');
+      return;
+    }
 
-    final profile = StudentProfile(
-      id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-      name: _nameController.text,
-      email: email,
-      bio: _bioController.text.isNotEmpty ? _bioController.text : null,
-      education: _educationController.text.isNotEmpty
-          ? _educationController.text
-          : null,
-      skills: _skills.toList(),
-      availabilityHours: _hours,
-      portfolioUrl: _portfolioController.text.isNotEmpty
-          ? _portfolioController.text
-          : null,
-      createdAt: DateTime.now(),
-      xpPoints: 0,
-      level: 1,
-      missionsCompletedCount: 0,
-    );
+    try {
+      final profile = StudentProfile(
+        id: user.id,
+        name: _nameController.text,
+        email: user.email ?? '',
+        bio: _bioController.text.isNotEmpty ? _bioController.text : null,
+        education: _educationController.text.isNotEmpty
+            ? _educationController.text
+            : null,
+        skills: _skills.toList(),
+        availabilityHours: _hours,
+        portfolioUrl: _portfolioController.text.isNotEmpty
+            ? _portfolioController.text
+            : null,
+        createdAt: DateTime.now(),
+        xpPoints: 0,
+        level: 1,
+        missionsCompletedCount: 0,
+      );
 
-    await prefs.setString('profile_name', _nameController.text);
-    await prefs.setString('profile_id', profile.id);
-    await prefs.setString('profile_bio', _bioController.text);
-    await prefs.setString('profile_education', _educationController.text);
-    await prefs.setStringList('profile_skills', _skills.toList());
-    await prefs.setDouble('profile_hours', _hours);
-    await prefs.setBool('is_logged_in', true);
+      // Save to Supabase Cloud
+      await SupabaseService.updateProfile(
+        id: user.id,
+        data: {
+          'name': profile.name,
+          'bio': profile.bio,
+          'education': profile.education,
+          'skills': profile.skills,
+          'availability_hours': profile.availabilityHours,
+          'portfolio_url': profile.portfolioUrl,
+        },
+      );
 
-    if (!mounted) return;
-    appState.saveStudentProfile(profile);
-    context.goNamed('studentDashboard');
+      // Save to local cache for offline/instant use
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('profile_name', _nameController.text);
+      await prefs.setString('profile_id', profile.id);
+      await prefs.setString('profile_bio', _bioController.text);
+      await prefs.setString('profile_education', _educationController.text);
+      await prefs.setStringList('profile_skills', _skills.toList());
+      await prefs.setDouble('profile_hours', _hours);
+      await prefs.setBool('is_logged_in', true);
+
+      if (!mounted) return;
+      appState.saveStudentProfile(profile);
+      context.goNamed('studentDashboard');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save cloud profile: $e')),
+        );
+      }
+    }
   }
 
   @override

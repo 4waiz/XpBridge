@@ -62,4 +62,44 @@ class StartupProfile {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'company_name': companyName,
+      'email': email,
+      'phone': phone,
+      'description': description,
+      'industry': industry,
+      'required_skills': requiredSkills,
+      'open_roles': openRoles.map((role) => role.toMap()).toList(),
+      'website_url': websiteUrl,
+      'logo_url': logoUrl,
+      'logo_base64': logoBase64,
+      'project_details': projectDetails,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  factory StartupProfile.fromMap(Map<String, dynamic> map) {
+    return StartupProfile(
+      id: map['id'] ?? '',
+      companyName: map['company_name'] ?? '',
+      email: map['email'] ?? '',
+      phone: map['phone'],
+      description: map['description'] ?? '',
+      industry: map['industry'] ?? '',
+      requiredSkills: List<String>.from(map['required_skills'] ?? []),
+      openRoles: (map['open_roles'] as List? ?? [])
+          .map((roleMap) => StartupRole.fromMap(Map<String, dynamic>.from(roleMap)))
+          .toList(),
+      websiteUrl: map['website_url'],
+      logoUrl: map['logo_url'],
+      logoBase64: map['logo_base64'],
+      projectDetails: map['project_details'],
+      createdAt: DateTime.parse(
+          map['created_at'] ?? DateTime.now().toIso8601String()),
+    );
+  }
 }
+

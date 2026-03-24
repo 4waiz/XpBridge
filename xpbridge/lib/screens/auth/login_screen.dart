@@ -1,5 +1,6 @@
 import 'dart:convert';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/supabase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,7 +9,6 @@ import '../../app.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
 import '../../models/student_profile.dart';
-import '../../services/user_file_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
@@ -27,6 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   String? _emailError;
   String? _passwordError;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -72,88 +73,64 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (_emailError == null && _passwordError == null) {
-      final enteredEmail = _emailController.text.trim().toLowerCase();
-      final enteredPassword = _passwordController.text;
+      setState(() => _isLoading = true);
+      
+      try {
+        final enteredEmail = _emailController.text.trim().toLowerCase();
+        final enteredPassword = _passwordController.text;
 
-      final userExists = await UserFileService.userExists(enteredEmail);
-      if (!userExists) {
-        setState(() {
-          _emailError = 'Account not found. Please sign up first.';
-        });
-        return;
-      }
+        final response = await SupabaseService.signIn(
+          email: enteredEmail,
+          password: enteredPassword,
+        );
 
-      final isValid = await UserFileService.validateUser(
-        enteredEmail,
-        enteredPassword,
-      );
-      if (!isValid) {
-        setState(() {
-          _passwordError = 'Incorrect password. Please try again.';
-        });
-        return;
-      }
+        final user = response.user;
+        if (user == null) throw Exception('Login failed');
 
-      final prefs = await SharedPreferences.getInstance();
-      final savedRole = prefs.getString('user_role');
-      await prefs.setBool('is_logged_in', true);
+        // Fetch user role and profile from 'profiles' table
+        final profileData = await SupabaseService.client
+            .from('profiles')
+            .select()
+            .eq('id', user.id)
+            .single();
 
-      if (!mounted) return;
+        final roleStr = profileData['role'] as String;
+        final role = roleStr == 'student' ? UserRole.student : UserRole.startup;
 
-      final appState = AppStateScope.of(context);
-      final role = savedRole == 'student' ? UserRole.student : UserRole.startup;
-      appState.login(role: role);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setString('user_role', roleStr);
 
-      if (role == UserRole.student) {
-        final name = prefs.getString('profile_name');
-        if (name != null && name.isNotEmpty) {
-          final profile = StudentProfile(
-            id: 'user_restored',
-            name: name,
-            email: enteredEmail,
-            bio: prefs.getString('profile_bio'),
-            education: prefs.getString('profile_education'),
-            skills: prefs.getStringList('profile_skills') ?? [],
-            availabilityHours: prefs.getDouble('profile_hours') ?? 10,
-            createdAt: DateTime.now(),
-            xpPoints: 0,
-            level: 1,
-            missionsCompletedCount: 0,
-          );
+        if (!mounted) return;
+
+        final appState = AppStateScope.of(context);
+        appState.login(role: role);
+
+        if (role == UserRole.student) {
+          final profile = StudentProfile.fromMap(profileData);
           appState.saveStudentProfile(profile);
-        }
-        if (!mounted) return;
-        context.goNamed('studentDashboard');
-      } else {
-        final companyName = prefs.getString('startup_name');
-        if (companyName != null && companyName.isNotEmpty) {
-          final storedRoles = prefs.getString('startup_roles');
-          final roles = storedRoles != null && storedRoles.isNotEmpty
-              ? (jsonDecode(storedRoles) as List<dynamic>)
-                    .map(
-                      (item) => StartupRole.fromMap(
-                        Map<String, dynamic>.from(item as Map),
-                      ),
-                    )
-                    .where((role) => role.title.isNotEmpty)
-                    .toList()
-              : <StartupRole>[];
-          final profile = StartupProfile(
-            id: 'startup_restored',
-            companyName: companyName,
-            email: enteredEmail,
-            description: prefs.getString('startup_description') ?? '',
-            industry: prefs.getString('startup_industry') ?? '',
-            requiredSkills: prefs.getStringList('startup_skills') ?? [],
-            openRoles: roles,
-            projectDetails: prefs.getString('startup_project'),
-            logoBase64: prefs.getString('startup_logo_base64'),
-            createdAt: DateTime.now(),
-          );
+          context.goNamed('studentDashboard');
+        } else {
+          final profile = StartupProfile.fromMap(profileData);
           appState.saveStartupProfile(profile);
+          context.goNamed('startupDashboard');
         }
-        if (!mounted) return;
-        context.goNamed('startupDashboard');
+      } on AuthException catch (e) {
+        setState(() {
+          if (e.message.toLowerCase().contains('invalid login credentials')) {
+            _passwordError = 'Invalid email or password.';
+          } else {
+            _emailError = e.message;
+          }
+        });
+      } catch (e) {
+        setState(() {
+          _emailError = 'An unexpected error occurred. Please try again.';
+        });
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
@@ -257,6 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     XPButton(
                       label: 'Continue',
                       icon: Icons.arrow_forward_rounded,
+                      loading: _isLoading,
                       onPressed: _handleLogin,
                     ),
                   ],

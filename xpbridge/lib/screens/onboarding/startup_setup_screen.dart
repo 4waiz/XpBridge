@@ -9,6 +9,7 @@ import '../../data/dummy_data.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
 import '../../models/team_mission_config.dart';
+import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
@@ -131,41 +132,79 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
     if (!_canContinue) return;
 
     final appState = AppStateScope.of(context);
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('user_email') ?? '';
+    final user = SupabaseService.currentUser;
+    if (user == null) {
+      context.goNamed('login');
+      return;
+    }
 
-    final profile = StartupProfile(
-      id: 'startup_${DateTime.now().millisecondsSinceEpoch}',
-      companyName: _companyNameController.text,
-      email: email,
-      description: _descriptionController.text,
-      industry: _selectedIndustry!,
-      requiredSkills: _requiredSkills.toList(),
-      openRoles: _openRoles.toList(),
-      websiteUrl: _websiteController.text.isNotEmpty
-          ? _websiteController.text
-          : null,
-      projectDetails: _projectDetailsController.text.isNotEmpty
-          ? _projectDetailsController.text
-          : null,
-      createdAt: DateTime.now(),
-    );
+    try {
+      final profile = StartupProfile(
+        id: user.id,
+        companyName: _companyNameController.text,
+        email: user.email ?? '',
+        description: _descriptionController.text,
+        industry: _selectedIndustry!,
+        requiredSkills: _requiredSkills.toList(),
+        openRoles: _openRoles.toList(),
+        websiteUrl:
+            _websiteController.text.isNotEmpty ? _websiteController.text : null,
+        projectDetails: _projectDetailsController.text.isNotEmpty
+            ? _projectDetailsController.text
+            : null,
+        createdAt: DateTime.now(),
+      );
 
-    await prefs.setString('startup_name', _companyNameController.text);
-    await prefs.setString('startup_id', profile.id);
-    await prefs.setString('startup_description', _descriptionController.text);
-    await prefs.setString('startup_industry', _selectedIndustry!);
-    await prefs.setStringList('startup_skills', _requiredSkills.toList());
-    await prefs.setString('startup_project', _projectDetailsController.text);
-    await prefs.setString(
-      'startup_roles',
-      jsonEncode(_openRoles.map((role) => role.toMap()).toList()),
-    );
-    await prefs.setBool('is_logged_in', true);
+      // 1. Update Company Profile in the cloud
+      await SupabaseService.updateProfile(
+        id: user.id,
+        data: {
+          'company_name': profile.companyName,
+          'industry': profile.industry,
+          'website_url': profile.websiteUrl,
+          'description': profile.description,
+          'bio': profile.description, // Reusing for bio field
+        },
+      );
 
-    if (!mounted) return;
-    appState.saveStartupProfile(profile);
-    context.goNamed('startupDashboard');
+      // 2. Insert all Open Roles as Missions in the cloud
+      for (final role in _openRoles) {
+        await SupabaseService.createMission({
+          'startup_id': user.id,
+          'title': role.title,
+          'description': role.description ?? profile.description,
+          'commitment': role.commitment,
+          'estimated_hours': role.estimatedHours,
+          'learning_outcome': role.learningOutcome,
+          'required_skills': profile.requiredSkills, // Company wide skills
+          'status': 'open',
+        });
+      }
+
+      // 3. Keep local cache for offline/instant use
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('startup_name', _companyNameController.text);
+      await prefs.setString('startup_id', profile.id);
+      await prefs.setString('startup_description', _descriptionController.text);
+      await prefs.setString('startup_industry', _selectedIndustry!);
+      await prefs.setStringList('startup_skills', _requiredSkills.toList());
+      await prefs.setString('startup_project', _projectDetailsController.text);
+      await prefs.setString(
+        'startup_roles',
+        jsonEncode(_openRoles.map((role) => role.toMap()).toList()),
+      );
+      await prefs.setBool('is_logged_in', true);
+
+      if (!mounted) return;
+      appState.saveStartupProfile(profile);
+      context.goNamed('startupDashboard');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save cloud startup profile: $e')),
+        );
+      }
+    }
   }
 
   @override

@@ -65,4 +65,44 @@ class StudentProfile {
           missionsCompletedCount ?? this.missionsCompletedCount,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'bio': bio,
+      'education': education,
+      'skills': skills,
+      'availability_hours': availabilityHours,
+      'portfolio_url': portfolioUrl,
+      'profile_image_url': profileImageUrl,
+      'created_at': createdAt.toIso8601String(),
+      'xp_points': xpPoints,
+      'level': level,
+      'missions_completed_count': missionsCompletedCount,
+    };
+  }
+
+  factory StudentProfile.fromMap(Map<String, dynamic> map) {
+    return StudentProfile(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      email: map['email'] ?? '',
+      phone: map['phone'],
+      bio: map['bio'],
+      education: map['education'],
+      skills: List<String>.from(map['skills'] ?? []),
+      availabilityHours: (map['availability_hours'] ?? 0).toDouble(),
+      portfolioUrl: map['portfolio_url'],
+      profileImageUrl: map['profile_image_url'],
+      createdAt: DateTime.parse(
+          map['created_at'] ?? DateTime.now().toIso8601String()),
+      xpPoints: map['xp_points'] ?? 0,
+      level: map['level'] ?? 1,
+      missionsCompletedCount: map['missions_completed_count'] ?? 0,
+    );
+  }
 }
+

@@ -1,9 +1,10 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/supabase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app.dart';
-import '../../services/user_file_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
@@ -28,6 +29,7 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _emailError;
   String? _passwordError;
   String? _roleError;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -89,40 +91,49 @@ class _SignupScreenState extends State<SignupScreen> {
         _emailError == null &&
         _passwordError == null &&
         _roleError == null) {
-      final email = _emailController.text.trim().toLowerCase();
-      final password = _passwordController.text;
-      final name = _nameController.text.trim();
-      final role = _selectedRole == UserRole.student ? 'student' : 'startup';
+      setState(() => _isLoading = true);
+      
+      try {
+        final email = _emailController.text.trim().toLowerCase();
+        final password = _passwordController.text;
+        final name = _nameController.text.trim();
+        final role = _selectedRole == UserRole.student ? 'student' : 'startup';
 
-      if (await UserFileService.userExists(email)) {
+        await SupabaseService.signUp(
+          email: email,
+          password: password,
+          name: name,
+          role: role,
+        );
+
+        // Success! Now we handle local state and navigation
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_email', email);
+        await prefs.setString('user_name', name);
+        await prefs.setString('user_role', role);
+
+        if (!mounted) return;
+
+        final appState = AppStateScope.of(context);
+        appState.login(role: _selectedRole!);
+
+        if (_selectedRole == UserRole.student) {
+          context.goNamed('studentSetup');
+        } else {
+          context.goNamed('startupSetup');
+        }
+      } on AuthException catch (e) {
         setState(() {
-          _emailError = 'Account already exists. Please login.';
+          _emailError = e.message;
         });
-        return;
-      }
-
-      final saved = await UserFileService.saveUser(email, password);
-      if (!saved) {
+      } catch (e) {
         setState(() {
-          _emailError = 'Failed to create account. Please try again.';
+          _emailError = 'An unexpected error occurred. Please try again.';
         });
-        return;
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', email);
-      await prefs.setString('user_name', name);
-      await prefs.setString('user_role', role);
-
-      if (!mounted) return;
-
-      final appState = AppStateScope.of(context);
-      appState.login(role: _selectedRole!);
-
-      if (_selectedRole == UserRole.student) {
-        context.goNamed('studentSetup');
-      } else {
-        context.goNamed('startupSetup');
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
@@ -252,6 +263,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     XPButton(
                       label: 'Create account',
                       icon: Icons.arrow_forward_rounded,
+                      loading: _isLoading,
                       onPressed: _handleSignup,
                     ),
                   ],
