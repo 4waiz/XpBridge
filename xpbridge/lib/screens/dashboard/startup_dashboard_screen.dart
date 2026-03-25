@@ -528,10 +528,8 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                               .map((m) => StudentProfile.fromMap(m))
                               .toList();
 
-                          // Fallback to dummy data if cloud is empty
-                          final students = cloudStudents.isNotEmpty
-                              ? cloudStudents
-                              : DummyData.students;
+                          // Use cloud students only for demo fresh start
+                          final students = cloudStudents;
 
                           return _BrowseStudentsTab(
                             students: _applyFilters(students),

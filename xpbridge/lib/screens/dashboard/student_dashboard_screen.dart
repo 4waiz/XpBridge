@@ -129,7 +129,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   List<StartupProfile> get _filteredStartups {
-    var startups = DummyData.startups;
+    var startups = <StartupProfile>[]; // No dummy fallback for demo fresh start
 
     if (_selectedIndustry != null) {
       startups = startups
