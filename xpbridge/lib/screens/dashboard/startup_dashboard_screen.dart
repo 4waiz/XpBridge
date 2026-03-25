@@ -539,15 +539,47 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                           );
                         },
                       )
-                    : _ApplicationsTab(
-                        appState: appState,
-                        applications: applications,
-                        guildApplications: guildApplications,
-                        statusColor: _statusColor,
-                        statusLabel: _statusLabel,
-                        statusProgress: _statusProgress,
-                        onMarkCompleted: _markApplicationCompleted,
-                        onLeaveFeedback: _showFeedbackSheet,
+                    : StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: SupabaseService.applicationsStreamForStartup(
+                          startupProfile?.id ?? '',
+                        ),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                               ConnectionState.waiting &&
+                              !snapshot.hasData) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          final data = snapshot.data ?? [];
+                          final cloudApps = data
+                              .map((m) => Application.fromMap(m))
+                              .toList();
+
+                          // Merge with local state to ensure no UI flicker
+                          final localApps = startupProfile != null
+                              ? appState.getApplicationsForStartup(startupProfile.id)
+                              : <Application>[];
+                          final merged = [...cloudApps];
+                          for (final local in localApps) {
+                            if (!merged.any((a) => a.id == local.id)) {
+                              merged.add(local);
+                            }
+                          }
+                          merged.sort((a, b) => b.appliedAt.compareTo(a.appliedAt));
+
+                          return _ApplicationsTab(
+                            appState: appState,
+                            applications: merged,
+                            guildApplications: guildApplications,
+                            statusColor: _statusColor,
+                            statusLabel: _statusLabel,
+                            statusProgress: _statusProgress,
+                            onMarkCompleted: _markApplicationCompleted,
+                            onLeaveFeedback: _showFeedbackSheet,
+                          );
+                        },
                       ),
               ),
             ],

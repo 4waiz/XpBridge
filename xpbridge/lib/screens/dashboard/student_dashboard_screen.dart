@@ -41,7 +41,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }) {
     final appState = AppStateScope.of(context);
     final profile = appState.studentProfile;
-    if (profile == null) return;
+
+    if (profile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please complete your profile first (add your name and bio).'),
+          backgroundColor: AppTheme.error,
+          action: SnackBarAction(
+            label: 'Go to Profile',
+            textColor: Colors.white,
+            onPressed: () => context.pushNamed('studentProfile'),
+          ),
+        ),
+      );
+      return;
+    }
 
     final messageController = TextEditingController();
 
@@ -49,49 +63,52 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => XPPremiumSheet(
-        title: 'Apply for $title',
-        subtitle: 'Share why you are the right fit for this mission.',
-        footer: XPButton(
-          label: 'Submit application',
-          icon: Icons.send_rounded,
-          onPressed: () async {
-            final application = Application(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              studentId: profile.id,
-              startupId: mission['startup_id'],
-              studentName: profile.name,
-              startupName: mission['startup_name'] ?? 'Startup',
-              roleTitle: title,
-              status: ApplicationStatus.pending,
-              message: messageController.text.trim(),
-              appliedAt: DateTime.now(),
-            );
-
-            await appState.addApplication(application);
-
-            if (sheetCtx.mounted) Navigator.pop(sheetCtx);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Applied for $title'),
-                  backgroundColor: AppTheme.successDark,
-                ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (context, setModalState) => XPPremiumSheet(
+          title: 'Apply for $title',
+          subtitle: 'Share why you are the right fit for this mission.',
+          footer: XPButton(
+            label: 'Submit application',
+            icon: Icons.send_rounded,
+            onPressed: () async {
+              final application = Application(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                studentId: profile.id,
+                startupId: mission['startup_id'] ?? '',
+                studentName: profile.name,
+                startupName: mission['startup_name'] ?? 'Startup',
+                roleTitle: title,
+                status: ApplicationStatus.pending,
+                message: messageController.text.trim(),
+                appliedAt: DateTime.now(),
               );
-            }
-          },
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            XPTextField(
-              controller: messageController,
-              labelText: 'Message',
-              hintText: 'Share your background and interest...',
-              maxLines: 4,
-              prefixIcon: Icons.chat_bubble_outline_rounded,
-            ),
-          ],
+
+              // This updates local state AND pushes to Supabase
+              await appState.addApplication(application);
+
+              if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Applied for $title! The startup will see your application instantly.'),
+                    backgroundColor: AppTheme.successDark,
+                  ),
+                );
+              }
+            },
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              XPTextField(
+                controller: messageController,
+                labelText: 'Message',
+                hintText: 'Share your background and interest...',
+                maxLines: 4,
+                prefixIcon: Icons.chat_bubble_outline_rounded,
+              ),
+            ],
+          ),
         ),
       ),
     );

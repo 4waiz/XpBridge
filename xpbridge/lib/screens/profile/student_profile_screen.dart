@@ -6,6 +6,8 @@ import '../../app.dart';
 import '../../data/dummy_data.dart';
 import '../../models/application.dart';
 import '../../models/skill_badge.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../models/student_profile.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/team_mission_widgets.dart';
@@ -39,14 +41,24 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   void _showEditSheet(BuildContext context) {
     final appState = AppStateScope.of(context);
-    final profile = appState.studentProfile;
-    if (profile == null) return;
+    var profile = appState.studentProfile;
+    
+    // If profile is null, we use the current auth user as fallback
+    final userId = profile?.id ?? Supabase.instance.client.auth.currentUser?.id;
+    final userEmail = profile?.email ?? Supabase.instance.client.auth.currentUser?.email ?? '';
 
-    final nameCtrl = TextEditingController(text: profile.name);
-    final bioCtrl = TextEditingController(text: profile.bio ?? '');
-    final eduCtrl = TextEditingController(text: profile.education ?? '');
-    double hours = profile.availabilityHours;
-    final selectedSkills = Set<String>.from(profile.skills);
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in again to continue.')),
+      );
+      return;
+    }
+
+    final nameCtrl = TextEditingController(text: profile?.name ?? '');
+    final bioCtrl = TextEditingController(text: profile?.bio ?? '');
+    final eduCtrl = TextEditingController(text: profile?.education ?? '');
+    double hours = profile?.availabilityHours ?? 10.0;
+    final selectedSkills = profile != null ? Set<String>.from(profile.skills) : <String>{};
 
     showModalBottomSheet(
       context: context,
@@ -60,13 +72,23 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             label: 'Save changes',
             icon: Icons.check_rounded,
             onPressed: () async {
-              final updated = profile.copyWith(
-                name: nameCtrl.text.trim(),
-                bio: bioCtrl.text.trim().isNotEmpty ? bioCtrl.text.trim() : null,
-                education: eduCtrl.text.trim().isNotEmpty ? eduCtrl.text.trim() : null,
-                skills: selectedSkills.toList(),
-                availabilityHours: hours,
-              );
+              final updated = profile?.copyWith(
+                    name: nameCtrl.text.trim(),
+                    bio: bioCtrl.text.trim().isNotEmpty ? bioCtrl.text.trim() : null,
+                    education: eduCtrl.text.trim().isNotEmpty ? eduCtrl.text.trim() : null,
+                    skills: selectedSkills.toList(),
+                    availabilityHours: hours,
+                  ) ??
+                  StudentProfile(
+                    id: userId,
+                    name: nameCtrl.text.trim(),
+                    email: userEmail,
+                    bio: bioCtrl.text.trim().isNotEmpty ? bioCtrl.text.trim() : null,
+                    education: eduCtrl.text.trim().isNotEmpty ? eduCtrl.text.trim() : null,
+                    skills: selectedSkills.toList(),
+                    availabilityHours: hours,
+                    createdAt: DateTime.now(),
+                  );
               appState.saveStudentProfile(updated);
 
               // Persist locally
