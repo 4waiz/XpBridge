@@ -453,6 +453,8 @@ class XPOpportunityCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             description,
+            maxLines: 5,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: secondaryColor,
               height: 1.55,
@@ -652,6 +654,8 @@ class XPApplicationStatusCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             summary,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),

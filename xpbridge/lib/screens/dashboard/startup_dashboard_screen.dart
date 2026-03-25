@@ -649,6 +649,8 @@ class _BrowseStudentsTab extends StatelessWidget {
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     student.bio!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],

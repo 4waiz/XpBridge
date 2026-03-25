@@ -61,6 +61,8 @@ class TeamMissionHighlights extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             config.sharedLearningOutcome,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -94,6 +96,7 @@ class TeamMissionSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.lg),
       backgroundColor: AppTheme.surface.withValues(alpha: 0.72),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -110,7 +113,7 @@ class TeamMissionSummaryCard extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleLarge,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: AppSpacing.xxs),
@@ -118,7 +121,7 @@ class TeamMissionSummaryCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             description,
-            maxLines: 3,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall,
           ),
