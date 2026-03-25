@@ -353,7 +353,7 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                             key: ValueKey(
                               'required-skills-${_requiredSkills.join("|")}',
                             ),
-                            initialValue: null,
+
                             decoration: const InputDecoration(
                               labelText: 'Add a skill',
                               hintText: 'Choose a required skill',

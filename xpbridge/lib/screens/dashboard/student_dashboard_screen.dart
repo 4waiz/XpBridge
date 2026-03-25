@@ -737,36 +737,36 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         'Larger missions built for guilds with complementary roles.',
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    height: 420,
-                    child: ListView.separated(
+                  IntrinsicHeight(
+                    child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      itemCount: teamMissionEntries.length > 5
-                          ? 5
-                          : teamMissionEntries.length,
-                      separatorBuilder: (_, separatorIndex) =>
-                          const SizedBox(width: AppSpacing.md),
-                      itemBuilder: (context, index) {
-                        final entry = teamMissionEntries[index];
-                        final startup = entry.key;
-                        final role = entry.value;
-                        return SizedBox(
-                          width: 300,
-                          child: TeamMissionSummaryCard(
-                            company: startup.companyName,
-                            title: role.title,
-                            description: role.description ?? startup.description,
-                            config: role.teamMissionConfig!,
-                            onTap: () => context.pushNamed(
-                              'startupDetail',
-                              pathParameters: {'id': startup.id},
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: teamMissionEntries.take(5).map((entry) {
+                          final startup = entry.key;
+                          final role = entry.value;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: AppSpacing.md),
+                            child: SizedBox(
+                              width: 300,
+                              child: TeamMissionSummaryCard(
+                                company: startup.companyName,
+                                title: role.title,
+                                description:
+                                    role.description ?? startup.description,
+                                config: role.teamMissionConfig!,
+                                onTap: () => context.pushNamed(
+                                  'startupDetail',
+                                  pathParameters: {'id': startup.id},
+                                ),
+                                ctaLabel: currentGuild != null
+                                    ? 'Apply as guild'
+                                    : 'View mission',
+                              ),
                             ),
-                            ctaLabel: currentGuild != null
-                                ? 'Apply as guild'
-                                : 'View mission',
-                          ),
-                        );
-                      },
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
                 ],
