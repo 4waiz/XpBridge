@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app.dart';
 import '../../data/dummy_data.dart';
+import '../../services/supabase_service.dart';
 import '../../models/ai_interview.dart';
 import '../../models/application.dart';
 import '../../models/guild_application.dart';
@@ -37,18 +38,18 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
     super.dispose();
   }
 
-  List<StudentProfile> get _filteredStudents {
-    var students = DummyData.students;
+  List<StudentProfile> _applyFilters(List<StudentProfile> students) {
+    var filtered = [...students];
 
     if (_selectedSkill != null) {
-      students = students
+      filtered = filtered
           .where((student) => student.skills.contains(_selectedSkill))
           .toList();
     }
 
     if (_query.trim().isNotEmpty) {
       final query = _query.trim().toLowerCase();
-      students = students.where((student) {
+      filtered = filtered.where((student) {
         final haystack = [
           student.name,
           student.education ?? '',
@@ -59,7 +60,7 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
       }).toList();
     }
 
-    return students;
+    return filtered;
   }
 
   Future<void> _markApplicationCompleted(Application application) async {
@@ -511,9 +512,32 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
               const SizedBox(height: AppSpacing.lg),
               Expanded(
                 child: _bottomNavIndex == 0
-                    ? _BrowseStudentsTab(
-                        students: _filteredStudents,
-                        startupSkills: skillsForFilters,
+                    ? StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: SupabaseService.studentsStream(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                               ConnectionState.waiting &&
+                              !snapshot.hasData) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          final data = snapshot.data ?? [];
+                          final cloudStudents = data
+                              .map((m) => StudentProfile.fromMap(m))
+                              .toList();
+
+                          // Fallback to dummy data if cloud is empty
+                          final students = cloudStudents.isNotEmpty
+                              ? cloudStudents
+                              : DummyData.students;
+
+                          return _BrowseStudentsTab(
+                            students: _applyFilters(students),
+                            startupSkills: skillsForFilters,
+                          );
+                        },
                       )
                     : _ApplicationsTab(
                         appState: appState,

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app.dart';
 import '../../data/dummy_data.dart';
+import '../../models/application.dart';
 import '../../models/event_log_entry.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
@@ -16,6 +17,7 @@ import '../../widgets/xp_chip.dart';
 import '../../widgets/xp_navigation.dart';
 import '../../widgets/xp_premium.dart';
 import '../../widgets/xp_section_title.dart';
+import '../../widgets/xp_input.dart';
 import '../../services/supabase_service.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
@@ -31,6 +33,69 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   String? _selectedSkill;
   String _query = '';
   bool _feedExpanded = false;
+
+  void _showApplySheet(
+    BuildContext context, {
+    required Map<String, dynamic> mission,
+    required String title,
+  }) {
+    final appState = AppStateScope.of(context);
+    final profile = appState.studentProfile;
+    if (profile == null) return;
+
+    final messageController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => XPPremiumSheet(
+        title: 'Apply for $title',
+        subtitle: 'Share why you are the right fit for this mission.',
+        footer: XPButton(
+          label: 'Submit application',
+          icon: Icons.send_rounded,
+          onPressed: () async {
+            final application = Application(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              studentId: profile.id,
+              startupId: mission['startup_id'],
+              studentName: profile.name,
+              startupName: mission['startup_name'] ?? 'Startup',
+              roleTitle: title,
+              status: ApplicationStatus.pending,
+              message: messageController.text.trim(),
+              appliedAt: DateTime.now(),
+            );
+
+            await appState.addApplication(application);
+
+            if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Applied for $title'),
+                  backgroundColor: AppTheme.successDark,
+                ),
+              );
+            }
+          },
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            XPTextField(
+              controller: messageController,
+              labelText: 'Message',
+              hintText: 'Share your background and interest...',
+              maxLines: 4,
+              prefixIcon: Icons.chat_bubble_outline_rounded,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   List<StartupProfile> _sortedStartups(List<String> studentSkills) {
     final startups = [..._filteredStartups];
@@ -980,6 +1045,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                       .toList(),
                                 ),
                               ],
+                              const SizedBox(height: AppSpacing.md),
+                              XPButton(
+                                label: 'Apply',
+                                icon: Icons.send_rounded,
+                                size: XPButtonSize.small,
+                                onPressed: () {
+                                  _showApplySheet(
+                                    context,
+                                    mission: mission,
+                                    title: title,
+                                  );
+                                },
+                              ),
                             ],
                           ),
                         ),

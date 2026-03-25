@@ -303,7 +303,12 @@ class XPPremiumSheet extends StatelessWidget {
               if (title != null || subtitle != null) ...[
                 const SizedBox(height: AppSpacing.xl),
               ],
-              child,
+              Flexible(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: child,
+                ),
+              ),
               if (footer != null) ...[
                 const SizedBox(height: AppSpacing.xl),
                 footer!,

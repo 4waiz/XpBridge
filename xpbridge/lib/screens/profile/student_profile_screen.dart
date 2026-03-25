@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app.dart';
+import '../../data/dummy_data.dart';
 import '../../models/application.dart';
 import '../../models/skill_badge.dart';
+import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/team_mission_widgets.dart';
 import '../../widgets/verified_badges_section.dart';
@@ -12,10 +14,17 @@ import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_card.dart';
 import '../../widgets/xp_chip.dart';
 import '../../widgets/xp_button.dart';
+import '../../widgets/xp_input.dart';
 import '../../widgets/xp_premium.dart';
 
-class StudentProfileScreen extends StatelessWidget {
+class StudentProfileScreen extends StatefulWidget {
   const StudentProfileScreen({super.key});
+
+  @override
+  State<StudentProfileScreen> createState() => _StudentProfileScreenState();
+}
+
+class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   Future<void> _handleLogout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
@@ -26,6 +35,144 @@ class StudentProfileScreen extends StatelessWidget {
     final appState = AppStateScope.of(context);
     appState.logout();
     context.goNamed('login');
+  }
+
+  void _showEditSheet(BuildContext context) {
+    final appState = AppStateScope.of(context);
+    final profile = appState.studentProfile;
+    if (profile == null) return;
+
+    final nameCtrl = TextEditingController(text: profile.name);
+    final bioCtrl = TextEditingController(text: profile.bio ?? '');
+    final eduCtrl = TextEditingController(text: profile.education ?? '');
+    double hours = profile.availabilityHours;
+    final selectedSkills = Set<String>.from(profile.skills);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setModalState) => XPPremiumSheet(
+          title: 'Edit profile',
+          subtitle: 'Update your info and skills.',
+          footer: XPButton(
+            label: 'Save changes',
+            icon: Icons.check_rounded,
+            onPressed: () async {
+              final updated = profile.copyWith(
+                name: nameCtrl.text.trim(),
+                bio: bioCtrl.text.trim().isNotEmpty ? bioCtrl.text.trim() : null,
+                education: eduCtrl.text.trim().isNotEmpty ? eduCtrl.text.trim() : null,
+                skills: selectedSkills.toList(),
+                availabilityHours: hours,
+              );
+              appState.saveStudentProfile(updated);
+
+              // Persist locally
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('profile_name', updated.name);
+              await prefs.setString('profile_bio', updated.bio ?? '');
+              await prefs.setString('profile_education', updated.education ?? '');
+              await prefs.setStringList('profile_skills', updated.skills);
+              await prefs.setDouble('profile_hours', updated.availabilityHours);
+
+              // Sync to Supabase
+              try {
+                await SupabaseService.updateProfile(
+                  id: updated.id,
+                  data: {
+                    'name': updated.name,
+                    'bio': updated.bio,
+                    'education': updated.education,
+                    'skills': updated.skills,
+                    'availability_hours': updated.availabilityHours,
+                  },
+                );
+              } catch (_) {}
+
+              if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+              if (context.mounted) {
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Profile updated'),
+                    backgroundColor: AppTheme.successDark,
+                  ),
+                );
+              }
+            },
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              XPTextField(
+                controller: nameCtrl,
+                labelText: 'Name',
+                prefixIcon: Icons.person_outline_rounded,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              XPTextField(
+                controller: eduCtrl,
+                labelText: 'Education',
+                prefixIcon: Icons.school_outlined,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              XPTextField(
+                controller: bioCtrl,
+                labelText: 'Bio',
+                prefixIcon: Icons.edit_note_rounded,
+                maxLines: 3,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Skills (${selectedSkills.length}/4)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: DummyData.skillPool.map((skill) {
+                  return XPChoiceChip(
+                    label: skill,
+                    selected: selectedSkills.contains(skill),
+                    onSelected: (selected) {
+                      setModalState(() {
+                        if (selected && selectedSkills.length < 4) {
+                          selectedSkills.add(skill);
+                        } else {
+                          selectedSkills.remove(skill);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Availability: ${hours.round()} hrs/week',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              Slider(
+                min: 2,
+                max: 25,
+                divisions: 23,
+                value: hours,
+                label: '${hours.round()} hrs',
+                onChanged: (v) => setModalState(() => hours = v),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   int _levelBase(int level) {
@@ -128,11 +275,23 @@ class StudentProfileScreen extends StatelessWidget {
               XPAppBar(
                 title: 'Profile',
                 subtitle: 'Your public career layer',
-                trailing: XPHeaderButton(
-                  icon: Icons.logout_rounded,
-                  foregroundColor: AppTheme.error,
-                  backgroundColor: AppTheme.surface.withValues(alpha: 0.72),
-                  onTap: () => _handleLogout(context),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    XPHeaderButton(
+                      icon: Icons.edit_rounded,
+                      foregroundColor: AppTheme.primaryDeep,
+                      backgroundColor: AppTheme.surface.withValues(alpha: 0.72),
+                      onTap: () => _showEditSheet(context),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    XPHeaderButton(
+                      icon: Icons.logout_rounded,
+                      foregroundColor: AppTheme.error,
+                      backgroundColor: AppTheme.surface.withValues(alpha: 0.72),
+                      onTap: () => _handleLogout(context),
+                    ),
+                  ],
                 ),
               ),
               Expanded(

@@ -99,6 +99,15 @@ class SupabaseService {
         .order('created_at', ascending: false);
   }
 
+  /// Real-time stream of all student profiles for startups to browse.
+  static Stream<List<Map<String, dynamic>>> studentsStream() {
+    return client
+        .from('profiles')
+        .stream(primaryKey: ['id'])
+        .eq('role', 'student')
+        .order('created_at', ascending: false);
+  }
+
   /// One-shot fetch — used as a fallback or initial load.
   static Future<List<Map<String, dynamic>>> getMissions() async {
     final response = await client
