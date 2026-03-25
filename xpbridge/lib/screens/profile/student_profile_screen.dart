@@ -56,7 +56,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     _portfolioController.text = profile.portfolioUrl ?? '';
     _githubController.text = profile.githubUrl ?? '';
     _skills = List<String>.from(profile.skills);
-    _hours = profile.availabilityHours;
+    _hours = profile.availabilityHours.clamp(2.0, 30.0);
     _resumeUrl = profile.resumeUrl;
     _resumeFileName = profile.resumeFileName;
     _resumeMimeType = profile.resumeMimeType;

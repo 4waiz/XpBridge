@@ -658,9 +658,7 @@ class AppState extends ChangeNotifier {
 
   bool _isStudentProfileComplete(StudentProfile? profile) {
     if (profile == null) return false;
-    return profile.name.trim().isNotEmpty &&
-        profile.skills.length >= 2 &&
-        (profile.resumeUrl?.trim().isNotEmpty ?? false);
+    return profile.name.trim().isNotEmpty && profile.skills.length >= 2;
   }
 
   bool _isStartupProfileComplete(StartupProfile? profile) {

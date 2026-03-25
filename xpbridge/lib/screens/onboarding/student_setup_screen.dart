@@ -48,7 +48,7 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
       _portfolioController.text = profile.portfolioUrl ?? '';
       _githubController.text = profile.githubUrl ?? '';
       _skills = List<String>.from(profile.skills);
-      _hours = profile.availabilityHours;
+      _hours = profile.availabilityHours.clamp(2.0, 30.0);
       _resumeUrl = profile.resumeUrl;
       _resumeFileName = profile.resumeFileName;
       _resumeMimeType = profile.resumeMimeType;
@@ -105,10 +105,13 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
       setState(() => _submitError = 'Select between 2 and 4 skills.');
       return;
     }
+    // CV is now optional during initial setup
+    /*
     if ((_resumeUrl ?? '').isEmpty) {
       setState(() => _submitError = 'Upload your CV as a PDF or image.');
       return;
     }
+    */
 
     final user = SupabaseService.currentUser;
     if (user == null) {
@@ -161,8 +164,9 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
   Widget build(BuildContext context) {
     return XPPageScaffold(
       title: 'Build your profile',
-      subtitle: 'Students must provide a CV, a few real skills, and at least one work link.',
+      subtitle: 'Tell us a bit about yourself. You can add your CV now or later from your dashboard.',
       showBack: true,
+      onBack: () => AppStateScope.of(context).logout(),
       compact: true,
       bottomBar: XPBottomActionBar(
         child: XPButton(
@@ -284,19 +288,19 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  _resumeFileName ?? 'Upload your CV',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  _resumeUrl == null
-                                      ? 'Required. PDF or image files only.'
-                                      : _resumeMimeType == 'application/pdf'
-                                          ? 'PDF uploaded'
-                                          : 'Image resume uploaded',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
+                                  Text(
+                                    _resumeFileName ?? 'CV (Optional)',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    _resumeUrl == null
+                                        ? 'Recommended. You can skip this for now.'
+                                        : _resumeMimeType == 'application/pdf'
+                                            ? 'PDF uploaded'
+                                            : 'Image resume uploaded',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
                               ],
                             ),
                           ),

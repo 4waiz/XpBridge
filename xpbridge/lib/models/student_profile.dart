@@ -114,7 +114,8 @@ class StudentProfile {
       bio: map['bio'],
       education: map['education'],
       skills: List<String>.from(map['skills'] ?? []),
-      availabilityHours: (map['availability_hours'] ?? 0).toDouble(),
+      availabilityHours:
+          (map['availability_hours'] ?? 10.0).toDouble().clamp(2.0, 30.0),
       portfolioUrl: map['portfolio_url'],
       githubUrl: map['github_url'],
       resumeUrl: map['resume_url'],

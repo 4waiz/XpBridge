@@ -11,12 +11,14 @@ class XPAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.subtitle,
     this.trailing,
     this.showBack = true,
+    this.onBack,
   });
 
   final String title;
   final String? subtitle;
   final Widget? trailing;
   final bool showBack;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -34,9 +36,10 @@ class XPAppBar extends StatelessWidget implements PreferredSizeWidget {
             if (showBack) ...[
               XPHeaderButton(
                 icon: Icons.arrow_back_rounded,
-                onTap: () => context.canPop()
-                    ? context.pop()
-                    : context.goNamed('studentDashboard'),
+                onTap: onBack ??
+                    () => context.canPop()
+                        ? context.pop()
+                        : context.go('/intro'),
               ),
               const SizedBox(width: AppSpacing.md),
             ],

@@ -213,27 +213,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return XPPageScaffold(
       title: 'Discover missions',
       subtitle: 'Search live startup work and apply with your existing profile.',
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          XPHeaderButton(
-            icon: Icons.description_outlined,
-            onTap: () => context.goNamed('myApplications'),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          XPHeaderButton(
-            icon: Icons.person_outline_rounded,
-            onTap: () => context.goNamed('studentProfile'),
-          ),
-          if (appState.isAdmin) ...[
-            const SizedBox(width: AppSpacing.sm),
-            XPHeaderButton(
-              icon: Icons.admin_panel_settings_outlined,
-              onTap: () => context.goNamed('admin'),
-            ),
-          ],
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: appState.refreshSession,
         child: ListView(
@@ -279,6 +258,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       Expanded(
                         child: DropdownButtonFormField<String?>(
                           initialValue: _industryFilter,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Industry',
                           ),
@@ -290,7 +270,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                             ...industries.map(
                               (industry) => DropdownMenuItem<String?>(
                                 value: industry,
-                                child: Text(industry),
+                                child: Text(
+                                  industry,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ),
                           ],
@@ -302,6 +285,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       Expanded(
                         child: DropdownButtonFormField<String?>(
                           initialValue: _skillFilter,
+                          isExpanded: true,
                           decoration: const InputDecoration(labelText: 'Skill'),
                           items: [
                             const DropdownMenuItem<String?>(
@@ -311,7 +295,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                             ...skills.map(
                               (skill) => DropdownMenuItem<String?>(
                                 value: skill,
-                                child: Text(skill),
+                                child: Text(
+                                  skill,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ),
                           ],

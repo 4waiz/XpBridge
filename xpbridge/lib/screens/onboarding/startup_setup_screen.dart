@@ -325,6 +325,7 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
       title: 'Set up your startup',
       subtitle: 'Tight company details, a real website, and at least one mission keep this reviewable.',
       showBack: true,
+      onBack: () => AppStateScope.of(context).logout(),
       compact: true,
       bottomBar: XPBottomActionBar(
         child: XPButton(

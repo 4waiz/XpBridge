@@ -12,6 +12,7 @@ class XPPageScaffold extends StatelessWidget {
     this.trailing,
     this.bottomBar,
     this.showBack = false,
+    this.onBack,
     this.compact = false,
   });
 
@@ -21,6 +22,7 @@ class XPPageScaffold extends StatelessWidget {
   final Widget? trailing;
   final Widget? bottomBar;
   final bool showBack;
+  final VoidCallback? onBack;
   final bool compact;
 
   @override
@@ -39,6 +41,7 @@ class XPPageScaffold extends StatelessWidget {
                   subtitle: subtitle,
                   trailing: trailing,
                   showBack: showBack,
+                  onBack: onBack,
                 ),
               Expanded(
                 child: Align(
