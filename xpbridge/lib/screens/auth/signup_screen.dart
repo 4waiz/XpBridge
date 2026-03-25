@@ -1,15 +1,12 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/supabase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app.dart';
+import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
-import '../../widgets/xp_input.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -19,17 +16,14 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  UserRole? _selectedRole;
-
-  String? _nameError;
-  String? _emailError;
-  String? _passwordError;
-  String? _roleError;
   bool _isLoading = false;
+  UserRole? _selectedRole;
+  String? _submitError;
 
   @override
   void dispose() {
@@ -39,101 +33,62 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  bool _isValidEmail(String email) {
-    final emailRegex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
-    return emailRegex.hasMatch(email);
-  }
-
-  String? _validateName(String name) {
-    if (name.isEmpty) {
-      return 'Name is required';
-    }
-    if (name.length < 2) {
-      return 'Name must be at least 2 characters';
-    }
+  String? _validateName(String? value) {
+    final name = value?.trim() ?? '';
+    if (name.isEmpty) return 'Name is required';
+    if (name.length < 2) return 'Use at least 2 characters';
     return null;
   }
 
-  String? _validateEmail(String email) {
-    if (email.isEmpty) {
-      return 'Email is required';
-    }
-    if (!email.contains('@')) {
-      return 'Email must contain @';
-    }
-    if (!_isValidEmail(email)) {
-      return 'Please enter a valid email address';
-    }
+  String? _validateEmail(String? value) {
+    final email = value?.trim() ?? '';
+    if (email.isEmpty) return 'Email is required';
+    final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+    if (!regex.hasMatch(email)) return 'Enter a valid email address';
     return null;
   }
 
-  String? _validatePassword(String password) {
-    if (password.isEmpty) {
-      return 'Password is required';
-    }
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
+  String? _validatePassword(String? value) {
+    final password = value ?? '';
+    if (password.isEmpty) return 'Password is required';
+    if (password.length < 8) return 'Use at least 8 characters';
     return null;
   }
 
-  Future<void> _handleSignup() async {
+  Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate() || _selectedRole == null) {
+      setState(() {
+        _submitError = _selectedRole == null ? 'Select a role to continue.' : null;
+      });
+      return;
+    }
+
     setState(() {
-      _nameError = _validateName(_nameController.text.trim());
-      _emailError = _validateEmail(_emailController.text.trim());
-      _passwordError = _validatePassword(_passwordController.text);
-      _roleError = _selectedRole == null ? 'Please select a role' : null;
+      _isLoading = true;
+      _submitError = null;
     });
 
-    if (_nameError == null &&
-        _emailError == null &&
-        _passwordError == null &&
-        _roleError == null) {
-      setState(() => _isLoading = true);
-      
-      try {
-        final email = _emailController.text.trim().toLowerCase();
-        final password = _passwordController.text;
-        final name = _nameController.text.trim();
-        final role = _selectedRole == UserRole.student ? 'student' : 'startup';
+    try {
+      final role = _selectedRole == UserRole.student ? 'student' : 'startup';
+      await SupabaseService.signUp(
+        email: _emailController.text.trim().toLowerCase(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+        role: role,
+      );
 
-        await SupabaseService.signUp(
-          email: email,
-          password: password,
-          name: name,
-          role: role,
-        );
-
-        // Success! Now we handle local state and navigation
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_email', email);
-        await prefs.setString('user_name', name);
-        await prefs.setString('user_role', role);
-
-        if (!mounted) return;
-
-        final appState = AppStateScope.of(context);
-        appState.login(role: _selectedRole!);
-
-        if (_selectedRole == UserRole.student) {
-          context.goNamed('studentSetup');
-        } else {
-          context.goNamed('startupSetup');
-        }
-      } on AuthException catch (e) {
-        setState(() {
-          _emailError = e.message;
-        });
-      } catch (e) {
-        setState(() {
-          _emailError = 'An unexpected error occurred. Please try again.';
-        });
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+      if (!mounted) return;
+      final appState = AppStateScope.of(context);
+      appState.login(role: _selectedRole!);
+      context.goNamed(
+        _selectedRole == UserRole.student ? 'studentSetup' : 'startupSetup',
+      );
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -143,140 +98,147 @@ class _SignupScreenState extends State<SignupScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.page),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              XPHeaderButton(
-                icon: Icons.arrow_back_rounded,
-                onTap: () => context.goNamed('login'),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                'Create your account',
-                style: Theme.of(
-                  context,
-                ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Choose your role, set up your profile, and redesign your path into real experience.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              Text(
-                'I am joining as',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.page),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _RoleCard(
-                      title: 'Student',
-                      subtitle: 'Learn through startup missions',
-                      icon: Icons.school_rounded,
-                      selected: _selectedRole == UserRole.student,
-                      onTap: () {
-                        setState(() {
-                          _selectedRole = UserRole.student;
-                          _roleError = null;
-                        });
-                      },
+                  XPHeaderButton(
+                    icon: Icons.arrow_back_rounded,
+                    onTap: () => context.goNamed('login'),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Text(
+                    'Create your account',
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: _RoleCard(
-                      title: 'Startup',
-                      subtitle: 'Find motivated early talent',
-                      icon: Icons.rocket_launch_rounded,
-                      selected: _selectedRole == UserRole.startup,
-                      onTap: () {
-                        setState(() {
-                          _selectedRole = UserRole.startup;
-                          _roleError = null;
-                        });
-                      },
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Choose the workspace you need first. Students must upload a CV in setup, and startups move straight into company profile creation.',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _RoleCard(
+                          title: 'Student',
+                          subtitle: 'Profile, CV, portfolio, and mission applications',
+                          icon: Icons.school_rounded,
+                          selected: _selectedRole == UserRole.student,
+                          onTap: () {
+                            setState(() {
+                              _selectedRole = UserRole.student;
+                              _submitError = null;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: _RoleCard(
+                          title: 'Startup',
+                          subtitle: 'Company setup, missions, applicants, and feedback',
+                          icon: Icons.rocket_launch_rounded,
+                          selected: _selectedRole == UserRole.startup,
+                          onTap: () {
+                            setState(() {
+                              _selectedRole = UserRole.startup;
+                              _submitError = null;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  XPCard(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    elevated: true,
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _nameController,
+                            validator: _validateName,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: const InputDecoration(
+                              labelText: 'Full name or company owner name',
+                              prefixIcon: Icon(Icons.person_outline_rounded),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          TextFormField(
+                            controller: _emailController,
+                            validator: _validateEmail,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              hintText: 'you@example.com',
+                              prefixIcon: Icon(Icons.mail_outline_rounded),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          TextFormField(
+                            controller: _passwordController,
+                            validator: _validatePassword,
+                            obscureText: _obscurePassword,
+                            onFieldSubmitted: (_) => _submit(),
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              helperText: 'Use at least 8 characters.',
+                              prefixIcon: const Icon(Icons.lock_outline_rounded),
+                              suffixIcon: IconButton(
+                                onPressed: () {
+                                  setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  );
+                                },
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_rounded
+                                      : Icons.visibility_rounded,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_submitError != null) ...[
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              _submitError!,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppTheme.error),
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.xl),
+                          XPButton(
+                            label: 'Create account',
+                            icon: Icons.arrow_forward_rounded,
+                            loading: _isLoading,
+                            onPressed: _isLoading ? null : _submit,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => context.goNamed('login'),
+                      child: const Text('Already have an account? Log in'),
                     ),
                   ),
                 ],
               ),
-              if (_roleError != null) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  _roleError!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.error),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.xl),
-              XPCard(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                elevated: true,
-                radius: AppTheme.cornerRadiusLarge,
-                child: Column(
-                  children: [
-                    XPTextField(
-                      controller: _nameController,
-                      labelText: 'Full name',
-                      hintText: 'Enter your full name',
-                      errorText: _nameError,
-                      prefixIcon: Icons.person_outline_rounded,
-                      textCapitalization: TextCapitalization.words,
-                      onChanged: (_) => setState(() => _nameError = null),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    XPTextField(
-                      controller: _emailController,
-                      labelText: 'Email',
-                      hintText: 'you@example.com',
-                      errorText: _emailError,
-                      prefixIcon: Icons.mail_outline_rounded,
-                      keyboardType: TextInputType.emailAddress,
-                      onChanged: (_) => setState(() => _emailError = null),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    XPTextField(
-                      controller: _passwordController,
-                      labelText: 'Password',
-                      hintText: 'At least 6 characters',
-                      errorText: _passwordError,
-                      prefixIcon: Icons.lock_outline_rounded,
-                      suffixIcon: _obscurePassword
-                          ? Icons.visibility_off_rounded
-                          : Icons.visibility_rounded,
-                      obscureText: _obscurePassword,
-                      onSuffixTap: () {
-                        setState(() => _obscurePassword = !_obscurePassword);
-                      },
-                      onChanged: (_) => setState(() => _passwordError = null),
-                      onSubmitted: (_) => _handleSignup(),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    XPButton(
-                      label: 'Create account',
-                      icon: Icons.arrow_forward_rounded,
-                      loading: _isLoading,
-                      onPressed: _handleSignup,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.goNamed('login'),
-                  child: const Text('Already have an account? Log in'),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -331,9 +293,9 @@ class _RoleCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             Text(
               title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(subtitle, style: Theme.of(context).textTheme.bodySmall),

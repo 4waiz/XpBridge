@@ -1,24 +1,21 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app.dart';
+import '../../data/dummy_data.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
 import '../../models/team_mission_config.dart';
-import '../../services/logo_image_service.dart';
+import '../../services/asset_upload_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/team_mission_widgets.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
-import '../../widgets/xp_chip.dart';
-import '../../widgets/xp_input.dart';
-import '../../widgets/xp_premium.dart';
+import '../../widgets/xp_empty_state.dart';
+import '../../widgets/xp_page_scaffold.dart';
+import '../../widgets/xp_selectors.dart';
 
 class StartupProfileScreen extends StatefulWidget {
   const StartupProfileScreen({super.key});
@@ -28,663 +25,510 @@ class StartupProfileScreen extends StatefulWidget {
 }
 
 class _StartupProfileScreenState extends State<StartupProfileScreen> {
-  static const List<String> _teamRoleOptions = [
-    'Product',
-    'Design',
-    'Dev',
-    'Marketing',
-    'Data',
-    'Operations',
-  ];
+  final _formKey = GlobalKey<FormState>();
+  final _companyNameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _websiteController = TextEditingController();
+  final _projectDetailsController = TextEditingController();
+  String? _industry;
+  List<String> _requiredSkills = [];
+  String? _logoUrl;
+  bool _isSaving = false;
+  String? _submitError;
+  bool _loaded = false;
 
-  bool _savingLogo = false;
-
-  Future<void> _handleLogout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-
-    if (!context.mounted) return;
-
-    final appState = AppStateScope.of(context);
-    appState.logout();
-    context.goNamed('login');
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loaded) return;
+    final profile = AppStateScope.of(context).startupProfile;
+    if (profile != null) {
+      _applyProfile(profile);
+    }
+    _loaded = true;
   }
 
-  Future<void> _persistRoles(List<StartupRole> roles) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'startup_roles',
-      jsonEncode(roles.map((role) => role.toMap()).toList()),
-    );
+  void _applyProfile(StartupProfile profile) {
+    _companyNameController.text = profile.companyName;
+    _descriptionController.text = profile.description;
+    _websiteController.text = profile.websiteUrl ?? '';
+    _projectDetailsController.text = profile.projectDetails ?? '';
+    _industry = profile.industry;
+    _requiredSkills = List<String>.from(profile.requiredSkills);
+    _logoUrl = profile.logoUrl;
   }
 
-  Future<void> _persistLogo(String base64) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(LogoImageService.storageKey, base64);
+  @override
+  void dispose() {
+    _companyNameController.dispose();
+    _descriptionController.dispose();
+    _websiteController.dispose();
+    _projectDetailsController.dispose();
+    super.dispose();
   }
 
-  Future<ImageSource?> _chooseImageSource() {
-    return showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return XPPremiumSheet(
-          title: 'Update logo',
-          subtitle: 'Choose a source for your company mark.',
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Upload from gallery'),
-                onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Take a photo'),
-                onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _editLogo(AppState appState, StartupProfile? profile) async {
-    if (profile == null || _savingLogo) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    final source = await _chooseImageSource();
-    if (source == null) return;
-    if (!mounted) return;
-
-    setState(() => _savingLogo = true);
+  Future<void> _pickLogo() async {
+    final user = SupabaseService.currentUser;
+    if (user == null) return;
     try {
-      final bytes = await LogoImageService.pickAndEdit(
-        context: context,
-        source: source,
-      );
-      if (bytes == null) return;
-
-      final encoded = LogoImageService.encode(bytes);
-      final updatedProfile = profile.copyWith(logoBase64: encoded);
-      appState.saveStartupProfile(updatedProfile);
-      await _persistLogo(encoded);
-
-      if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Company logo updated'),
-          backgroundColor: AppTheme.successDark,
-        ),
-      );
-    } catch (_) {
-      if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Could not update the logo. Please try again.'),
-          ),
-        );
-      }
+      setState(() => _isSaving = true);
+      final picked = await AssetUploadService.pickLogo();
+      if (picked == null) return;
+      final url = await AssetUploadService.uploadLogo(user.id, picked);
+      setState(() => _logoUrl = url);
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
     } finally {
-      if (mounted) {
-        setState(() => _savingLogo = false);
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
-  void _showAddRoleSheet(
-    BuildContext context,
-    AppState appState,
-    StartupProfile? profile,
-  ) {
+  Future<void> _showRoleSheet() async {
     final titleController = TextEditingController();
-    final commitmentController = TextEditingController();
     final descriptionController = TextEditingController();
     final outcomeController = TextEditingController();
+    final commitmentController = TextEditingController();
     final hoursController = TextEditingController();
     final durationController = TextEditingController();
-    final minMembersController = TextEditingController(text: '2');
-    final maxMembersController = TextEditingController(text: '4');
-    final selectedRoles = <String>{};
+    final teamRoles = <String>[];
     bool isTeamMission = false;
 
-    showModalBottomSheet(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) {
+      builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return XPPremiumSheet(
-            title: 'Add a role',
-            subtitle:
-                'Create a polished opportunity without leaving this screen.',
-            footer: XPButton(
-            label: 'Add role',
-            icon: Icons.add_rounded,
-            onPressed: () async {
-              final title = titleController.text.trim();
-              final outcome = outcomeController.text.trim();
-              if (title.isEmpty || outcome.isEmpty || profile == null) {
-                return;
-              }
-              final hours = int.tryParse(hoursController.text.trim());
-              final duration = int.tryParse(durationController.text.trim());
-              final minMembers =
-                  int.tryParse(minMembersController.text.trim()) ?? 2;
-              final maxMembers =
-                  int.tryParse(maxMembersController.text.trim()) ?? 4;
-
-              final role = StartupRole(
-                title: title,
-                commitment: commitmentController.text.trim().isNotEmpty
-                    ? commitmentController.text.trim()
-                    : null,
-                description: descriptionController.text.trim().isNotEmpty
-                    ? descriptionController.text.trim()
-                    : null,
-                learningOutcome: outcome,
-                estimatedHours: hours,
-                durationWeeks: duration,
-                teamMissionConfig: isTeamMission
-                    ? TeamMissionConfig(
-                        requiredRoles: selectedRoles.toList(),
-                        maxMembers: maxMembers,
-                        teamSizeMin: minMembers,
-                        sharedLearningOutcome: outcome,
-                      )
-                    : null,
-              );
-
-              final updated = profile.copyWith(
-                openRoles: [...profile.openRoles, role],
-              );
-              appState.saveStartupProfile(updated);
-              await _persistRoles(updated.openRoles);
-
-              // Push to Supabase so students see it in real-time
-              try {
-                await SupabaseService.createMissionFromRole(
-                  startupId: profile.id,
-                  role: role,
-                  requiredSkills: profile.requiredSkills,
-                );
-              } catch (_) {
-                // Offline-safe: local save already succeeded
-              }
-
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Added ${role.title}'),
-                    backgroundColor: AppTheme.successDark,
-                  ),
-                );
-              }
-            },
-            ),
-            child: SingleChildScrollView(
-            child: Column(
-              children: [
-                XPTextField(
-                  controller: titleController,
-                  labelText: 'Role title',
-                  hintText: 'e.g. Software Engineer Intern',
-                  prefixIcon: Icons.work_outline_rounded,
-                  textCapitalization: TextCapitalization.words,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                XPTextField(
-                  controller: commitmentController,
-                  labelText: 'Commitment',
-                  hintText: '10 hrs/week · Remote',
-                  prefixIcon: Icons.schedule_rounded,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                XPTextField(
-                  controller: outcomeController,
-                  labelText: isTeamMission
-                      ? 'Shared learning outcome'
-                      : 'Learning outcome',
-                  hintText: 'What will the student learn or own?',
-                  prefixIcon: Icons.rocket_launch_outlined,
-                  maxLines: 2,
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                SwitchListTile(
-                  value: isTeamMission,
-                  onChanged: (value) =>
-                      setModalState(() => isTeamMission = value),
-                  title: Text(
-                    isTeamMission ? 'Team mission' : 'Solo mission',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  subtitle: Text(
-                    isTeamMission
-                        ? 'Guilds can apply as a team.'
-                        : 'Single students apply directly.',
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-                if (isTeamMission) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Required roles',
-                      style: Theme.of(context).textTheme.titleLarge,
+            return Padding(
+              padding: EdgeInsets.only(
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                top: AppSpacing.md,
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+              ),
+              child: XPSection(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Add mission', style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: AppSpacing.lg),
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(labelText: 'Role title'),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: _teamRoleOptions.map((role) {
-                      return XPChoiceChip(
-                        label: role,
-                        selected: selectedRoles.contains(role),
-                        onSelected: (selected) {
-                          setModalState(() {
-                            if (selected) {
-                              selectedRoles.add(role);
-                            } else {
-                              selectedRoles.remove(role);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: XPTextField(
-                          controller: minMembersController,
-                          labelText: 'Min members',
-                          hintText: '2',
-                          prefixIcon: Icons.group_outlined,
-                          keyboardType: TextInputType.number,
-                        ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      controller: descriptionController,
+                      minLines: 3,
+                      maxLines: 4,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      controller: outcomeController,
+                      minLines: 2,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Learning outcome',
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: XPTextField(
-                          controller: maxMembersController,
-                          labelText: 'Max members',
-                          hintText: '4',
-                          prefixIcon: Icons.groups_rounded,
-                          keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      controller: commitmentController,
+                      decoration: const InputDecoration(labelText: 'Commitment'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: hoursController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'Hours'),
+                          ),
                         ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: TextField(
+                            controller: durationController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'Weeks'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    SwitchListTile(
+                      value: isTeamMission,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Team mission'),
+                      onChanged: (value) =>
+                          setModalState(() => isTeamMission = value),
+                    ),
+                    if (isTeamMission) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: [
+                          'Product',
+                          'Design',
+                          'Dev',
+                          'Marketing',
+                          'Data',
+                          'Operations',
+                        ].map((role) {
+                          return FilterChip(
+                            label: Text(role),
+                            selected: teamRoles.contains(role),
+                            onSelected: (selected) {
+                              setModalState(() {
+                                if (selected) {
+                                  teamRoles.add(role);
+                                } else {
+                                  teamRoles.remove(role);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-                XPTextField(
-                  controller: descriptionController,
-                  labelText: 'Description',
-                  hintText: 'Describe the work and context.',
-                  prefixIcon: Icons.description_outlined,
-                  maxLines: 4,
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: XPTextField(
-                        controller: hoursController,
-                        labelText: 'Hours',
-                        hintText: '8',
-                        prefixIcon: Icons.timer_outlined,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: XPTextField(
-                        controller: durationController,
-                        labelText: 'Weeks',
-                        hintText: '6',
-                        prefixIcon: Icons.calendar_today_outlined,
-                        keyboardType: TextInputType.number,
-                      ),
+                    const SizedBox(height: AppSpacing.xl),
+                    XPButton(
+                      label: 'Create mission',
+                      onPressed: () async {
+                        final title = titleController.text.trim();
+                        final description = descriptionController.text.trim();
+                        final outcome = outcomeController.text.trim();
+                        if (title.isEmpty || description.isEmpty || outcome.isEmpty) {
+                          return;
+                        }
+                        final role = StartupRole(
+                          title: title,
+                          description: description,
+                          learningOutcome: outcome,
+                          commitment: commitmentController.text.trim().isEmpty
+                              ? null
+                              : commitmentController.text.trim(),
+                          estimatedHours:
+                              int.tryParse(hoursController.text.trim()),
+                          durationWeeks:
+                              int.tryParse(durationController.text.trim()),
+                          teamMissionConfig: isTeamMission
+                              ? TeamMissionConfig(
+                                  requiredRoles: teamRoles,
+                                  teamSizeMin: 2,
+                                  maxMembers: 4,
+                                  sharedLearningOutcome: outcome,
+                                )
+                              : null,
+                        );
+                        await AppStateScope.of(context).createMission(role);
+                        if (!context.mounted) return;
+                        Navigator.pop(sheetContext);
+                      },
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          );
+              ),
+            );
           },
         );
       },
     );
   }
 
+  Future<void> _save() async {
+    final appState = AppStateScope.of(context);
+    final current = appState.startupProfile;
+    final user = SupabaseService.currentUser;
+    if (current == null || user == null) return;
+    if (!_formKey.currentState!.validate()) return;
+    if (_industry == null || _requiredSkills.length < 2) {
+      setState(() => _submitError = 'Select an industry and at least 2 skills.');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _submitError = null;
+    });
+
+    final updated = current.copyWith(
+      companyName: _companyNameController.text.trim(),
+      description: _descriptionController.text.trim(),
+      websiteUrl: _websiteController.text.trim(),
+      projectDetails: _projectDetailsController.text.trim(),
+      industry: _industry,
+      requiredSkills: _requiredSkills,
+      logoUrl: _logoUrl,
+    );
+
+    try {
+      await appState.persistStartupProfile(updated);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Company profile updated.'),
+          backgroundColor: AppTheme.successDark,
+        ),
+      );
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    final appState = AppStateScope.of(context);
+    await appState.logout();
+    if (!mounted) return;
+    context.goNamed('login');
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final profile = appState.startupProfile;
-    final Uint8List? logoBytes = LogoImageService.decode(profile?.logoBase64);
+    final missions = appState.missions
+        .where((mission) => mission.startupId == profile?.id)
+        .toList();
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: XPScene(
+    if (profile == null) {
+      return XPPageScaffold(
+        title: 'Company profile',
+        subtitle: 'Not set up yet',
+        showBack: true,
         compact: true,
-        child: SafeArea(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.page),
+            child: XPEmptyState(
+              icon: Icons.business_rounded,
+              title: 'No startup profile yet',
+              message: 'Finish setup to manage your company profile.',
+              actionLabel: 'Go to setup',
+              onAction: () => context.goNamed('startupSetup'),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return XPPageScaffold(
+      title: 'Company profile',
+      subtitle: 'Edit public company details and mission inventory.',
+      showBack: true,
+      compact: true,
+      trailing: XPHeaderButton(icon: Icons.logout_rounded, onTap: _logout),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.page,
+          AppSpacing.md,
+          AppSpacing.page,
+          AppSpacing.page,
+        ),
+        child: Form(
+          key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              XPAppBar(
-                title: 'Company Profile',
-                subtitle: 'The surface candidates see first',
-                trailing: XPHeaderButton(
-                  icon: Icons.logout_rounded,
-                  foregroundColor: AppTheme.error,
-                  backgroundColor: AppTheme.surface.withValues(alpha: 0.72),
-                  onTap: () => _handleLogout(context),
+              XPSection(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _companyNameController,
+                      validator: (value) => (value?.trim().isEmpty ?? true)
+                          ? 'Company name is required'
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Company name',
+                        prefixIcon: Icon(Icons.business_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _descriptionController,
+                      validator: (value) => (value?.trim().isEmpty ?? true)
+                          ? 'Description is required'
+                          : null,
+                      minLines: 3,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        prefixIcon: Icon(Icons.description_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _websiteController,
+                      validator: (value) => (value?.trim().isEmpty ?? true)
+                          ? 'Website is required'
+                          : null,
+                      keyboardType: TextInputType.url,
+                      decoration: const InputDecoration(
+                        labelText: 'Website',
+                        prefixIcon: Icon(Icons.language_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _projectDetailsController,
+                      validator: (value) => (value?.trim().isEmpty ?? true)
+                          ? 'Project details are required'
+                          : null,
+                      minLines: 3,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Project details',
+                        prefixIcon: Icon(Icons.lightbulb_outline_rounded),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.page,
-                    AppSpacing.md,
-                    AppSpacing.page,
-                    AppSpacing.page,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      XPGlassPanel(
-                        backgroundColor: AppTheme.primaryDeep.withValues(
-                          alpha: 0.82,
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppTheme.primaryDeep,
-                            AppTheme.primaryDark,
-                            AppTheme.primary.withValues(alpha: 0.88),
-                          ],
-                        ),
-                        borderColor: AppTheme.surface.withValues(alpha: 0.16),
-                        shadow: AppTheme.heroCardShadow,
-                        child: Column(
-                          children: [
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Container(
-                                  width: 118,
-                                  height: 118,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.surface.withValues(
-                                      alpha: 0.18,
-                                    ),
-                                    borderRadius: BorderRadius.circular(
-                                      AppTheme.cornerRadiusLarge,
-                                    ),
-                                    image: logoBytes != null
-                                        ? DecorationImage(
-                                            image: MemoryImage(logoBytes),
-                                            fit: BoxFit.cover,
-                                          )
-                                        : null,
-                                  ),
-                                  child: logoBytes != null
-                                      ? null
-                                      : Center(
-                                          child: Text(
-                                            profile?.companyName.isNotEmpty ==
-                                                    true
-                                                ? profile!.companyName[0]
-                                                      .toUpperCase()
-                                                : '?',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .displayMedium
-                                                ?.copyWith(
-                                                  color: AppTheme.surface,
-                                                ),
-                                          ),
-                                        ),
-                                ),
-                                if (_savingLogo)
-                                  Positioned.fill(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.28,
-                                        ),
-                                        borderRadius: BorderRadius.circular(
-                                          AppTheme.cornerRadiusLarge,
-                                        ),
-                                      ),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                AppTheme.surface,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                if (profile != null)
-                                  Positioned(
-                                    right: -10,
-                                    bottom: -10,
-                                    child: XPHeaderButton(
-                                      icon: Icons.edit_rounded,
-                                      foregroundColor: AppTheme.surface,
-                                      backgroundColor: AppTheme.surface
-                                          .withValues(alpha: 0.18),
-                                      onTap: () => _editLogo(appState, profile),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
-                            Text(
-                              profile?.companyName ?? 'Company',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(color: AppTheme.surface),
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            XPBadge(
-                              label: profile?.industry ?? 'Industry',
-                              color: AppTheme.surface.withValues(alpha: 0.12),
-                              textColor: AppTheme.surface,
-                            ),
-                          ],
-                        ),
+              const SizedBox(height: AppSpacing.lg),
+              XPSingleSelectField(
+                label: 'Industry',
+                hint: 'Select an industry',
+                options: DummyData.industries,
+                value: _industry,
+                onChanged: (value) => setState(() => _industry = value),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              XPMultiSelectField(
+                label: 'Required skills',
+                hint: 'Select 2-4 skills',
+                options: DummyData.skillPool,
+                values: _requiredSkills,
+                minSelection: 2,
+                maxSelection: 4,
+                onChanged: (values) => setState(() => _requiredSkills = values),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              XPSection(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Logo',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            _logoUrl == null
+                                ? 'Optional, but recommended for trust.'
+                                : 'Logo uploaded.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: AppSpacing.xl),
-                      XPSection(
-                        title: 'About company',
-                        child: Text(
-                          profile?.description ?? 'No description',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      ),
-                      if (profile?.websiteUrl?.isNotEmpty == true) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Website',
-                          child: XPBadge(
-                            label: profile!.websiteUrl!,
-                            icon: Icons.language_rounded,
-                            color: AppTheme.primarySoft,
-                          ),
-                        ),
-                      ],
-                      if (profile?.requiredSkills.isNotEmpty == true) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Skills needed',
-                          child: Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: profile!.requiredSkills
-                                .map((skill) => XPSkillTag(label: skill))
-                                .toList(),
-                          ),
-                        ),
-                      ],
-                      if (profile?.projectDetails?.isNotEmpty == true) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Project details',
-                          child: Text(
-                            profile!.projectDetails!,
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.xl),
-                      XPSection(
-                        title: 'Open roles',
-                        action: XPOutlinedButton(
-                          label: 'Add role',
-                          icon: Icons.add_rounded,
-                          expand: false,
-                          size: XPButtonSize.small,
-                          onPressed: () =>
-                              _showAddRoleSheet(context, appState, profile),
-                        ),
-                        child: profile?.openRoles.isNotEmpty == true
-                            ? Column(
-                                children: profile!.openRoles.map((role) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(
-                                      bottom: AppSpacing.md,
-                                    ),
-                                    child: XPCard(
-                                      backgroundColor: AppTheme.surface
-                                          .withValues(alpha: 0.56),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            role.title,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.titleLarge,
-                                          ),
-                                          if (role.teamMissionConfig != null) ...[
-                                            const SizedBox(
-                                              height: AppSpacing.xs,
-                                            ),
-                                            XPBadge(
-                                              label: 'Team Mission',
-                                              icon: Icons.groups_rounded,
-                                              color: AppTheme.primaryDeep,
-                                              textColor: AppTheme.surface,
-                                            ),
-                                          ],
-                                          if (role.commitment?.isNotEmpty ==
-                                              true) ...[
-                                            const SizedBox(
-                                              height: AppSpacing.xs,
-                                            ),
-                                            XPBadge(
-                                              label: role.commitment!,
-                                              icon: Icons.schedule_rounded,
-                                            ),
-                                          ],
-                                          const SizedBox(height: AppSpacing.sm),
-                                          Text(
-                                            role.learningOutcome,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.bodyMedium,
-                                          ),
-                                          if (role.description?.isNotEmpty ==
-                                              true) ...[
-                                            const SizedBox(
-                                              height: AppSpacing.xs,
-                                            ),
+                    ),
+                    XPOutlinedButton(
+                      label: _logoUrl == null ? 'Upload' : 'Replace',
+                      expand: false,
+                      size: XPButtonSize.small,
+                      onPressed: _isSaving ? null : _pickLogo,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              XPSection(
+                title: 'Live missions',
+                subtitle: 'These are visible to students right now.',
+                action: XPOutlinedButton(
+                  label: 'Add mission',
+                  expand: false,
+                  size: XPButtonSize.medium,
+                  onPressed: _showRoleSheet,
+                ),
+                child: missions.isEmpty
+                    ? const Text('No missions created yet.')
+                    : Column(
+                        children: missions.map((mission) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                            child: XPCard(
+                              padding: const EdgeInsets.all(AppSpacing.lg),
+                              backgroundColor: AppTheme.primarySoft,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
                                             Text(
-                                              role.description!,
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.bodySmall,
+                                              mission.title,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium,
+                                            ),
+                                            const SizedBox(height: AppSpacing.xs),
+                                            Text(
+                                              mission.description,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall,
                                             ),
                                           ],
-                                          if (role.teamMissionConfig != null) ...[
-                                            const SizedBox(
-                                              height: AppSpacing.sm,
-                                            ),
-                                            Wrap(
-                                              spacing: AppSpacing.sm,
-                                              runSpacing: AppSpacing.sm,
-                                              children: [
-                                                XPBadge(
-                                                  label:
-                                                      '${role.teamMissionConfig!.teamSizeMin}-${role.teamMissionConfig!.maxMembers} members',
-                                                  icon: Icons.group_outlined,
-                                                ),
-                                                ...role.teamMissionConfig!
-                                                    .requiredRoles
-                                                    .map(
-                                                      (item) => XPBadge(
-                                                        label: item,
-                                                        color:
-                                                            AppTheme.primarySoft,
-                                                      ),
-                                                    ),
-                                              ],
-                                            ),
-                                          ],
-                                          if (role.estimatedHours != null ||
-                                              role.durationWeeks != null) ...[
-                                            const SizedBox(
-                                              height: AppSpacing.sm,
-                                            ),
-                                            Wrap(
-                                              spacing: AppSpacing.sm,
-                                              runSpacing: AppSpacing.sm,
-                                              children: [
-                                                if (role.estimatedHours != null)
-                                                  XPBadge(
-                                                    label:
-                                                        '${role.estimatedHours} hrs',
-                                                    icon: Icons.timer_outlined,
-                                                  ),
-                                                if (role.durationWeeks != null)
-                                                  XPBadge(
-                                                    label:
-                                                        '${role.durationWeeks} weeks',
-                                                    icon: Icons
-                                                        .calendar_today_outlined,
-                                                  ),
-                                              ],
-                                            ),
-                                          ],
-                                        ],
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                }).toList(),
-                              )
-                            : Text(
-                                'No roles added yet.',
-                                style: Theme.of(context).textTheme.bodySmall,
+                                      XPOutlinedButton(
+                                        label: 'Delete',
+                                        expand: false,
+                                        size: XPButtonSize.small,
+                                        onPressed: () =>
+                                            appState.deleteMission(mission.id),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Wrap(
+                                    spacing: AppSpacing.sm,
+                                    runSpacing: AppSpacing.sm,
+                                    children: [
+                                      if ((mission.commitment ?? '').isNotEmpty)
+                                        XPBadge(label: mission.commitment!),
+                                      if (mission.isTeamMission)
+                                        const TeamMissionBadge(compact: true),
+                                    ],
+                                  ),
+                                ],
                               ),
+                            ),
+                          );
+                        }).toList(),
                       ),
-                    ],
+              ),
+              if (_submitError != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  _submitError!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.error,
                   ),
                 ),
+              ],
+              const SizedBox(height: AppSpacing.xl),
+              XPButton(
+                label: 'Save changes',
+                icon: Icons.check_rounded,
+                loading: _isSaving,
+                onPressed: _isSaving ? null : _save,
               ),
             ],
           ),

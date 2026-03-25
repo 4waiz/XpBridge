@@ -1,23 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app.dart';
 import '../../data/dummy_data.dart';
-import '../../models/application.dart';
-import '../../models/skill_badge.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/student_profile.dart';
+import '../../services/asset_upload_service.dart';
+import '../../services/link_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/team_mission_widgets.dart';
-import '../../widgets/verified_badges_section.dart';
 import '../../widgets/xp_app_bar.dart';
-import '../../widgets/xp_card.dart';
-import '../../widgets/xp_chip.dart';
 import '../../widgets/xp_button.dart';
-import '../../widgets/xp_input.dart';
-import '../../widgets/xp_premium.dart';
+import '../../widgets/xp_card.dart';
+import '../../widgets/xp_empty_state.dart';
+import '../../widgets/xp_page_scaffold.dart';
+import '../../widgets/xp_selectors.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   const StudentProfileScreen({super.key});
@@ -27,740 +23,356 @@ class StudentProfileScreen extends StatefulWidget {
 }
 
 class _StudentProfileScreenState extends State<StudentProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _bioController = TextEditingController();
+  final _educationController = TextEditingController();
+  final _portfolioController = TextEditingController();
+  final _githubController = TextEditingController();
+  List<String> _skills = [];
+  double _hours = 10;
+  String? _resumeUrl;
+  String? _resumeFileName;
+  String? _resumeMimeType;
+  bool _isSaving = false;
+  String? _submitError;
+  bool _loaded = false;
 
-  Future<void> _handleLogout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-
-    if (!context.mounted) return;
-
-    final appState = AppStateScope.of(context);
-    appState.logout();
-    context.goNamed('login');
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loaded) return;
+    final profile = AppStateScope.of(context).studentProfile;
+    if (profile != null) {
+      _applyProfile(profile);
+    }
+    _loaded = true;
   }
 
-  void _showEditSheet(BuildContext context) {
-    final appState = AppStateScope.of(context);
-    var profile = appState.studentProfile;
-    
-    // If profile is null, we use the current auth user as fallback
-    final userId = profile?.id ?? Supabase.instance.client.auth.currentUser?.id;
-    final userEmail = profile?.email ?? Supabase.instance.client.auth.currentUser?.email ?? '';
+  void _applyProfile(StudentProfile profile) {
+    _nameController.text = profile.name;
+    _bioController.text = profile.bio ?? '';
+    _educationController.text = profile.education ?? '';
+    _portfolioController.text = profile.portfolioUrl ?? '';
+    _githubController.text = profile.githubUrl ?? '';
+    _skills = List<String>.from(profile.skills);
+    _hours = profile.availabilityHours;
+    _resumeUrl = profile.resumeUrl;
+    _resumeFileName = profile.resumeFileName;
+    _resumeMimeType = profile.resumeMimeType;
+  }
 
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in again to continue.')),
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _bioController.dispose();
+    _educationController.dispose();
+    _portfolioController.dispose();
+    _githubController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickResume() async {
+    final user = SupabaseService.currentUser;
+    if (user == null) return;
+    try {
+      setState(() => _isSaving = true);
+      final picked = await AssetUploadService.pickResume();
+      if (picked == null) return;
+      final url = await AssetUploadService.uploadResume(user.id, picked);
+      setState(() {
+        _resumeUrl = url;
+        _resumeFileName = picked.fileName;
+        _resumeMimeType = picked.mimeType;
+      });
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _save() async {
+    final appState = AppStateScope.of(context);
+    final current = appState.studentProfile;
+    final user = SupabaseService.currentUser;
+    if (current == null || user == null) return;
+    if (!_formKey.currentState!.validate()) return;
+    if (_skills.length < 2 || (_resumeUrl ?? '').isEmpty) {
+      setState(
+        () => _submitError = 'Keep 2-4 skills selected and make sure a CV is uploaded.',
       );
       return;
     }
 
-    final nameCtrl = TextEditingController(text: profile?.name ?? '');
-    final bioCtrl = TextEditingController(text: profile?.bio ?? '');
-    final eduCtrl = TextEditingController(text: profile?.education ?? '');
-    double hours = profile?.availabilityHours ?? 10.0;
-    final selectedSkills = profile != null ? Set<String>.from(profile.skills) : <String>{};
+    setState(() {
+      _isSaving = true;
+      _submitError = null;
+    });
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => StatefulBuilder(
-        builder: (ctx, setModalState) => XPPremiumSheet(
-          title: 'Edit profile',
-          subtitle: 'Update your info and skills.',
-          footer: XPButton(
-            label: 'Save changes',
-            icon: Icons.check_rounded,
-            onPressed: () async {
-              final updated = profile?.copyWith(
-                    name: nameCtrl.text.trim(),
-                    bio: bioCtrl.text.trim().isNotEmpty ? bioCtrl.text.trim() : null,
-                    education: eduCtrl.text.trim().isNotEmpty ? eduCtrl.text.trim() : null,
-                    skills: selectedSkills.toList(),
-                    availabilityHours: hours,
-                  ) ??
-                  StudentProfile(
-                    id: userId,
-                    name: nameCtrl.text.trim(),
-                    email: userEmail,
-                    bio: bioCtrl.text.trim().isNotEmpty ? bioCtrl.text.trim() : null,
-                    education: eduCtrl.text.trim().isNotEmpty ? eduCtrl.text.trim() : null,
-                    skills: selectedSkills.toList(),
-                    availabilityHours: hours,
-                    createdAt: DateTime.now(),
-                  );
-              appState.saveStudentProfile(updated);
-
-              // Persist locally
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('profile_name', updated.name);
-              await prefs.setString('profile_bio', updated.bio ?? '');
-              await prefs.setString('profile_education', updated.education ?? '');
-              await prefs.setStringList('profile_skills', updated.skills);
-              await prefs.setDouble('profile_hours', updated.availabilityHours);
-
-              // Sync to Supabase
-              try {
-                await SupabaseService.updateProfile(
-                  id: updated.id,
-                  data: {
-                    'name': updated.name,
-                    'bio': updated.bio,
-                    'education': updated.education,
-                    'skills': updated.skills,
-                    'availability_hours': updated.availabilityHours,
-                  },
-                );
-              } catch (_) {}
-
-              if (sheetCtx.mounted) Navigator.pop(sheetCtx);
-              if (context.mounted) {
-                setState(() {});
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Profile updated'),
-                    backgroundColor: AppTheme.successDark,
-                  ),
-                );
-              }
-            },
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              XPTextField(
-                controller: nameCtrl,
-                labelText: 'Name',
-                prefixIcon: Icons.person_outline_rounded,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              XPTextField(
-                controller: eduCtrl,
-                labelText: 'Education',
-                prefixIcon: Icons.school_outlined,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              XPTextField(
-                controller: bioCtrl,
-                labelText: 'Bio',
-                prefixIcon: Icons.edit_note_rounded,
-                maxLines: 3,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Skills (${selectedSkills.length}/4)',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: DummyData.skillPool.map((skill) {
-                  return XPChoiceChip(
-                    label: skill,
-                    selected: selectedSkills.contains(skill),
-                    onSelected: (selected) {
-                      setModalState(() {
-                        if (selected && selectedSkills.length < 4) {
-                          selectedSkills.add(skill);
-                        } else {
-                          selectedSkills.remove(skill);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Availability: ${hours.round()} hrs/week',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              Slider(
-                min: 2,
-                max: 25,
-                divisions: 23,
-                value: hours,
-                label: '${hours.round()} hrs',
-                onChanged: (v) => setModalState(() => hours = v),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final updated = current.copyWith(
+      name: _nameController.text.trim(),
+      bio: _bioController.text.trim(),
+      education: _educationController.text.trim(),
+      skills: _skills,
+      availabilityHours: _hours,
+      portfolioUrl: _portfolioController.text.trim().isEmpty
+          ? null
+          : _portfolioController.text.trim(),
+      githubUrl: _githubController.text.trim().isEmpty
+          ? null
+          : _githubController.text.trim(),
+      resumeUrl: _resumeUrl,
+      resumeFileName: _resumeFileName,
+      resumeMimeType: _resumeMimeType,
     );
-  }
 
-  int _levelBase(int level) {
-    if (level >= 10) return 6000;
-    if (level >= 9) return 4800;
-    if (level >= 8) return 3800;
-    if (level >= 7) return 3000;
-    if (level >= 6) return 2200;
-    if (level >= 5) return 1500;
-    if (level >= 4) return 900;
-    if (level >= 3) return 500;
-    if (level >= 2) return 200;
-    return 0;
-  }
-
-  int? _nextLevelTarget(int level) {
-    if (level >= 10) return null;
-    switch (level) {
-      case 1:
-        return 200;
-      case 2:
-        return 500;
-      case 3:
-        return 900;
-      case 4:
-        return 1500;
-      case 5:
-        return 2200;
-      case 6:
-        return 3000;
-      case 7:
-        return 3800;
-      case 8:
-        return 4800;
-      case 9:
-        return 6000;
-      default:
-        return null;
+    try {
+      await appState.persistStudentProfile(updated);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile updated.'),
+          backgroundColor: AppTheme.successDark,
+        ),
+      );
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
-  double _levelProgress(int xp, int level) {
-    final next = _nextLevelTarget(level);
-    if (next == null) return 1;
-    final base = _levelBase(level);
-    final span = (next - base).toDouble();
-    if (span <= 0) return 1;
-    return ((xp - base) / span).clamp(0, 1);
+  Future<void> _logout() async {
+    final appState = AppStateScope.of(context);
+    await appState.logout();
+    if (!mounted) return;
+    context.goNamed('login');
   }
 
-  String _dateLabel(DateTime date) => '${date.month}/${date.day}/${date.year}';
+  Future<void> _openLink(String? link) async {
+    try {
+      await LinkService.openExternal(link);
+    } on XpServiceException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final profile = appState.studentProfile;
-    final applications = profile != null
-        ? appState.getApplicationsForStudent(profile.id)
-        : <Application>[];
-    final reflections = applications
-        .where(
-          (app) =>
-              app.reflectionDid?.isNotEmpty == true ||
-              app.reflectionLearned?.isNotEmpty == true,
-        )
-        .toList();
-    final feedbackEntries = applications
-        .where(
-          (app) =>
-              app.mentorRating != null ||
-              app.mentorFeedbackText?.isNotEmpty == true,
-        )
-        .toList();
-    final portfolioItems = applications
-        .where(
-          (app) =>
-              (app.status == ApplicationStatus.completed ||
-                  app.completedAt != null) &&
-              app.deliverableUrl?.isNotEmpty == true,
-        )
-        .toList();
-    final xpPoints = profile?.xpPoints ?? 0;
-    final level = profile?.level ?? 1;
-    final levelProgress = _levelProgress(xpPoints, level);
-    final nextLevel = _nextLevelTarget(level);
-    final badges = profile != null
-        ? appState.getBadgesForStudent(profile.id)
-        : const <SkillBadge>[];
-    final currentGuild = profile != null
-        ? appState.getGuildForStudent(profile.id)
-        : null;
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: XPScene(
+    if (profile == null) {
+      return XPPageScaffold(
+        title: 'Your profile',
+        subtitle: 'Not set up yet',
+        showBack: true,
         compact: true,
-        child: SafeArea(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.page),
+            child: XPEmptyState(
+              icon: Icons.person_outline_rounded,
+              title: 'No student profile yet',
+              message: 'Finish setup to manage your profile.',
+              actionLabel: 'Go to setup',
+              onAction: () => context.goNamed('studentSetup'),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return XPPageScaffold(
+      title: 'Your profile',
+      subtitle: 'Keep your CV, links, and skills current.',
+      showBack: true,
+      compact: true,
+      trailing: XPHeaderButton(
+        icon: Icons.logout_rounded,
+        onTap: _logout,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.page,
+          AppSpacing.md,
+          AppSpacing.page,
+          AppSpacing.page,
+        ),
+        child: Form(
+          key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              XPAppBar(
-                title: 'Profile',
-                subtitle: 'Your public career layer',
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
+              XPSection(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    XPHeaderButton(
-                      icon: Icons.edit_rounded,
-                      foregroundColor: AppTheme.primaryDeep,
-                      backgroundColor: AppTheme.surface.withValues(alpha: 0.72),
-                      onTap: () => _showEditSheet(context),
+                    Text(
+                      'Level ${profile.level} • ${profile.xpPoints} XP',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    XPHeaderButton(
-                      icon: Icons.logout_rounded,
-                      foregroundColor: AppTheme.error,
-                      backgroundColor: AppTheme.surface.withValues(alpha: 0.72),
-                      onTap: () => _handleLogout(context),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _nameController,
+                      validator: (value) =>
+                          (value?.trim().isEmpty ?? true) ? 'Name is required' : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Full name',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _educationController,
+                      validator: (value) => (value?.trim().isEmpty ?? true)
+                          ? 'Education is required'
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Education',
+                        prefixIcon: Icon(Icons.school_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _bioController,
+                      validator: (value) =>
+                          (value?.trim().isEmpty ?? true) ? 'Bio is required' : null,
+                      minLines: 3,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Bio',
+                        prefixIcon: Icon(Icons.edit_note_rounded),
+                      ),
                     ),
                   ],
                 ),
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.page,
-                    AppSpacing.md,
-                    AppSpacing.page,
-                    AppSpacing.page,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      XPGlassPanel(
-                        backgroundColor: AppTheme.primaryDeep.withValues(
-                          alpha: 0.82,
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppTheme.primaryDeep,
-                            AppTheme.primaryDark,
-                            AppTheme.primary.withValues(alpha: 0.88),
-                          ],
-                        ),
-                        borderColor: AppTheme.surface.withValues(alpha: 0.18),
-                        shadow: AppTheme.heroCardShadow,
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 108,
-                              height: 108,
-                              decoration: BoxDecoration(
-                                color: AppTheme.surface.withValues(alpha: 0.16),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppTheme.surface.withValues(
-                                    alpha: 0.24,
-                                  ),
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  profile?.name.isNotEmpty == true
-                                      ? profile!.name[0].toUpperCase()
-                                      : '?',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .displayMedium
-                                      ?.copyWith(
-                                        color: AppTheme.surface,
-                                        fontSize: 52,
-                                      ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
-                            Text(
-                              profile?.name ?? 'Student',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(color: AppTheme.surface),
-                              textAlign: TextAlign.center,
-                            ),
-                            if (profile?.education?.isNotEmpty == true) ...[
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                profile!.education!,
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: AppTheme.surface.withValues(
-                                        alpha: 0.82,
-                                      ),
-                                    ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                            const SizedBox(height: AppSpacing.lg),
-                            Row(
+              const SizedBox(height: AppSpacing.lg),
+              XPMultiSelectField(
+                label: 'Skills',
+                hint: 'Select 2-4 skills',
+                options: DummyData.skillPool,
+                values: _skills,
+                minSelection: 2,
+                maxSelection: 4,
+                onChanged: (values) => setState(() => _skills = values),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              XPSection(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Links',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _portfolioController,
+                      keyboardType: TextInputType.url,
+                      decoration: const InputDecoration(
+                        labelText: 'Portfolio link',
+                        prefixIcon: Icon(Icons.language_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _githubController,
+                      keyboardType: TextInputType.url,
+                      decoration: const InputDecoration(
+                        labelText: 'GitHub link',
+                        prefixIcon: Icon(Icons.code_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    XPCard(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      backgroundColor: AppTheme.primarySoft,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: _HeroMetric(
-                                    label: 'Level',
-                                    value: 'L$level',
-                                  ),
+                                Text(
+                                  _resumeFileName ?? 'No CV uploaded',
+                                  style: Theme.of(context).textTheme.titleMedium,
                                 ),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: _HeroMetric(
-                                    label: 'XP',
-                                    value: '$xpPoints',
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: _HeroMetric(
-                                    label: 'Completed',
-                                    value:
-                                        '${profile?.missionsCompletedCount ?? 0}',
-                                  ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  _resumeUrl == null
+                                      ? 'Upload a PDF or image CV.'
+                                      : 'Current CV is available to startups.',
+                                  style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],
                             ),
-                            const SizedBox(height: AppSpacing.lg),
-                            Theme(
-                              data: Theme.of(context).copyWith(
-                                progressIndicatorTheme:
-                                    const ProgressIndicatorThemeData(
-                                      color: AppTheme.surface,
-                                      linearTrackColor: Color(0x33FFFFFF),
-                                    ),
-                              ),
-                              child: XPProgressBar(progress: levelProgress),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              nextLevel != null
-                                  ? '${nextLevel - xpPoints} XP to Level ${level + 1}'
-                                  : 'Current level cap reached',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: AppTheme.surface.withValues(
-                                      alpha: 0.76,
-                                    ),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      XPButton(
-                        label: 'Proof of Work Portfolio',
-                        icon: Icons.auto_fix_high_rounded,
-                        onPressed: () => context.pushNamed('portfolioGenerator'),
-                      ),
-                      if (profile?.bio?.isNotEmpty == true) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'About',
-                          child: Text(
-                            profile!.bio!,
-                            style: Theme.of(context).textTheme.bodyLarge,
                           ),
-                        ),
-                      ],
-                      if (profile?.skills.isNotEmpty == true) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Skills',
-                          child: Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: profile!.skills
-                                .map((skill) => XPSkillTag(label: skill))
-                                .toList(),
-                          ),
-                        ),
-                      ],
-                      if (currentGuild != null) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Guild',
-                          subtitle:
-                              'Your current team, collaboration XP, and shared mission progress.',
-                          action: XPOutlinedButton(
-                            label: 'Open guild',
-                            icon: Icons.groups_rounded,
+                          XPOutlinedButton(
+                            label: _resumeUrl == null ? 'Upload' : 'Replace',
                             expand: false,
                             size: XPButtonSize.small,
-                            onPressed: () => context.pushNamed(
-                              'guildDetail',
-                              pathParameters: {'id': currentGuild.id},
-                            ),
+                            onPressed: _isSaving ? null : _pickResume,
                           ),
-                          child: GuildPreviewCard(
-                            guild: currentGuild,
-                            members: appState.getGuildMembers(currentGuild.id),
-                            activeMissions:
-                                appState.getActiveGuildMissionCount(
-                                  currentGuild.id,
-                                ),
-                            onTap: () => context.pushNamed(
-                              'guildDetail',
-                              pathParameters: {'id': currentGuild.id},
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (profile != null) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        VerifiedBadgesSection(badges: badges),
-                      ],
-                      if (reflections.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Reflections',
-                          subtitle:
-                              'Snapshots of what you shipped and learned.',
-                          child: Column(
-                            children: reflections.map((app) {
-                              return Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.md,
-                                ),
-                                child: XPCard(
-                                  backgroundColor: AppTheme.surface.withValues(
-                                    alpha: 0.56,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${app.roleTitle ?? 'Mission'} · ${app.startupName}',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleMedium,
-                                      ),
-                                      if (app.reflectionDid?.isNotEmpty ==
-                                          true) ...[
-                                        const SizedBox(height: AppSpacing.xs),
-                                        Text(app.reflectionDid!),
-                                      ],
-                                      if (app.reflectionLearned?.isNotEmpty ==
-                                          true) ...[
-                                        const SizedBox(height: AppSpacing.xs),
-                                        Text(
-                                          app.reflectionLearned!,
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.bodySmall,
-                                        ),
-                                      ],
-                                      if (app.skillsPracticed.isNotEmpty) ...[
-                                        const SizedBox(height: AppSpacing.sm),
-                                        Wrap(
-                                          spacing: AppSpacing.xs,
-                                          runSpacing: AppSpacing.xs,
-                                          children: app.skillsPracticed
-                                              .map(
-                                                (skill) =>
-                                                    XPSkillTag(label: skill),
-                                              )
-                                              .toList(),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                      if (feedbackEntries.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Mentor feedback',
-                          child: Column(
-                            children: feedbackEntries.map((app) {
-                              return Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.md,
-                                ),
-                                child: XPCard(
-                                  backgroundColor: AppTheme.surface.withValues(
-                                    alpha: 0.56,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${app.roleTitle ?? 'Mission'} · ${app.startupName}',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleMedium,
-                                      ),
-                                      if (app.mentorRating != null) ...[
-                                        const SizedBox(height: AppSpacing.xs),
-                                        Row(
-                                          children: List.generate(
-                                            5,
-                                            (index) => Icon(
-                                              index < app.mentorRating!
-                                                  ? Icons.star_rounded
-                                                  : Icons.star_border_rounded,
-                                              color: AppTheme.primary,
-                                              size: 18,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                      if (app.mentorFeedbackText?.isNotEmpty ==
-                                          true) ...[
-                                        const SizedBox(height: AppSpacing.sm),
-                                        Text(
-                                          app.mentorFeedbackText!,
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.bodySmall,
-                                        ),
-                                      ],
-                                      if (app.endorsedSkills.isNotEmpty) ...[
-                                        const SizedBox(height: AppSpacing.sm),
-                                        Wrap(
-                                          spacing: AppSpacing.xs,
-                                          runSpacing: AppSpacing.xs,
-                                          children: app.endorsedSkills
-                                              .map(
-                                                (skill) => XPSkillTag(
-                                                  label: skill,
-                                                  isMatched: true,
-                                                ),
-                                              )
-                                              .toList(),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                      if (portfolioItems.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Proof of work',
-                          child: Column(
-                            children: portfolioItems.map((app) {
-                              return Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.md,
-                                ),
-                                child: XPCard(
-                                  backgroundColor: AppTheme.surface.withValues(
-                                    alpha: 0.56,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        app.roleTitle ?? 'Mission',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleMedium,
-                                      ),
-                                      const SizedBox(height: AppSpacing.xxs),
-                                      Text(
-                                        app.startupName,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall,
-                                      ),
-                                      const SizedBox(height: AppSpacing.sm),
-                                      XPBadge(
-                                        label: app.deliverableUrl ?? '',
-                                        icon: Icons.link_rounded,
-                                        color: AppTheme.primarySoft,
-                                      ),
-                                      const SizedBox(height: AppSpacing.xs),
-                                      Text(
-                                        'Completed ${_dateLabel(app.completedAt ?? app.appliedAt)}',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.xl),
-                      XPSection(
-                        child: SwitchListTile(
-                          value: appState.xpFeedOptOut,
-                          onChanged: (value) => appState.setFeedOptOut(value),
-                          title: Text(
-                            'Share XP updates',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          subtitle: const Text(
-                            'Show my first name in the XP community feed',
-                          ),
-                          contentPadding: EdgeInsets.zero,
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: AppSpacing.xl),
-                      XPSection(
-                        title: 'Availability',
-                        child: XPBadge(
-                          label:
-                              '${profile?.availabilityHours.round() ?? 0} hours per week',
-                          icon: Icons.schedule_rounded,
-                          color: AppTheme.primarySoft,
-                        ),
+                    ),
+                    if ((_resumeUrl ?? '').isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      XPOutlinedButton(
+                        label: 'Open CV',
+                        icon: Icons.open_in_new_rounded,
+                        size: XPButtonSize.small,
+                        onPressed: () => _openLink(_resumeUrl),
                       ),
                     ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              XPSection(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Availability',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text('${_hours.round()} hours per week'),
+                    Slider(
+                      min: 2,
+                      max: 30,
+                      divisions: 28,
+                      value: _hours,
+                      onChanged: (value) => setState(() => _hours = value),
+                    ),
+                  ],
+                ),
+              ),
+              if (_submitError != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  _submitError!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.error,
                   ),
                 ),
+              ],
+              const SizedBox(height: AppSpacing.xl),
+              XPButton(
+                label: 'Save changes',
+                icon: Icons.check_rounded,
+                loading: _isSaving,
+                onPressed: _isSaving ? null : _save,
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _HeroMetric extends StatelessWidget {
-  const _HeroMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return XPGlassPanel(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.md,
-      ),
-      backgroundColor: AppTheme.surface.withValues(alpha: 0.12),
-      borderColor: AppTheme.surface.withValues(alpha: 0.16),
-      shadow: const [],
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(color: AppTheme.surface),
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.surface.withValues(alpha: 0.76),
-            ),
-          ),
-        ],
       ),
     );
   }

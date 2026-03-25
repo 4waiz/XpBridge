@@ -8,6 +8,10 @@ class StudentProfile {
   final List<String> skills;
   final double availabilityHours;
   final String? portfolioUrl;
+  final String? githubUrl;
+  final String? resumeUrl;
+  final String? resumeFileName;
+  final String? resumeMimeType;
   final String? profileImageUrl;
   final DateTime createdAt;
   final int xpPoints;
@@ -24,6 +28,10 @@ class StudentProfile {
     required this.skills,
     required this.availabilityHours,
     this.portfolioUrl,
+    this.githubUrl,
+    this.resumeUrl,
+    this.resumeFileName,
+    this.resumeMimeType,
     this.profileImageUrl,
     required this.createdAt,
     this.xpPoints = 0,
@@ -41,6 +49,10 @@ class StudentProfile {
     List<String>? skills,
     double? availabilityHours,
     String? portfolioUrl,
+    String? githubUrl,
+    String? resumeUrl,
+    String? resumeFileName,
+    String? resumeMimeType,
     String? profileImageUrl,
     DateTime? createdAt,
     int? xpPoints,
@@ -57,6 +69,10 @@ class StudentProfile {
       skills: skills ?? this.skills,
       availabilityHours: availabilityHours ?? this.availabilityHours,
       portfolioUrl: portfolioUrl ?? this.portfolioUrl,
+      githubUrl: githubUrl ?? this.githubUrl,
+      resumeUrl: resumeUrl ?? this.resumeUrl,
+      resumeFileName: resumeFileName ?? this.resumeFileName,
+      resumeMimeType: resumeMimeType ?? this.resumeMimeType,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       createdAt: createdAt ?? this.createdAt,
       xpPoints: xpPoints ?? this.xpPoints,
@@ -77,6 +93,10 @@ class StudentProfile {
       'skills': skills,
       'availability_hours': availabilityHours,
       'portfolio_url': portfolioUrl,
+      'github_url': githubUrl,
+      'resume_url': resumeUrl,
+      'resume_file_name': resumeFileName,
+      'resume_mime_type': resumeMimeType,
       'profile_image_url': profileImageUrl,
       'created_at': createdAt.toIso8601String(),
       'xp_points': xpPoints,
@@ -96,6 +116,10 @@ class StudentProfile {
       skills: List<String>.from(map['skills'] ?? []),
       availabilityHours: (map['availability_hours'] ?? 0).toDouble(),
       portfolioUrl: map['portfolio_url'],
+      githubUrl: map['github_url'],
+      resumeUrl: map['resume_url'],
+      resumeFileName: map['resume_file_name'],
+      resumeMimeType: map['resume_mime_type'],
       profileImageUrl: map['profile_image_url'],
       createdAt: DateTime.parse(
           map['created_at'] ?? DateTime.now().toIso8601String()),

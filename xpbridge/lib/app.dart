@@ -1,176 +1,118 @@
-import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:xpbridge/routes/app_router.dart';
-import 'package:xpbridge/theme/app_theme.dart';
 
-import 'data/dummy_data.dart';
+import 'config/app_config.dart';
 import 'models/ai_interview.dart';
 import 'models/application.dart';
 import 'models/event_log_entry.dart';
 import 'models/guild.dart';
 import 'models/guild_application.dart';
+import 'models/mission.dart';
 import 'models/skill_badge.dart';
 import 'models/student_profile.dart';
 import 'models/startup_profile.dart';
 import 'models/startup_role.dart';
+import 'routes/app_router.dart';
 import 'services/ai_interview_service.dart';
-import 'services/badge_service.dart';
-import 'services/guild_service.dart';
 import 'services/supabase_service.dart';
+import 'theme/app_theme.dart';
 
 enum UserRole { student, startup }
 
 class AppState extends ChangeNotifier {
+  AppState();
+
+  bool _isInitialized = false;
+  bool _isBusy = false;
+  bool _onboardingComplete = false;
   bool _isLoggedIn = false;
+  bool _isAdmin = false;
+  bool _xpFeedOptOut = false;
+  String? _errorMessage;
   UserRole? _userRole;
+
   StudentProfile? _studentProfile;
   StartupProfile? _startupProfile;
-  List<Application> _applications = List<Application>.from(
-    DummyData.applications,
-  );
+
+  List<StudentProfile> _students = [];
+  List<StartupProfile> _startups = [];
+  List<Mission> _missions = [];
+  List<Application> _applications = [];
   List<AiInterview> _aiInterviews = [];
+
+  // Compatibility surfaces kept for older screens that still compile in-tree.
   List<Guild> _guilds = [];
   List<GuildApplication> _guildApplications = [];
   List<SkillBadge> _skillBadges = [];
   List<EventLogEntry> _eventLog = [];
-  bool _xpFeedOptOut = false;
 
+  bool get isInitialized => _isInitialized;
+  bool get isBusy => _isBusy;
+  bool get onboardingComplete => _onboardingComplete;
   bool get isLoggedIn => _isLoggedIn;
+  bool get isAdmin => _isAdmin;
+  bool get xpFeedOptOut => _xpFeedOptOut;
+  String? get errorMessage => _errorMessage;
   UserRole? get userRole => _userRole;
+  bool get isStudent => _userRole == UserRole.student;
+  bool get isStartup => _userRole == UserRole.startup;
+
   StudentProfile? get studentProfile => _studentProfile;
   StartupProfile? get startupProfile => _startupProfile;
+  List<StudentProfile> get students => _students;
+  List<StartupProfile> get startups => _startups;
+  List<Mission> get missions => _missions;
   List<Application> get applications => _applications;
   List<AiInterview> get aiInterviews => _aiInterviews;
   List<Guild> get guilds => _guilds;
   List<GuildApplication> get guildApplications => _guildApplications;
   List<SkillBadge> get skillBadges => _skillBadges;
   List<EventLogEntry> get eventLog => _eventLog;
-  bool get xpFeedOptOut => _xpFeedOptOut;
 
-  bool get isStudent => _userRole == UserRole.student;
-  bool get isStartup => _userRole == UserRole.startup;
+  bool get aiFeaturesEnabled => AppConfig.instance.aiFeaturesEnabled;
+
+  bool get needsProfileSetup {
+    if (!_isLoggedIn) return false;
+    if (isStudent) return !_isStudentProfileComplete(_studentProfile);
+    if (isStartup) return !_isStartupProfileComplete(_startupProfile);
+    return false;
+  }
+
+  String get defaultAuthenticatedLocation {
+    if (needsProfileSetup) {
+      return isStudent ? '/student/setup' : '/startup/setup';
+    }
+    return isStudent ? '/student/dashboard' : '/startup/dashboard';
+  }
+
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+    await _loadOnboardingPreference();
+    await refreshSession(markInitialized: true);
+  }
+
+  Future<void> _loadOnboardingPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    _onboardingComplete = prefs.getBool('onboarding_complete') ?? false;
+  }
+
+  Future<void> completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_complete', true);
+    _onboardingComplete = true;
+    notifyListeners();
+  }
+
+  Future<bool> loadUserSession() async {
+    await initialize();
+    return _isLoggedIn;
+  }
 
   void login({required UserRole role}) {
     _isLoggedIn = true;
     _userRole = role;
-    if (_applications.isEmpty) {
-      _applications = List<Application>.from(DummyData.applications);
-    }
     notifyListeners();
-  }
-
-  Future<void> logout() async {
-    _isLoggedIn = false;
-    _userRole = null;
-    _studentProfile = null;
-    _startupProfile = null;
-    _applications = [];
-    _aiInterviews = [];
-    _guilds = [];
-    _guildApplications = [];
-    _skillBadges = [];
-    _eventLog = [];
-    _xpFeedOptOut = false;
-
-    // Clear login state from SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_logged_in', false);
-
-    notifyListeners();
-  }
-
-  /// Loads user session from SharedPreferences on app startup
-  /// Returns true if user was logged in, false otherwise
-  Future<bool> loadUserSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-
-    if (!isLoggedIn) return false;
-
-    final roleStr = prefs.getString('user_role');
-    if (roleStr == null) return false;
-
-    final role = roleStr == 'student' ? UserRole.student : UserRole.startup;
-
-    if (role == UserRole.student) {
-      // Reconstruct StudentProfile from saved keys
-      final name = prefs.getString('profile_name') ?? '';
-      final email = prefs.getString('user_email') ?? '';
-      final bio = prefs.getString('profile_bio');
-      final education = prefs.getString('profile_education');
-      final skills = prefs.getStringList('profile_skills') ?? [];
-      final hours = prefs.getDouble('profile_hours') ?? 10.0;
-
-      if (name.isEmpty) return false;
-
-      _studentProfile = StudentProfile(
-        id:
-            prefs.getString('profile_id') ??
-            'user_${DateTime.now().millisecondsSinceEpoch}',
-        name: name,
-        email: email,
-        bio: bio,
-        education: education,
-        skills: skills,
-        availabilityHours: hours,
-        createdAt: DateTime.now(),
-      );
-    } else {
-      // Reconstruct StartupProfile from saved keys
-      final companyName = prefs.getString('startup_name') ?? '';
-      final email = prefs.getString('user_email') ?? '';
-      final description = prefs.getString('startup_description');
-      final industry = prefs.getString('startup_industry');
-      final skills = prefs.getStringList('startup_skills') ?? [];
-      final project = prefs.getString('startup_project');
-      final rolesJson = prefs.getString('startup_roles');
-      final logoBase64 = prefs.getString('startup_logo_base64');
-
-      if (companyName.isEmpty) return false;
-
-      List<StartupRole> roles = [];
-      if (rolesJson != null && rolesJson.isNotEmpty) {
-        try {
-          final decoded = jsonDecode(rolesJson) as List<dynamic>;
-          roles = decoded
-              .map(
-                (item) =>
-                    StartupRole.fromMap(Map<String, dynamic>.from(item as Map)),
-              )
-              .toList();
-        } catch (_) {
-          roles = [];
-        }
-      }
-
-      _startupProfile = StartupProfile(
-        id:
-            prefs.getString('startup_id') ??
-            'startup_${DateTime.now().millisecondsSinceEpoch}',
-        companyName: companyName,
-        email: email,
-        description: description ?? '',
-        industry: industry ?? '',
-        requiredSkills: skills,
-        projectDetails: project,
-        openRoles: roles,
-        logoBase64: logoBase64,
-        createdAt: DateTime.now(),
-      );
-    }
-
-    _isLoggedIn = true;
-    _userRole = role;
-
-    // Also load applications
-    await loadApplications();
-
-    notifyListeners();
-    return true;
   }
 
   void setUserRole(UserRole role) {
@@ -180,179 +122,525 @@ class AppState extends ChangeNotifier {
 
   void saveStudentProfile(StudentProfile profile) {
     _studentProfile = profile;
-    _refreshDerivedState();
+    _upsertStudent(profile);
     notifyListeners();
   }
 
   void saveStartupProfile(StartupProfile profile) {
     _startupProfile = profile;
+    _upsertStartup(profile);
+    notifyListeners();
+  }
+
+  Future<void> refreshSession({bool markInitialized = false}) async {
+    _isBusy = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final user = SupabaseService.currentUser;
+      if (user == null) {
+        _resetSessionState();
+        return;
+      }
+
+      final profileRecord = await SupabaseService.getCurrentProfileRecord();
+      if (profileRecord == null) {
+        _resetSessionState();
+        return;
+      }
+
+      _isLoggedIn = true;
+      final roleString = profileRecord['role'] as String? ?? 'student';
+      _userRole = roleString == 'startup'
+          ? UserRole.startup
+          : UserRole.student;
+      _isAdmin =
+          (profileRecord['is_admin'] as bool? ?? false) ||
+          AppConfig.instance.isAdminEmail(user.email);
+
+      _studentProfile = _userRole == UserRole.student
+          ? await SupabaseService.getStudentProfile(user.id)
+          : null;
+      _startupProfile = _userRole == UserRole.startup
+          ? await SupabaseService.getStartupProfile(user.id)
+          : null;
+
+      await _refreshCollections();
+    } on XpServiceException catch (error) {
+      _errorMessage = error.message;
+    } finally {
+      _isBusy = false;
+      if (markInitialized) {
+        _isInitialized = true;
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> _refreshCollections() async {
+    _students = await SupabaseService.getStudents();
+    _startups = await SupabaseService.getStartups();
+    _missions = await SupabaseService.getMissions();
+
+    if (_isAdmin) {
+      _applications = await SupabaseService.getAllApplications();
+      _aiInterviews = isStudent && _studentProfile != null
+          ? await SupabaseService.getInterviewsForStudent(_studentProfile!.id)
+          : isStartup && _startupProfile != null
+              ? await SupabaseService.getInterviewsForStartup(_startupProfile!.id)
+              : [];
+    } else if (isStudent && _studentProfile != null) {
+      _applications = await SupabaseService.getApplicationsForStudent(
+        _studentProfile!.id,
+      );
+      _aiInterviews = await SupabaseService.getInterviewsForStudent(
+        _studentProfile!.id,
+      );
+    } else if (isStartup && _startupProfile != null) {
+      _applications = await SupabaseService.getApplicationsForStartup(
+        _startupProfile!.id,
+      );
+      _aiInterviews = await SupabaseService.getInterviewsForStartup(
+        _startupProfile!.id,
+      );
+      _startupProfile = _startupProfile!.copyWith(
+        openRoles: _missions
+            .where((mission) => mission.startupId == _startupProfile!.id)
+            .map((mission) => mission.toStartupRole())
+            .toList(),
+      );
+      _upsertStartup(_startupProfile!);
+    }
+
+    if (_studentProfile != null) {
+      final refreshedStudent = _students.cast<StudentProfile?>().firstWhere(
+            (item) => item?.id == _studentProfile!.id,
+            orElse: () => _studentProfile,
+          );
+      _studentProfile = refreshedStudent;
+    }
+
+    if (_startupProfile != null) {
+      final refreshedStartup = _startups.cast<StartupProfile?>().firstWhere(
+            (item) => item?.id == _startupProfile!.id,
+            orElse: () => _startupProfile,
+          );
+      _startupProfile = refreshedStartup?.copyWith(
+        openRoles: _missions
+            .where((mission) => mission.startupId == _startupProfile!.id)
+            .map((mission) => mission.toStartupRole())
+            .toList(),
+      );
+    }
+  }
+
+  Future<void> loadApplications() async {
+    if (!_isLoggedIn) {
+      _applications = [];
+      _aiInterviews = [];
+      notifyListeners();
+      return;
+    }
+    await refreshSession();
+  }
+
+  Future<void> logout() async {
+    await SupabaseService.signOut();
+    _resetSessionState();
     notifyListeners();
   }
 
   Future<void> setFeedOptOut(bool value) async {
     _xpFeedOptOut = value;
     notifyListeners();
-    await _persistFeedPreference();
   }
 
-  Future<void> loadApplications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString('applications');
-    final storedEvents = prefs.getString('xp_event_log');
-    final storedInterviews = prefs.getString('ai_interviews');
-    final storedGuilds = prefs.getString('guilds');
-    final storedGuildApplications = prefs.getString('guild_applications');
-    final storedBadges = prefs.getString('skill_badges');
-    _xpFeedOptOut = prefs.getBool('xp_feed_opt_out') ?? false;
-    if (storedEvents != null && storedEvents.isNotEmpty) {
-      try {
-        final decodedEvents = jsonDecode(storedEvents) as List<dynamic>;
-        _eventLog = decodedEvents
-            .map(
-              (item) =>
-                  EventLogEntry.fromMap(Map<String, dynamic>.from(item as Map)),
-            )
-            .toList();
-      } catch (_) {
-        _eventLog = [];
-      }
+  List<StudentProfile> get allStudents {
+    final current = _studentProfile;
+    if (current == null) return List<StudentProfile>.from(_students);
+    return _students.any((item) => item.id == current.id)
+        ? List<StudentProfile>.from(_students)
+        : [current, ..._students];
+  }
+
+  List<StartupProfile> get allStartups {
+    final current = _startupProfile;
+    if (current == null) return List<StartupProfile>.from(_startups);
+    return _startups.any((item) => item.id == current.id)
+        ? List<StartupProfile>.from(_startups)
+        : [current, ..._startups];
+  }
+
+  StudentProfile? getStudentById(String studentId) {
+    for (final student in allStudents) {
+      if (student.id == studentId) return student;
     }
-    if (stored != null && stored.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(stored) as List<dynamic>;
-        _applications = decoded
-            .map(
-              (item) =>
-                  Application.fromMap(Map<String, dynamic>.from(item as Map)),
-            )
-            .toList();
-      } catch (_) {
-        _applications = List<Application>.from(DummyData.applications);
-      }
+    return null;
+  }
+
+  StartupProfile? getStartupById(String startupId) {
+    for (final startup in allStartups) {
+      if (startup.id == startupId) return startup;
     }
-    if (storedInterviews != null && storedInterviews.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(storedInterviews) as List<dynamic>;
-        _aiInterviews = decoded
-            .map(
-              (item) => AiInterview.fromMap(Map<String, dynamic>.from(item as Map)),
-            )
-            .toList();
-      } catch (_) {
-        _aiInterviews = [];
-      }
+    return null;
+  }
+
+  Mission? getMissionById(String missionId) {
+    for (final mission in _missions) {
+      if (mission.id == missionId) return mission;
     }
-    if (storedGuilds != null && storedGuilds.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(storedGuilds) as List<dynamic>;
-        _guilds = decoded
-            .map((item) => Guild.fromMap(Map<String, dynamic>.from(item as Map)))
-            .toList();
-      } catch (_) {
-        _guilds = GuildService.seededGuilds();
-      }
-    } else {
-      _guilds = GuildService.seededGuilds();
+    return null;
+  }
+
+  StartupRole? getStartupRole(String startupId, String roleTitle) {
+    final startup = getStartupById(startupId);
+    if (startup == null) return null;
+    for (final role in startup.openRoles) {
+      if (role.title == roleTitle) return role;
     }
-    if (storedGuildApplications != null && storedGuildApplications.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(storedGuildApplications) as List<dynamic>;
-        _guildApplications = decoded
-            .map(
-              (item) => GuildApplication.fromMap(
-                Map<String, dynamic>.from(item as Map),
-              ),
-            )
-            .toList();
-      } catch (_) {
-        _guildApplications = GuildService.seededApplications();
-      }
-    } else {
-      _guildApplications = GuildService.seededApplications();
+    return null;
+  }
+
+  Guild? getGuildById(String guildId) => null;
+  Guild? getGuildForStudent(String studentId) => null;
+  List<GuildApplication> getGuildApplicationsForStartup(String startupId) => [];
+  List<GuildApplication> getGuildApplicationsForGuild(String guildId) => [];
+  int getActiveGuildMissionCount(String guildId) => 0;
+  List<StudentProfile> getGuildMembers(String guildId) => [];
+
+  AiInterview? getInterviewById(String interviewId) {
+    for (final interview in _aiInterviews) {
+      if (interview.id == interviewId) return interview;
     }
-    if (storedBadges != null && storedBadges.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(storedBadges) as List<dynamic>;
-        _skillBadges = decoded
-            .map(
-              (item) =>
-                  SkillBadge.fromMap(Map<String, dynamic>.from(item as Map)),
-            )
-            .toList();
-      } catch (_) {
-        _skillBadges = [];
-      }
+    return null;
+  }
+
+  AiInterview? getInterviewForApplication(String applicationId) {
+    for (final interview in _aiInterviews) {
+      if (interview.applicationId == applicationId) return interview;
     }
-    _refreshDerivedState();
+    return null;
+  }
+
+  List<AiInterview> getInterviewsForStartup(String startupId) {
+    return _aiInterviews
+        .where((interview) => interview.startupId == startupId)
+        .toList();
+  }
+
+  List<SkillBadge> getBadgesForStudent(String studentId) => [];
+
+  List<Application> getApplicationsForStudent(String studentId) {
+    return _applications
+        .where((application) => application.studentId == studentId)
+        .toList();
+  }
+
+  List<Application> getApplicationsForStartup(String startupId) {
+    return _applications
+        .where((application) => application.startupId == startupId)
+        .toList();
+  }
+
+  Application? getApplicationById(String applicationId) {
+    for (final application in _applications) {
+      if (application.id == applicationId) return application;
+    }
+    return null;
+  }
+
+  Future<void> persistStudentProfile(StudentProfile profile) async {
+    _isBusy = true;
+    notifyListeners();
+    try {
+      await SupabaseService.upsertStudentProfile(profile);
+      _studentProfile = profile;
+      await _refreshCollections();
+    } finally {
+      _isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> persistStartupProfile(StartupProfile profile) async {
+    _isBusy = true;
+    notifyListeners();
+    try {
+      await SupabaseService.upsertStartupProfile(profile);
+      _startupProfile = profile;
+      await _refreshCollections();
+    } finally {
+      _isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Mission> createMission(StartupRole role) async {
+    final startup = _startupProfile;
+    if (startup == null) {
+      throw const XpServiceException('Complete your startup profile first.');
+    }
+    final mission = await SupabaseService.createMissionFromRole(
+      startupId: startup.id,
+      role: role,
+      requiredSkills: startup.requiredSkills,
+    );
+    _missions = [mission.copyWith(startupName: startup.companyName), ..._missions];
+    _startupProfile = startup.copyWith(openRoles: [
+      ...startup.openRoles,
+      role,
+    ]);
+    _upsertStartup(_startupProfile!);
+    notifyListeners();
+    return mission;
+  }
+
+  Future<void> deleteMission(String missionId) async {
+    await SupabaseService.deleteMission(missionId);
+    _missions = _missions.where((mission) => mission.id != missionId).toList();
+    if (_startupProfile != null) {
+      _startupProfile = _startupProfile!.copyWith(
+        openRoles: _missions
+            .where((mission) => mission.startupId == _startupProfile!.id)
+            .map((mission) => mission.toStartupRole())
+            .toList(),
+      );
+    }
     notifyListeners();
   }
 
-  Future<void> _persistApplications() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'applications',
-      jsonEncode(_applications.map((app) => app.toMap()).toList()),
+  Future<void> addApplication(Application application) async {
+    final duplicate = _applications.any(
+      (existing) =>
+          existing.studentId == application.studentId &&
+          existing.missionId == application.missionId &&
+          existing.missionId != null,
     );
-  }
+    if (duplicate) {
+      throw const XpServiceException('You already applied to this mission.');
+    }
 
-  Future<void> _persistAiInterviews() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'ai_interviews',
-      jsonEncode(_aiInterviews.map((item) => item.toMap()).toList()),
-    );
-  }
-
-  Future<void> _persistGuilds() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'guilds',
-      jsonEncode(_guilds.map((item) => item.toMap()).toList()),
-    );
-  }
-
-  Future<void> _persistGuildApplications() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'guild_applications',
-      jsonEncode(_guildApplications.map((item) => item.toMap()).toList()),
-    );
-  }
-
-  Future<void> _persistSkillBadges() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'skill_badges',
-      jsonEncode(_skillBadges.map((item) => item.toMap()).toList()),
-    );
-  }
-
-  Future<void> _persistEventLog() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'xp_event_log',
-      jsonEncode(_eventLog.map((event) => event.toMap()).toList()),
-    );
-  }
-
-  Future<void> _persistFeedPreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('xp_feed_opt_out', _xpFeedOptOut);
-  }
-
-  String _firstName(String name) => name.split(' ').first;
-
-  void _logEvent(String type, String displayText, String firstName) {
-    if (_xpFeedOptOut) return;
-    final entry = EventLogEntry(
-      type: type,
-      timestamp: DateTime.now(),
-      displayText: displayText,
-      firstName: firstName,
-    );
-    _eventLog = [entry, ..._eventLog].take(12).toList();
-    unawaited(_persistEventLog());
+    final saved = await SupabaseService.submitApplication(application);
+    _applications = [saved, ..._applications];
+    await _syncStudentProgress(saved.studentId);
     notifyListeners();
+  }
+
+  Future<void> updateApplicationStatus(
+    String applicationId,
+    ApplicationStatus status,
+  ) async {
+    await SupabaseService.updateApplicationStatus(applicationId, status.name);
+    _applications = _applications.map((application) {
+      if (application.id != applicationId) return application;
+      return application.copyWith(
+        status: status,
+        updatedAt: DateTime.now(),
+        completedAt: status == ApplicationStatus.completed
+            ? DateTime.now()
+            : application.completedAt,
+      );
+    }).toList();
+    final updated = getApplicationById(applicationId);
+    if (updated != null) {
+      await _syncStudentProgress(updated.studentId);
+    }
+    notifyListeners();
+  }
+
+  Future<void> saveReflection(
+    String applicationId, {
+    String? did,
+    String? learned,
+    List<String>? skillsPracticed,
+    int? hoursSpent,
+    String? deliverableUrl,
+    String? deliverableType,
+  }) async {
+    await SupabaseService.updateApplicationReflection(
+      applicationId,
+      {
+        'reflection_did': did,
+        'reflection_learned': learned,
+        'skills_practiced': skillsPracticed,
+        'hours_spent': hoursSpent,
+        'deliverable_url': deliverableUrl,
+        'deliverable_type': deliverableType,
+      },
+    );
+    _applications = _applications.map((application) {
+      if (application.id != applicationId) return application;
+      return application.copyWith(
+        reflectionDid: did ?? application.reflectionDid,
+        reflectionLearned: learned ?? application.reflectionLearned,
+        skillsPracticed: skillsPracticed ?? application.skillsPracticed,
+        hoursSpent: hoursSpent ?? application.hoursSpent,
+        deliverableUrl: deliverableUrl ?? application.deliverableUrl,
+        deliverableType: deliverableType ?? application.deliverableType,
+        updatedAt: DateTime.now(),
+      );
+    }).toList();
+    final updated = getApplicationById(applicationId);
+    if (updated != null) {
+      await _syncStudentProgress(updated.studentId);
+    }
+    notifyListeners();
+  }
+
+  Future<void> saveMentorFeedback(
+    String applicationId, {
+    int? rating,
+    String? feedback,
+    List<String>? strengths,
+    List<String>? growthAreas,
+    List<String>? endorsedSkills,
+  }) async {
+    await SupabaseService.updateApplicationFeedback(
+      applicationId,
+      {
+        'mentor_rating': rating,
+        'mentor_feedback_text': feedback,
+        'strengths': strengths,
+        'growth_areas': growthAreas,
+        'endorsed_skills': endorsedSkills,
+      },
+    );
+    _applications = _applications.map((application) {
+      if (application.id != applicationId) return application;
+      return application.copyWith(
+        mentorRating: rating ?? application.mentorRating,
+        mentorFeedbackText: feedback ?? application.mentorFeedbackText,
+        strengths: strengths ?? application.strengths,
+        growthAreas: growthAreas ?? application.growthAreas,
+        endorsedSkills: endorsedSkills ?? application.endorsedSkills,
+        feedbackAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }).toList();
+    final updated = getApplicationById(applicationId);
+    if (updated != null) {
+      await _syncStudentProgress(updated.studentId);
+    }
+    notifyListeners();
+  }
+
+  Future<AiInterview?> requestAiInterview(String applicationId) async {
+    final existing = getInterviewForApplication(applicationId);
+    if (existing != null) return existing;
+
+    final application = getApplicationById(applicationId);
+    if (application == null) return null;
+
+    final interview = AiInterviewService.createInterview(
+      application: application,
+      student: getStudentById(application.studentId),
+      startup: getStartupById(application.startupId),
+    );
+    final saved = await SupabaseService.createAiInterview(interview);
+    _aiInterviews = [saved, ..._aiInterviews];
+    if (application.status == ApplicationStatus.pending) {
+      await updateApplicationStatus(applicationId, ApplicationStatus.interviewing);
+    }
+    notifyListeners();
+    return saved;
+  }
+
+  Future<void> startAiInterview(String interviewId) async {
+    _aiInterviews = _aiInterviews.map((interview) {
+      if (interview.id != interviewId) return interview;
+      final updated = interview.copyWith(status: AiInterviewStatus.inProgress);
+      SupabaseService.updateAiInterview(updated);
+      return updated;
+    }).toList();
+    notifyListeners();
+  }
+
+  Future<AiInterview?> submitAiInterview(
+    String interviewId,
+    List<AiInterviewResponse> responses,
+  ) async {
+    AiInterview? updatedInterview;
+    _aiInterviews = _aiInterviews.map((interview) {
+      if (interview.id != interviewId) return interview;
+      updatedInterview = AiInterviewService.evaluateInterview(
+        interview,
+        responses,
+      );
+      return updatedInterview!;
+    }).toList();
+    if (updatedInterview != null) {
+      await SupabaseService.updateAiInterview(updatedInterview!);
+    }
+    notifyListeners();
+    return updatedInterview;
+  }
+
+  Future<Guild?> createGuild({
+    required String name,
+    required String description,
+    List<String> skillTags = const [],
+  }) async {
+    return null;
+  }
+
+  Future<void> joinGuild(String guildId, String studentId) async {}
+  Future<void> leaveGuild(String guildId, String studentId) async {}
+
+  Future<GuildApplication?> submitGuildApplication({
+    required String guildId,
+    required String startupId,
+    required String startupName,
+    required String missionTitle,
+    required String message,
+  }) async {
+    return null;
+  }
+
+  Future<void> advanceGuildApplication(String guildApplicationId) async {}
+  Future<void> completeGuildApplication(String guildApplicationId) async {}
+
+  Future<void> _syncStudentProgress(String studentId) async {
+    final profile = getStudentById(studentId);
+    if (profile == null) return;
+    final apps = await SupabaseService.getApplicationsForStudentAdmin(studentId);
+    final completed = apps
+        .where((application) => application.status == ApplicationStatus.completed)
+        .toList();
+    final reflected = completed
+        .where((application) {
+          return (application.reflectionDid?.isNotEmpty ?? false) ||
+              (application.reflectionLearned?.isNotEmpty ?? false);
+        })
+        .length;
+    final reviewed = completed
+        .where((application) {
+          return application.mentorRating != null ||
+              (application.mentorFeedbackText?.isNotEmpty ?? false);
+        })
+        .length;
+
+    final xp = (completed.length * 120) + (reflected * 20) + (reviewed * 30);
+    final level = _levelForXp(xp);
+    final updated = profile.copyWith(
+      xpPoints: xp,
+      level: level,
+      missionsCompletedCount: completed.length,
+    );
+
+    await SupabaseService.updateProfile(
+      id: studentId,
+      data: {
+        'xp_points': xp,
+        'level': level,
+        'missions_completed_count': completed.length,
+      },
+    );
+
+    _upsertStudent(updated);
+    if (_studentProfile?.id == studentId) {
+      _studentProfile = updated;
+    }
   }
 
   int _levelForXp(int xp) {
@@ -368,617 +656,76 @@ class AppState extends ChangeNotifier {
     return 1;
   }
 
-  List<StudentProfile> get allStudents {
-    final students = [...DummyData.students];
-    final current = _studentProfile;
-    if (current != null && students.every((item) => item.id != current.id)) {
-      students.insert(0, current);
-    }
-    return students;
+  bool _isStudentProfileComplete(StudentProfile? profile) {
+    if (profile == null) return false;
+    return profile.name.trim().isNotEmpty &&
+        profile.skills.length >= 2 &&
+        (profile.resumeUrl?.trim().isNotEmpty ?? false);
   }
 
-  List<StartupProfile> get allStartups {
-    final startups = [...DummyData.startups];
-    final current = _startupProfile;
-    if (current != null && startups.every((item) => item.id != current.id)) {
-      startups.insert(0, current);
-    }
-    return startups;
+  bool _isStartupProfileComplete(StartupProfile? profile) {
+    if (profile == null) return false;
+    return profile.companyName.trim().isNotEmpty &&
+        profile.description.trim().isNotEmpty &&
+        profile.industry.trim().isNotEmpty &&
+        profile.requiredSkills.length >= 2;
   }
 
-  StudentProfile? getStudentById(String studentId) {
-    try {
-      return allStudents.firstWhere((student) => student.id == studentId);
-    } catch (_) {
-      return null;
-    }
+  void _upsertStudent(StudentProfile profile) {
+    _students = [
+      profile,
+      ..._students.where((item) => item.id != profile.id),
+    ];
   }
 
-  StartupProfile? getStartupById(String startupId) {
-    try {
-      return allStartups.firstWhere((startup) => startup.id == startupId);
-    } catch (_) {
-      return null;
-    }
+  void _upsertStartup(StartupProfile profile) {
+    _startups = [
+      profile,
+      ..._startups.where((item) => item.id != profile.id),
+    ];
   }
 
-  StartupRole? getStartupRole(String startupId, String roleTitle) {
-    final startup = getStartupById(startupId);
-    if (startup == null) return null;
-    try {
-      return startup.openRoles.firstWhere((role) => role.title == roleTitle);
-    } catch (_) {
-      return null;
-    }
+  void _resetSessionState() {
+    _isLoggedIn = false;
+    _isAdmin = false;
+    _userRole = null;
+    _studentProfile = null;
+    _startupProfile = null;
+    _students = [];
+    _startups = [];
+    _missions = [];
+    _applications = [];
+    _aiInterviews = [];
+    _guilds = [];
+    _guildApplications = [];
+    _skillBadges = [];
+    _eventLog = [];
   }
 
-  Guild? getGuildById(String guildId) {
-    try {
-      return _guilds.firstWhere((guild) => guild.id == guildId);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Guild? getGuildForStudent(String studentId) {
-    try {
-      return _guilds.firstWhere((guild) => guild.memberIds.contains(studentId));
-    } catch (_) {
-      return null;
-    }
-  }
-
-  List<GuildApplication> getGuildApplicationsForStartup(String startupId) {
-    return _guildApplications
-        .where((application) => application.startupId == startupId)
-        .toList();
-  }
-
-  List<GuildApplication> getGuildApplicationsForGuild(String guildId) {
-    return _guildApplications
-        .where((application) => application.guildId == guildId)
-        .toList();
-  }
-
-  int getActiveGuildMissionCount(String guildId) {
-    return _guildApplications.where((application) {
-      return application.guildId == guildId &&
-          application.status != ApplicationStatus.completed &&
-          application.status != ApplicationStatus.rejected;
-    }).length;
-  }
-
-  AiInterview? getInterviewById(String interviewId) {
-    try {
-      return _aiInterviews.firstWhere((item) => item.id == interviewId);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  AiInterview? getInterviewForApplication(String applicationId) {
-    try {
-      return _aiInterviews.firstWhere(
-        (interview) => interview.applicationId == applicationId,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
-  List<AiInterview> getInterviewsForStartup(String startupId) {
-    return _aiInterviews
-        .where((interview) => interview.startupId == startupId)
-        .toList();
-  }
-
-  List<SkillBadge> getBadgesForStudent(String studentId) {
-    return _skillBadges
-        .where((badge) => badge.studentId == studentId)
-        .toList()
-      ..sort((a, b) => b.issuedAt.compareTo(a.issuedAt));
-  }
-
-  List<StudentProfile> getGuildMembers(String guildId) {
-    final guild = getGuildById(guildId);
-    if (guild == null) return [];
-    return guild.memberIds
-        .map(getStudentById)
-        .whereType<StudentProfile>()
-        .toList();
-  }
-
-  void _refreshDerivedState() {
-    _recalculateStudentProgress();
-    final previousBadgeIds = _skillBadges.map((badge) => badge.id).toSet();
-    _skillBadges = BadgeService.issueEligibleBadges(
-      students: allStudents,
-      applications: _applications,
-      guilds: _guilds,
-      guildApplications: _guildApplications,
-      existingBadges: _skillBadges,
-    );
-    final currentStudent = _studentProfile;
-    if (currentStudent != null) {
-      final newCurrentBadge = _skillBadges.firstWhere(
-        (badge) =>
-            badge.studentId == currentStudent.id &&
-            !previousBadgeIds.contains(badge.id),
-        orElse: () => SkillBadge(
-          id: '',
-          studentId: '',
-          title: '',
-          description: '',
-          issuedAt: DateTime(2000),
-          badgeType: SkillBadgeType.level10Achieved,
-          earnedFrom: '',
-          verificationStatus: SkillBadgeVerificationStatus.pending,
-          tokenIdOrReference: '',
-        ),
-      );
-      if (newCurrentBadge.id.isNotEmpty) {
-        _logEvent(
-          'badge_issued',
-          'Earned ${newCurrentBadge.title}',
-          _firstName(currentStudent.name),
-        );
-      }
-    }
-    unawaited(_persistSkillBadges());
-  }
-
-  void _recalculateStudentProgress() {
-    final profile = _studentProfile;
-    if (profile == null) return;
-    final previousLevel = profile.level;
-
-    final studentApps = getApplicationsForStudent(profile.id);
-    final completed = studentApps
-        .where(
-          (app) =>
-              app.status == ApplicationStatus.completed ||
-              app.completedAt != null,
-        )
-        .toList();
-
-    final completedCount = completed.length;
-    final currentGuild = getGuildForStudent(profile.id);
-    var xp = completedCount * 100;
-    if (completedCount > 0) {
-      xp += 50; // first completion bonus
-    }
-    xp +=
-        completed
-            .where(
-              (app) =>
-                  app.reflectionDid?.isNotEmpty == true ||
-                  app.reflectionLearned?.isNotEmpty == true,
-            )
-            .length *
-        15;
-    xp +=
-        completed
-            .where(
-              (app) =>
-                  app.mentorRating != null ||
-                  app.mentorFeedbackText?.isNotEmpty == true,
-            )
-            .length *
-        25;
-    if (currentGuild != null) {
-      xp += (currentGuild.collaborationXp * 0.35).round();
-    }
-
-    final newLevel = _levelForXp(xp);
-    _studentProfile = profile.copyWith(
-      xpPoints: xp,
-      missionsCompletedCount: completedCount,
-      level: newLevel,
-    );
-    if (newLevel > previousLevel) {
-      _logEvent(
-        'level_up',
-        'Leveled up to L$newLevel',
-        _firstName(profile.name),
-      );
-    }
-  }
-
-  Future<void> addApplication(Application application) async {
-    _applications = [..._applications, application];
-    _refreshDerivedState();
+  @visibleForTesting
+  void debugSeed({
+    required UserRole role,
+    StudentProfile? studentProfile,
+    StartupProfile? startupProfile,
+    List<StudentProfile> students = const [],
+    List<StartupProfile> startups = const [],
+    List<Mission> missions = const [],
+    List<Application> applications = const [],
+    List<AiInterview> aiInterviews = const [],
+    bool isAdmin = false,
+  }) {
+    _isInitialized = true;
+    _isLoggedIn = true;
+    _userRole = role;
+    _studentProfile = studentProfile;
+    _startupProfile = startupProfile;
+    _students = students;
+    _startups = startups;
+    _missions = missions;
+    _applications = applications;
+    _aiInterviews = aiInterviews;
+    _isAdmin = isAdmin;
     notifyListeners();
-    await _persistApplications();
-
-    // Sync to Supabase
-    try {
-      await SupabaseService.submitApplication(application);
-    } catch (_) {
-      // Offline-safe: local save already succeeded
-    }
-  }
-
-  Future<void> updateApplicationStatus(
-    String applicationId,
-    ApplicationStatus status,
-  ) async {
-    Application? updatedApplication;
-    _applications = _applications.map((app) {
-      if (app.id == applicationId) {
-        final updated = app.copyWith(
-          status: status,
-          updatedAt: DateTime.now(),
-          completedAt: status == ApplicationStatus.completed
-              ? (app.completedAt ?? DateTime.now())
-              : app.completedAt,
-        );
-        updatedApplication = updated;
-        return updated;
-      }
-      return app;
-    }).toList();
-    _refreshDerivedState();
-    notifyListeners();
-    await _persistApplications();
-
-    // Sync status to Supabase
-    try {
-      await SupabaseService.updateApplicationStatus(
-        applicationId,
-        status.name,
-      );
-    } catch (_) {}
-
-    if (status == ApplicationStatus.completed && updatedApplication != null) {
-      _logEvent(
-        'completion',
-        'Completed ${updatedApplication!.roleTitle ?? 'mission'}',
-        _firstName(updatedApplication!.studentName),
-      );
-    }
-  }
-
-  Future<void> saveReflection(
-    String applicationId, {
-    String? did,
-    String? learned,
-    List<String>? skillsPracticed,
-    int? hoursSpent,
-    String? deliverableUrl,
-    String? deliverableType,
-  }) async {
-    Application? updatedApp;
-    _applications = _applications.map((app) {
-      if (app.id == applicationId) {
-        final updated = app.copyWith(
-          reflectionDid: did ?? app.reflectionDid,
-          reflectionLearned: learned ?? app.reflectionLearned,
-          skillsPracticed: skillsPracticed ?? app.skillsPracticed,
-          hoursSpent: hoursSpent ?? app.hoursSpent,
-          deliverableUrl: deliverableUrl ?? app.deliverableUrl,
-          deliverableType: deliverableType ?? app.deliverableType,
-          updatedAt: DateTime.now(),
-          completedAt: app.completedAt ?? DateTime.now(),
-        );
-        updatedApp = updated;
-        return updated;
-      }
-      return app;
-    }).toList();
-    _refreshDerivedState();
-    notifyListeners();
-    await _persistApplications();
-
-    // Sync reflection to Supabase
-    try {
-      await SupabaseService.updateApplicationReflection(
-        applicationId,
-        {
-          'reflection_did': did,
-          'reflection_learned': learned,
-          'skills_practiced': skillsPracticed,
-          'hours_spent': hoursSpent,
-          'deliverable_url': deliverableUrl,
-          'deliverable_type': deliverableType,
-        },
-      );
-    } catch (_) {}
-
-    if (updatedApp != null) {
-      _logEvent(
-        'reflection',
-        'Shared a reflection for ${updatedApp!.roleTitle ?? 'a mission'}',
-        _firstName(updatedApp!.studentName),
-      );
-    }
-  }
-
-  Future<void> saveMentorFeedback(
-    String applicationId, {
-    int? rating,
-    String? feedback,
-    List<String>? strengths,
-    List<String>? growthAreas,
-    List<String>? endorsedSkills,
-  }) async {
-    Application? updatedApp;
-    _applications = _applications.map((app) {
-      if (app.id == applicationId) {
-        final updated = app.copyWith(
-          mentorRating: rating ?? app.mentorRating,
-          mentorFeedbackText: feedback ?? app.mentorFeedbackText,
-          strengths: strengths ?? app.strengths,
-          growthAreas: growthAreas ?? app.growthAreas,
-          endorsedSkills: endorsedSkills ?? app.endorsedSkills,
-          feedbackAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        updatedApp = updated;
-        return updated;
-      }
-      return app;
-    }).toList();
-    _refreshDerivedState();
-    notifyListeners();
-    await _persistApplications();
-
-    // Sync mentor feedback to Supabase
-    try {
-      await SupabaseService.updateApplicationFeedback(
-        applicationId,
-        {
-          'mentor_rating': rating,
-          'mentor_feedback_text': feedback,
-          'strengths': strengths,
-          'growth_areas': growthAreas,
-          'endorsed_skills': endorsedSkills,
-        },
-      );
-    } catch (_) {}
-
-    if (updatedApp != null) {
-      _logEvent(
-        'feedback',
-        'Received mentor feedback for ${updatedApp!.roleTitle ?? 'a mission'}',
-        _firstName(updatedApp!.studentName),
-      );
-    }
-  }
-
-  List<Application> getApplicationsForStudent(String studentId) {
-    return _applications.where((app) => app.studentId == studentId).toList();
-  }
-
-  List<Application> getApplicationsForStartup(String startupId) {
-    return _applications.where((app) => app.startupId == startupId).toList();
-  }
-
-  Application? getApplicationById(String applicationId) {
-    try {
-      return _applications.firstWhere((app) => app.id == applicationId);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<AiInterview?> requestAiInterview(String applicationId) async {
-    final existing = getInterviewForApplication(applicationId);
-    if (existing != null) {
-      return existing;
-    }
-    final application = getApplicationById(applicationId);
-    if (application == null) return null;
-
-    final interview = AiInterviewService.createInterview(
-      application: application,
-      student: getStudentById(application.studentId),
-      startup: getStartupById(application.startupId),
-    );
-    _aiInterviews = [interview, ..._aiInterviews];
-    _applications = _applications.map((app) {
-      if (app.id == applicationId && app.status == ApplicationStatus.pending) {
-        return app.copyWith(
-          status: ApplicationStatus.interviewing,
-          updatedAt: DateTime.now(),
-        );
-      }
-      return app;
-    }).toList();
-    notifyListeners();
-    await _persistAiInterviews();
-    await _persistApplications();
-    return interview;
-  }
-
-  Future<void> startAiInterview(String interviewId) async {
-    _aiInterviews = _aiInterviews.map((interview) {
-      if (interview.id == interviewId) {
-        return interview.copyWith(status: AiInterviewStatus.inProgress);
-      }
-      return interview;
-    }).toList();
-    notifyListeners();
-    await _persistAiInterviews();
-  }
-
-  Future<AiInterview?> submitAiInterview(
-    String interviewId,
-    List<AiInterviewResponse> responses,
-  ) async {
-    AiInterview? updatedInterview;
-    _aiInterviews = _aiInterviews.map((interview) {
-      if (interview.id == interviewId) {
-        updatedInterview = AiInterviewService.evaluateInterview(
-          interview,
-          responses,
-        );
-        return updatedInterview!;
-      }
-      return interview;
-    }).toList();
-    notifyListeners();
-    await _persistAiInterviews();
-    return updatedInterview;
-  }
-
-  Future<Guild?> createGuild({
-    required String name,
-    required String description,
-    List<String> skillTags = const [],
-  }) async {
-    final student = _studentProfile;
-    if (student == null) return null;
-
-    final existing = getGuildForStudent(student.id);
-    if (existing != null) {
-      await leaveGuild(existing.id, student.id);
-    }
-
-    final guild = GuildService.createGuild(
-      name: name,
-      description: description,
-      owner: student,
-      skillTags: skillTags,
-    );
-    _guilds = [guild, ..._guilds];
-    _refreshDerivedState();
-    notifyListeners();
-    await _persistGuilds();
-    return guild;
-  }
-
-  Future<void> joinGuild(String guildId, String studentId) async {
-    final student = getStudentById(studentId);
-    if (student == null) return;
-
-    final existing = getGuildForStudent(studentId);
-    if (existing != null && existing.id != guildId) {
-      await leaveGuild(existing.id, studentId);
-    }
-
-    _guilds = _guilds.map((guild) {
-      if (guild.id != guildId || guild.memberIds.contains(studentId)) {
-        return guild;
-      }
-      final updatedGuild = guild.copyWith(
-        memberIds: [...guild.memberIds, studentId],
-      );
-      return GuildService.mergeMemberSkills(updatedGuild, getGuildMembers(guildId)..add(student));
-    }).toList();
-    _refreshDerivedState();
-    notifyListeners();
-    await _persistGuilds();
-  }
-
-  Future<void> leaveGuild(String guildId, String studentId) async {
-    _guilds = _guilds
-        .map((guild) {
-          if (guild.id != guildId) return guild;
-          final remainingMembers = guild.memberIds
-              .where((memberId) => memberId != studentId)
-              .toList();
-          if (remainingMembers.isEmpty) {
-            return guild.copyWith(memberIds: const []);
-          }
-          return GuildService.mergeMemberSkills(
-            guild.copyWith(
-              ownerStudentId: guild.ownerStudentId == studentId
-                  ? remainingMembers.first
-                  : guild.ownerStudentId,
-              memberIds: remainingMembers,
-            ),
-            remainingMembers
-                .map(getStudentById)
-                .whereType<StudentProfile>()
-                .toList(),
-          );
-        })
-        .where((guild) => guild.memberIds.isNotEmpty)
-        .toList();
-    _refreshDerivedState();
-    notifyListeners();
-    await _persistGuilds();
-  }
-
-  Future<GuildApplication?> submitGuildApplication({
-    required String guildId,
-    required String startupId,
-    required String startupName,
-    required String missionTitle,
-    required String message,
-  }) async {
-    final exists = _guildApplications.any(
-      (application) =>
-          application.guildId == guildId &&
-          application.missionTitle == missionTitle &&
-          application.startupId == startupId &&
-          application.status != ApplicationStatus.rejected,
-    );
-    if (exists) return null;
-
-    final application = GuildService.createGuildApplication(
-      guildId: guildId,
-      startupId: startupId,
-      startupName: startupName,
-      missionTitle: missionTitle,
-      message: message,
-    );
-    _guildApplications = [application, ..._guildApplications];
-    _refreshDerivedState();
-    notifyListeners();
-    await _persistGuildApplications();
-    return application;
-  }
-
-  Future<void> advanceGuildApplication(String guildApplicationId) async {
-    _guildApplications = _guildApplications.map((application) {
-      if (application.id == guildApplicationId) {
-        return application.copyWith(
-          status: GuildService.nextStatus(application.status),
-          updatedAt: DateTime.now(),
-        );
-      }
-      return application;
-    }).toList();
-    await _applyGuildRewards();
-  }
-
-  Future<void> completeGuildApplication(String guildApplicationId) async {
-    _guildApplications = _guildApplications.map((application) {
-      if (application.id == guildApplicationId) {
-        return application.copyWith(
-          status: ApplicationStatus.completed,
-          updatedAt: DateTime.now(),
-        );
-      }
-      return application;
-    }).toList();
-    await _applyGuildRewards();
-  }
-
-  Future<void> _applyGuildRewards() async {
-    _guilds = _guilds.map((guild) {
-      final completedForGuild = _guildApplications.where(
-        (application) =>
-            application.guildId == guild.id &&
-            application.status == ApplicationStatus.completed,
-      );
-      final activeForGuild = _guildApplications.where(
-        (application) =>
-            application.guildId == guild.id &&
-            application.status != ApplicationStatus.completed &&
-            application.status != ApplicationStatus.rejected,
-      );
-      return guild.copyWith(
-        collaborationXp:
-            (completedForGuild.length * 120) + (activeForGuild.length * 35),
-        completedTeamMissionsCount: completedForGuild.length,
-      );
-    }).toList();
-    _refreshDerivedState();
-    notifyListeners();
-    await _persistGuildApplications();
-    await _persistGuilds();
   }
 }
 
@@ -1011,7 +758,7 @@ class _XPBridgeAppState extends State<XPBridgeApp> {
   void initState() {
     super.initState();
     _state = AppState();
-    _state.loadApplications();
+    _state.initialize();
     _router = AppRouter(appState: _state).router;
   }
 

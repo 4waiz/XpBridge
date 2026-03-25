@@ -2,26 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app.dart';
+import '../screens/admin/admin_screen.dart';
+import '../screens/applications/student_applications_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
-import '../screens/applications/student_applications_screen.dart';
 import '../screens/dashboard/startup_dashboard_screen.dart';
 import '../screens/dashboard/student_dashboard_screen.dart';
 import '../screens/details/startup_detail_screen.dart';
 import '../screens/details/student_detail_screen.dart';
+import '../screens/interview/ai_interview_screen.dart';
+import '../screens/onboarding/intro_screen.dart';
 import '../screens/onboarding/startup_setup_screen.dart';
 import '../screens/onboarding/student_setup_screen.dart';
 import '../screens/profile/startup_profile_screen.dart';
 import '../screens/profile/student_profile_screen.dart';
-import '../screens/profile/portfolio_generator_screen.dart';
-import '../screens/onboarding/intro_screen.dart';
 import '../screens/splash/splash_screen.dart';
-import '../screens/chat/ai_chat_screen.dart';
-import '../screens/chat/startup_ai_chat_screen.dart';
-import '../screens/guilds/guild_detail_screen.dart';
-import '../screens/guilds/guilds_screen.dart';
-import '../screens/interview/ai_interview_screen.dart';
-import '../screens/war_room/war_room_screen.dart';
 
 class AppRouter {
   AppRouter({required this.appState});
@@ -31,22 +26,71 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     initialLocation: '/',
     refreshListenable: appState,
+    redirect: (context, state) {
+      final path = state.matchedLocation;
+      final isPublic = path == '/' ||
+          path == '/intro' ||
+          path == '/login' ||
+          path == '/signup';
+
+      if (!appState.isInitialized) {
+        return path == '/' ? null : '/';
+      }
+
+      if (!appState.isLoggedIn) {
+        if (path == '/') {
+          return appState.onboardingComplete ? '/login' : '/intro';
+        }
+        if (!isPublic) {
+          return appState.onboardingComplete ? '/login' : '/intro';
+        }
+        return null;
+      }
+
+      if (path == '/') {
+        return appState.defaultAuthenticatedLocation;
+      }
+
+      if (appState.needsProfileSetup &&
+          path != '/student/setup' &&
+          path != '/startup/setup' &&
+          path != '/admin') {
+        return appState.defaultAuthenticatedLocation;
+      }
+
+      if (isPublic) {
+        return appState.defaultAuthenticatedLocation;
+      }
+
+      if (!appState.isAdmin && path == '/admin') {
+        return appState.defaultAuthenticatedLocation;
+      }
+
+      if (appState.isStudent &&
+          path.startsWith('/startup') &&
+          !path.startsWith('/startup/student/')) {
+        return '/student/dashboard';
+      }
+
+      if (appState.isStartup &&
+          path.startsWith('/student') &&
+          !path.startsWith('/student/startup/')) {
+        return '/startup/dashboard';
+      }
+
+      return null;
+    },
     routes: [
-      // Splash
       GoRoute(
         name: 'splash',
         path: '/',
         pageBuilder: (context, state) => _fade(const SplashScreen()),
       ),
-
-      // Intro/Onboarding
       GoRoute(
         name: 'intro',
         path: '/intro',
         pageBuilder: (context, state) => _fade(const IntroScreen()),
       ),
-
-      // Auth
       GoRoute(
         name: 'login',
         path: '/login',
@@ -57,15 +101,6 @@ class AppRouter {
         path: '/signup',
         pageBuilder: (context, state) => _slide(const SignupScreen()),
       ),
-
-      // Role Select (keeping for backward compatibility, redirects to login)
-      GoRoute(
-        name: 'roleSelect',
-        path: '/role',
-        redirect: (context, state) => '/login',
-      ),
-
-      // Student Flow
       GoRoute(
         name: 'studentSetup',
         path: '/student/setup',
@@ -79,10 +114,9 @@ class AppRouter {
       GoRoute(
         name: 'startupDetail',
         path: '/student/startup/:id',
-        pageBuilder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return _slide(StartupDetailScreen(startupId: id));
-        },
+        pageBuilder: (context, state) => _slide(
+          StartupDetailScreen(startupId: state.pathParameters['id'] ?? ''),
+        ),
       ),
       GoRoute(
         name: 'myApplications',
@@ -91,43 +125,10 @@ class AppRouter {
             _slide(const StudentApplicationsScreen()),
       ),
       GoRoute(
-        name: 'guilds',
-        path: '/student/guilds',
-        pageBuilder: (context, state) => _slide(const GuildsScreen()),
-      ),
-      GoRoute(
-        name: 'guildDetail',
-        path: '/student/guilds/:id',
-        pageBuilder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return _slide(GuildDetailScreen(guildId: id));
-        },
-      ),
-      GoRoute(
-        name: 'aiInterview',
-        path: '/student/interview/:id',
-        pageBuilder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return _slide(AiInterviewScreen(interviewId: id));
-        },
-      ),
-      GoRoute(
         name: 'studentProfile',
         path: '/student/profile',
         pageBuilder: (context, state) => _slide(const StudentProfileScreen()),
       ),
-      GoRoute(
-        name: 'portfolioGenerator',
-        path: '/student/portfolio-generator',
-        pageBuilder: (context, state) => _slide(const PortfolioGeneratorScreen()),
-      ),
-      GoRoute(
-        name: 'aiChat',
-        path: '/student/ai-chat',
-        pageBuilder: (context, state) => _slide(const AiChatScreen()),
-      ),
-
-      // Startup Flow
       GoRoute(
         name: 'startupSetup',
         path: '/startup/setup',
@@ -141,10 +142,9 @@ class AppRouter {
       GoRoute(
         name: 'studentDetail',
         path: '/startup/student/:id',
-        pageBuilder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return _slide(StudentDetailScreen(studentId: id));
-        },
+        pageBuilder: (context, state) => _slide(
+          StudentDetailScreen(studentId: state.pathParameters['id'] ?? ''),
+        ),
       ),
       GoRoute(
         name: 'startupProfile',
@@ -152,23 +152,22 @@ class AppRouter {
         pageBuilder: (context, state) => _slide(const StartupProfileScreen()),
       ),
       GoRoute(
-        name: 'startupAiChat',
-        path: '/startup/ai-chat',
-        pageBuilder: (context, state) => _slide(const StartupAiChatScreen()),
+        name: 'aiInterview',
+        path: '/interview/:id',
+        pageBuilder: (context, state) => _slide(
+          AiInterviewScreen(interviewId: state.pathParameters['id'] ?? ''),
+        ),
       ),
       GoRoute(
-        name: 'warRoom',
-        path: '/war-room/:id',
-        pageBuilder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return _slide(WarRoomScreen(applicationId: id));
-        },
+        name: 'admin',
+        path: '/admin',
+        pageBuilder: (context, state) => _slide(const AdminScreen()),
       ),
     ],
   );
 
-  static CustomTransitionPage _fade(Widget child) {
-    return CustomTransitionPage(
+  static CustomTransitionPage<void> _fade(Widget child) {
+    return CustomTransitionPage<void>(
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(
@@ -179,17 +178,16 @@ class AppRouter {
     );
   }
 
-  static CustomTransitionPage _slide(Widget child) {
-    return CustomTransitionPage(
+  static CustomTransitionPage<void> _slide(Widget child) {
+    return CustomTransitionPage<void>(
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final offsetAnimation =
-            Tween<Offset>(
-              begin: const Offset(0, 0.03),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-            );
+        final offsetAnimation = Tween<Offset>(
+          begin: const Offset(0, 0.03),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+        );
         return SlideTransition(
           position: offsetAnimation,
           child: FadeTransition(

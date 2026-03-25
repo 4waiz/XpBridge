@@ -9,6 +9,7 @@ enum ApplicationStatus {
 
 class Application {
   final String id;
+  final String? missionId;
   final String studentId;
   final String startupId;
   final String studentName;
@@ -34,6 +35,7 @@ class Application {
 
   const Application({
     required this.id,
+    this.missionId,
     required this.studentId,
     required this.startupId,
     required this.studentName,
@@ -60,6 +62,7 @@ class Application {
 
   Application copyWith({
     String? id,
+    String? missionId,
     String? studentId,
     String? startupId,
     String? studentName,
@@ -85,6 +88,7 @@ class Application {
   }) {
     return Application(
       id: id ?? this.id,
+      missionId: missionId ?? this.missionId,
       studentId: studentId ?? this.studentId,
       startupId: startupId ?? this.startupId,
       studentName: studentName ?? this.studentName,
@@ -113,6 +117,7 @@ class Application {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'missionId': missionId,
       'studentId': studentId,
       'startupId': startupId,
       'studentName': studentName,
@@ -142,6 +147,7 @@ class Application {
   Map<String, dynamic> toSupabaseMap() {
     return {
       'student_id': studentId,
+      'mission_id': missionId,
       'startup_id': startupId,
       'student_name': studentName,
       'startup_name': startupName,
@@ -214,6 +220,7 @@ class Application {
 
     return Application(
       id: (map['id'] as String?) ?? '',
+      missionId: pick<String>('missionId', 'mission_id'),
       studentId: pick<String>('studentId', 'student_id') ?? '',
       startupId: pick<String>('startupId', 'startup_id') ?? '',
       studentName: pick<String>('studentName', 'student_name') ?? '',

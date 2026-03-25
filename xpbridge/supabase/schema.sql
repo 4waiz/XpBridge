@@ -1,116 +1,211 @@
--- SQL Schema for XPBridge Supabase Integration
--- Run this in your Supabase SQL Editor
+-- XPBridge production schema
+-- Run in Supabase SQL editor for a fresh environment.
 
--- 1. Profiles Table (Unified for Students and Startups)
-CREATE TABLE profiles (
-  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  role TEXT CHECK (role IN ('student', 'startup')) NOT NULL,
-  bio TEXT,
-  profile_image_url TEXT,
-  
-  -- Student Specific
-  education TEXT,
-  skills TEXT[] DEFAULT '{}',
-  availability_hours NUMERIC DEFAULT 0,
-  xp_points INTEGER DEFAULT 0,
-  level INTEGER DEFAULT 1,
-  missions_completed_count INTEGER DEFAULT 0,
-  
-  -- Startup Specific
-  company_name TEXT,
-  website_url TEXT,
-  industry TEXT,
-  
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create extension if not exists pgcrypto;
+
+create table if not exists public.profiles (
+  id uuid primary key,
+  role text not null check (role in ('student', 'startup')),
+  email text unique not null,
+  name text,
+  company_name text,
+  phone text,
+  bio text,
+  description text,
+  profile_image_url text,
+  education text,
+  skills text[] not null default '{}',
+  availability_hours numeric not null default 0,
+  portfolio_url text,
+  github_url text,
+  resume_url text,
+  resume_file_name text,
+  resume_mime_type text,
+  xp_points integer not null default 0,
+  level integer not null default 1,
+  missions_completed_count integer not null default 0,
+  website_url text,
+  industry text,
+  required_skills text[] not null default '{}',
+  project_details text,
+  logo_url text,
+  is_admin boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- 2. Missions Table 
-CREATE TABLE missions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  startup_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  commitment TEXT, -- e.g. '10 hrs/week'
-  estimated_hours INTEGER,
-  learning_outcome TEXT,
-  required_skills TEXT[] DEFAULT '{}',
-  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'closed')),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists public.missions (
+  id uuid primary key default gen_random_uuid(),
+  startup_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null,
+  description text not null,
+  commitment text,
+  estimated_hours integer,
+  duration_weeks integer,
+  learning_outcome text not null default '',
+  required_skills text[] not null default '{}',
+  status text not null default 'open' check (status in ('open', 'closed')),
+  team_config jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- 3. Applications Table (expanded to match app model)
-CREATE TABLE applications (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  mission_id UUID REFERENCES missions(id) ON DELETE CASCADE,
-  student_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  startup_id UUID NOT NULL,
-  student_name TEXT NOT NULL DEFAULT '',
-  startup_name TEXT NOT NULL DEFAULT '',
-  role_title TEXT,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'interviewing', 'accepted', 'rejected', 'completed', 'hired')),
-  message TEXT,
-  deliverable_url TEXT,
-  deliverable_type TEXT,
-  reflection_did TEXT,
-  reflection_learned TEXT,
-  skills_practiced TEXT[] DEFAULT '{}',
-  hours_spent INTEGER,
-  mentor_rating INTEGER,
-  mentor_feedback_text TEXT,
-  strengths TEXT[] DEFAULT '{}',
-  growth_areas TEXT[] DEFAULT '{}',
-  endorsed_skills TEXT[] DEFAULT '{}',
-  applied_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  completed_at TIMESTAMPTZ,
-  feedback_at TIMESTAMPTZ
+create table if not exists public.applications (
+  id uuid primary key default gen_random_uuid(),
+  mission_id uuid references public.missions(id) on delete cascade,
+  student_id uuid not null references public.profiles(id) on delete cascade,
+  startup_id uuid not null references public.profiles(id) on delete cascade,
+  student_name text not null default '',
+  startup_name text not null default '',
+  role_title text,
+  status text not null default 'pending'
+    check (status in ('pending', 'interviewing', 'accepted', 'rejected', 'completed', 'hired')),
+  message text,
+  deliverable_url text,
+  deliverable_type text,
+  reflection_did text,
+  reflection_learned text,
+  skills_practiced text[] not null default '{}',
+  hours_spent integer,
+  mentor_rating integer,
+  mentor_feedback_text text,
+  strengths text[] not null default '{}',
+  growth_areas text[] not null default '{}',
+  endorsed_skills text[] not null default '{}',
+  applied_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  completed_at timestamptz,
+  feedback_at timestamptz
 );
 
--- 4. Enable Row Level Security (RLS)
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE missions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
+create unique index if not exists applications_student_mission_unique
+  on public.applications(student_id, mission_id)
+  where mission_id is not null;
 
--- 5. Public Access Policies (Example: Everyone can view open missions)
-CREATE POLICY "Missions are viewable by everyone" ON missions
-  FOR SELECT USING (status = 'open');
+create table if not exists public.ai_interviews (
+  id uuid primary key default gen_random_uuid(),
+  application_id uuid not null unique references public.applications(id) on delete cascade,
+  mission_id uuid references public.missions(id) on delete set null,
+  student_id uuid not null references public.profiles(id) on delete cascade,
+  startup_id uuid not null references public.profiles(id) on delete cascade,
+  questions jsonb not null default '[]'::jsonb,
+  responses jsonb not null default '[]'::jsonb,
+  status text not null default 'pending'
+    check (status in ('pending', 'inProgress', 'completed')),
+  summary text,
+  recommendation text,
+  communication_score integer,
+  confidence_score integer,
+  relevance_score integer,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
--- 6. Profile Access Policies (Users can only edit their own profile)
-CREATE POLICY "Users can edit their own profiles" ON profiles
-  FOR ALL USING (auth.uid() = id);
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and is_admin = true
+  );
+$$;
 
--- 7. Startups can insert their own missions
-CREATE POLICY "Startups can insert own missions" ON missions
-  FOR INSERT WITH CHECK (auth.uid() = startup_id);
+alter table public.profiles enable row level security;
+alter table public.missions enable row level security;
+alter table public.applications enable row level security;
+alter table public.ai_interviews enable row level security;
 
--- 8. Startups can update/delete their own missions
-CREATE POLICY "Startups can manage own missions" ON missions
-  FOR UPDATE USING (auth.uid() = startup_id);
+drop policy if exists "profiles_select_authenticated" on public.profiles;
+create policy "profiles_select_authenticated" on public.profiles
+  for select
+  using (auth.uid() is not null);
 
--- 9. Everyone can read all profiles (needed for company names in feeds)
-CREATE POLICY "Profiles are viewable by everyone" ON profiles
-  FOR SELECT USING (true);
+drop policy if exists "profiles_manage_self_or_admin" on public.profiles;
+create policy "profiles_manage_self_or_admin" on public.profiles
+  for all
+  using (auth.uid() = id or public.is_admin())
+  with check (auth.uid() = id or public.is_admin());
 
--- 10. Enable Supabase Realtime on missions table
-ALTER PUBLICATION supabase_realtime ADD TABLE missions;
+drop policy if exists "missions_select_open_or_owned_or_admin" on public.missions;
+create policy "missions_select_open_or_owned_or_admin" on public.missions
+  for select
+  using (status = 'open' or auth.uid() = startup_id or public.is_admin());
 
--- 11. Students can insert their own applications
-CREATE POLICY "Students can insert own applications" ON applications
-  FOR INSERT WITH CHECK (auth.uid() = student_id);
+drop policy if exists "missions_manage_owned_or_admin" on public.missions;
+create policy "missions_manage_owned_or_admin" on public.missions
+  for all
+  using (auth.uid() = startup_id or public.is_admin())
+  with check (auth.uid() = startup_id or public.is_admin());
 
--- 12. Students can view their own applications
-CREATE POLICY "Students can view own applications" ON applications
-  FOR SELECT USING (auth.uid() = student_id);
+drop policy if exists "applications_insert_student_or_admin" on public.applications;
+create policy "applications_insert_student_or_admin" on public.applications
+  for insert
+  with check (auth.uid() = student_id or public.is_admin());
 
--- 13. Startups can view applications for their missions
-CREATE POLICY "Startups can view applications for their roles" ON applications
-  FOR SELECT USING (auth.uid()::text = startup_id::text);
+drop policy if exists "applications_select_related_or_admin" on public.applications;
+create policy "applications_select_related_or_admin" on public.applications
+  for select
+  using (
+    auth.uid() = student_id
+    or auth.uid() = startup_id
+    or public.is_admin()
+  );
 
--- 14. Startups can update application status (accept/reject/complete)
-CREATE POLICY "Startups can update applications" ON applications
-  FOR UPDATE USING (auth.uid()::text = startup_id::text);
+drop policy if exists "applications_update_related_or_admin" on public.applications;
+create policy "applications_update_related_or_admin" on public.applications
+  for update
+  using (
+    auth.uid() = student_id
+    or auth.uid() = startup_id
+    or public.is_admin()
+  )
+  with check (
+    auth.uid() = student_id
+    or auth.uid() = startup_id
+    or public.is_admin()
+  );
 
--- 15. Enable Supabase Realtime on applications table
-ALTER PUBLICATION supabase_realtime ADD TABLE applications;
+drop policy if exists "applications_delete_admin" on public.applications;
+create policy "applications_delete_admin" on public.applications
+  for delete
+  using (public.is_admin());
+
+drop policy if exists "ai_interviews_select_related_or_admin" on public.ai_interviews;
+create policy "ai_interviews_select_related_or_admin" on public.ai_interviews
+  for select
+  using (
+    auth.uid() = student_id
+    or auth.uid() = startup_id
+    or public.is_admin()
+  );
+
+drop policy if exists "ai_interviews_insert_startup_or_admin" on public.ai_interviews;
+create policy "ai_interviews_insert_startup_or_admin" on public.ai_interviews
+  for insert
+  with check (auth.uid() = startup_id or public.is_admin());
+
+drop policy if exists "ai_interviews_update_related_or_admin" on public.ai_interviews;
+create policy "ai_interviews_update_related_or_admin" on public.ai_interviews
+  for update
+  using (
+    auth.uid() = student_id
+    or auth.uid() = startup_id
+    or public.is_admin()
+  )
+  with check (
+    auth.uid() = student_id
+    or auth.uid() = startup_id
+    or public.is_admin()
+  );
+
+alter publication supabase_realtime add table public.missions;
+alter publication supabase_realtime add table public.applications;
+alter publication supabase_realtime add table public.ai_interviews;
+
+-- Storage bucket setup is still required in Supabase dashboard or via SQL:
+-- insert into storage.buckets (id, name, public) values ('xpbridge-assets', 'xpbridge-assets', true);

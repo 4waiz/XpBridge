@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../app.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_button.dart';
 
@@ -44,8 +44,7 @@ class _IntroScreenState extends State<IntroScreen> {
   }
 
   Future<void> _completeOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_complete', true);
+    await AppStateScope.of(context).completeOnboarding();
     if (mounted) {
       context.goNamed('login');
     }

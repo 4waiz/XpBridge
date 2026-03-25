@@ -84,10 +84,10 @@ class StartupProfile {
   factory StartupProfile.fromMap(Map<String, dynamic> map) {
     return StartupProfile(
       id: map['id'] ?? '',
-      companyName: map['company_name'] ?? '',
+      companyName: map['company_name'] ?? map['name'] ?? '',
       email: map['email'] ?? '',
       phone: map['phone'],
-      description: map['description'] ?? '',
+      description: map['description'] ?? map['bio'] ?? '',
       industry: map['industry'] ?? '',
       requiredSkills: List<String>.from(map['required_skills'] ?? []),
       openRoles: (map['open_roles'] as List? ?? [])

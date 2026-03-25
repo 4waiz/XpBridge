@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 import '../models/student_profile.dart';
 import '../models/startup_profile.dart';
 import '../data/dummy_data.dart';
@@ -102,7 +102,7 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
   // Initialization
   static Future<void> initialize({bool forceReload = false}) async {
     if (forceReload || _apiKey == null) {
-      _apiKey = dotenv.env['GEMINI_API_KEY'];
+      _apiKey = AppConfig.instance.geminiApiKey;
     }
     if (_apiKey == null || _apiKey!.isEmpty || _apiKey == 'your_api_key_here') {
       throw Exception('GEMINI_API_KEY not found in .env file');

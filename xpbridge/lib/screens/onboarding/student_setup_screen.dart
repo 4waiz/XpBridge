@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app.dart';
 import '../../data/dummy_data.dart';
 import '../../models/student_profile.dart';
+import '../../services/asset_upload_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
-import '../../widgets/xp_chip.dart';
-import '../../widgets/xp_input.dart';
-import '../../widgets/xp_section_title.dart';
+import '../../widgets/xp_page_scaffold.dart';
+import '../../widgets/xp_selectors.dart';
 
 class StudentSetupScreen extends StatefulWidget {
   const StudentSetupScreen({super.key});
@@ -22,12 +21,40 @@ class StudentSetupScreen extends StatefulWidget {
 }
 
 class _StudentSetupScreenState extends State<StudentSetupScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
   final _educationController = TextEditingController();
   final _portfolioController = TextEditingController();
-  final Set<String> _skills = {};
+  final _githubController = TextEditingController();
+  List<String> _skills = [];
   double _hours = 10;
+  bool _isSaving = false;
+  String? _resumeUrl;
+  String? _resumeFileName;
+  String? _resumeMimeType;
+  String? _submitError;
+  bool _loaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loaded) return;
+    final profile = AppStateScope.of(context).studentProfile;
+    if (profile != null) {
+      _nameController.text = profile.name;
+      _bioController.text = profile.bio ?? '';
+      _educationController.text = profile.education ?? '';
+      _portfolioController.text = profile.portfolioUrl ?? '';
+      _githubController.text = profile.githubUrl ?? '';
+      _skills = List<String>.from(profile.skills);
+      _hours = profile.availabilityHours;
+      _resumeUrl = profile.resumeUrl;
+      _resumeFileName = profile.resumeFileName;
+      _resumeMimeType = profile.resumeMimeType;
+    }
+    _loaded = true;
+  }
 
   @override
   void dispose() {
@@ -35,249 +62,249 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
     _bioController.dispose();
     _educationController.dispose();
     _portfolioController.dispose();
+    _githubController.dispose();
     super.dispose();
   }
 
-  bool get _canContinue =>
-      _nameController.text.trim().isNotEmpty && _skills.length >= 2;
+  Future<void> _pickResume() async {
+    try {
+      final user = SupabaseService.currentUser;
+      if (user == null) {
+        throw const XpServiceException('Please log in again.');
+      }
+      final picked = await AssetUploadService.pickResume();
+      if (picked == null) return;
+      setState(() => _isSaving = true);
+      final url = await AssetUploadService.uploadResume(user.id, picked);
+      setState(() {
+        _resumeUrl = url;
+        _resumeFileName = picked.fileName;
+        _resumeMimeType = picked.mimeType;
+        _submitError = null;
+      });
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  String? _validateRequired(String? value, String label) {
+    if ((value?.trim() ?? '').isEmpty) {
+      return '$label is required';
+    }
+    return null;
+  }
 
   Future<void> _saveProfile() async {
-    if (!_canContinue) return;
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) return;
+    if (_skills.length < 2 || _skills.length > 4) {
+      setState(() => _submitError = 'Select between 2 and 4 skills.');
+      return;
+    }
+    if ((_resumeUrl ?? '').isEmpty) {
+      setState(() => _submitError = 'Upload your CV as a PDF or image.');
+      return;
+    }
 
-    final appState = AppStateScope.of(context);
     final user = SupabaseService.currentUser;
     if (user == null) {
       context.goNamed('login');
       return;
     }
 
+    setState(() {
+      _isSaving = true;
+      _submitError = null;
+    });
+
+    final profile = StudentProfile(
+      id: user.id,
+      name: _nameController.text.trim(),
+      email: user.email ?? '',
+      bio: _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
+      education: _educationController.text.trim().isEmpty
+          ? null
+          : _educationController.text.trim(),
+      skills: _skills,
+      availabilityHours: _hours,
+      portfolioUrl: _portfolioController.text.trim().isEmpty
+          ? null
+          : _portfolioController.text.trim(),
+      githubUrl: _githubController.text.trim().isEmpty
+          ? null
+          : _githubController.text.trim(),
+      resumeUrl: _resumeUrl,
+      resumeFileName: _resumeFileName,
+      resumeMimeType: _resumeMimeType,
+      createdAt: DateTime.now(),
+    );
+
     try {
-      final profile = StudentProfile(
-        id: user.id,
-        name: _nameController.text,
-        email: user.email ?? '',
-        bio: _bioController.text.isNotEmpty ? _bioController.text : null,
-        education: _educationController.text.isNotEmpty
-            ? _educationController.text
-            : null,
-        skills: _skills.toList(),
-        availabilityHours: _hours,
-        portfolioUrl: _portfolioController.text.isNotEmpty
-            ? _portfolioController.text
-            : null,
-        createdAt: DateTime.now(),
-        xpPoints: 0,
-        level: 1,
-        missionsCompletedCount: 0,
-      );
-
-      // Save to Supabase Cloud
-      await SupabaseService.updateProfile(
-        id: user.id,
-        data: {
-          'name': profile.name,
-          'bio': profile.bio,
-          'education': profile.education,
-          'skills': profile.skills,
-          'availability_hours': profile.availabilityHours,
-          'portfolio_url': profile.portfolioUrl,
-        },
-      );
-
-      // Save to local cache for offline/instant use
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('profile_name', _nameController.text);
-      await prefs.setString('profile_id', profile.id);
-      await prefs.setString('profile_bio', _bioController.text);
-      await prefs.setString('profile_education', _educationController.text);
-      await prefs.setStringList('profile_skills', _skills.toList());
-      await prefs.setDouble('profile_hours', _hours);
-      await prefs.setBool('is_logged_in', true);
-
+      final appState = AppStateScope.of(context);
+      await appState.persistStudentProfile(profile);
       if (!mounted) return;
-      appState.saveStudentProfile(profile);
       context.goNamed('studentDashboard');
-    } catch (e) {
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save cloud profile: $e')),
-        );
+        setState(() => _isSaving = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.page,
-                AppSpacing.md,
-                AppSpacing.page,
-                0,
-              ),
-              child: Row(
-                children: [
-                  XPHeaderButton(
-                    icon: Icons.arrow_back_rounded,
-                    onTap: () => context.goNamed('signup'),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Build your profile',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(
-                          'Help startups understand what you can do and how much time you can commit.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+    return XPPageScaffold(
+      title: 'Build your profile',
+      subtitle: 'Students must provide a CV, a few real skills, and at least one work link.',
+      showBack: true,
+      compact: true,
+      bottomBar: XPBottomActionBar(
+        child: XPButton(
+          label: 'Save and continue',
+          icon: Icons.arrow_forward_rounded,
+          loading: _isSaving,
+          onPressed: _isSaving ? null : _saveProfile,
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.page,
+          AppSpacing.md,
+          AppSpacing.page,
+          130,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              XPSection(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      validator: (value) => _validateRequired(value, 'Full name'),
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Full name',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.page,
-                  AppSpacing.lg,
-                  AppSpacing.page,
-                  120,
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _educationController,
+                      validator: (value) => _validateRequired(value, 'Education'),
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Education',
+                        hintText: 'e.g. BSc Computer Science',
+                        prefixIcon: Icon(Icons.school_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _bioController,
+                      minLines: 3,
+                      maxLines: 4,
+                      validator: (value) => _validateRequired(value, 'Bio'),
+                      decoration: const InputDecoration(
+                        labelText: 'Short bio',
+                        hintText: 'What can a founder trust you with right now?',
+                        prefixIcon: Icon(Icons.edit_note_rounded),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              XPMultiSelectField(
+                label: 'Core skills',
+                hint: 'Select 2-4 skills',
+                options: DummyData.skillPool,
+                values: _skills,
+                minSelection: 2,
+                maxSelection: 4,
+                onChanged: (values) => setState(() => _skills = values),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              XPSection(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    XPSection(
-                      padding: const EdgeInsets.all(AppSpacing.xl),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const XPSectionTitle(
-                            title: 'Basic info',
-                            subtitle: 'Keep it concise and useful.',
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          XPTextField(
-                            controller: _nameController,
-                            labelText: 'Full name',
-                            hintText: 'Enter your name',
-                            prefixIcon: Icons.person_outline_rounded,
-                            textCapitalization: TextCapitalization.words,
-                            onChanged: (_) => setState(() {}),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          XPTextField(
-                            controller: _educationController,
-                            labelText: 'Education',
-                            hintText: 'e.g. BSc Computer Science',
-                            prefixIcon: Icons.school_outlined,
-                            textCapitalization: TextCapitalization.words,
-                            onChanged: (_) => setState(() {}),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          XPTextField(
-                            controller: _bioController,
-                            labelText: 'Bio',
-                            hintText: 'What should startups know about you?',
-                            prefixIcon: Icons.edit_note_rounded,
-                            maxLines: 4,
-                            textCapitalization: TextCapitalization.sentences,
-                            onChanged: (_) => setState(() {}),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          XPTextField(
-                            controller: _portfolioController,
-                            labelText: 'Portfolio URL',
-                            hintText: 'https://yourportfolio.com',
-                            prefixIcon: Icons.link_rounded,
-                            keyboardType: TextInputType.url,
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ],
+                    Text(
+                      'Links and proof',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _portfolioController,
+                      keyboardType: TextInputType.url,
+                      decoration: const InputDecoration(
+                        labelText: 'Portfolio link',
+                        hintText: 'https://yourportfolio.com',
+                        prefixIcon: Icon(Icons.language_rounded),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    XPSection(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          XPSectionTitle(
-                            title: 'Skills',
-                            subtitle:
-                                'Select between 2 and 4 areas you want to be matched on.',
-                            actionLabel: '${_skills.length}/4',
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: DummyData.skillPool.map((skill) {
-                              return XPChoiceChip(
-                                label: skill,
-                                selected: _skills.contains(skill),
-                                onSelected: (selected) {
-                                  setState(() {
-                                    if (selected) {
-                                      if (_skills.length < 4) {
-                                        _skills.add(skill);
-                                      }
-                                    } else {
-                                      _skills.remove(skill);
-                                    }
-                                  });
-                                },
-                              );
-                            }).toList(),
-                          ),
-                        ],
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _githubController,
+                      keyboardType: TextInputType.url,
+                      decoration: const InputDecoration(
+                        labelText: 'GitHub link',
+                        hintText: 'https://github.com/username',
+                        prefixIcon: Icon(Icons.code_rounded),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    XPSection(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: AppSpacing.md),
+                    XPCard(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      backgroundColor: AppTheme.primarySoft,
+                      child: Row(
                         children: [
-                          const XPSectionTitle(
-                            title: 'Availability',
-                            subtitle:
-                                'Let startups know how much time you can give each week.',
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: AppTheme.surface,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: const Icon(
+                              Icons.description_outlined,
+                              color: AppTheme.primaryDeep,
+                            ),
                           ),
-                          const SizedBox(height: AppSpacing.lg),
-                          XPCard(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            backgroundColor: AppTheme.cardBackground,
-                            radius: AppTheme.cornerRadius,
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${_hours.round()} hours / week',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                  _resumeFileName ?? 'Upload your CV',
+                                  style: Theme.of(context).textTheme.titleMedium,
                                 ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Slider(
-                                  min: 2,
-                                  max: 25,
-                                  divisions: 23,
-                                  value: _hours,
-                                  label: '${_hours.round()} hrs',
-                                  onChanged: (value) =>
-                                      setState(() => _hours = value),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  _resumeUrl == null
+                                      ? 'Required. PDF or image files only.'
+                                      : _resumeMimeType == 'application/pdf'
+                                          ? 'PDF uploaded'
+                                          : 'Image resume uploaded',
+                                  style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],
                             ),
+                          ),
+                          XPOutlinedButton(
+                            label: _resumeUrl == null ? 'Upload' : 'Replace',
+                            expand: false,
+                            size: XPButtonSize.small,
+                            onPressed: _isSaving ? null : _pickResume,
                           ),
                         ],
                       ),
@@ -285,15 +312,42 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: XPBottomActionBar(
-        child: XPButton(
-          label: 'Save and continue',
-          icon: Icons.arrow_forward_rounded,
-          onPressed: _canContinue ? _saveProfile : null,
+              const SizedBox(height: AppSpacing.lg),
+              XPSection(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Availability',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      '${_hours.round()} hours per week',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    Slider(
+                      min: 2,
+                      max: 30,
+                      divisions: 28,
+                      value: _hours,
+                      label: '${_hours.round()} hrs',
+                      onChanged: (value) => setState(() => _hours = value),
+                    ),
+                  ],
+                ),
+              ),
+              if (_submitError != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  _submitError!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.error,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

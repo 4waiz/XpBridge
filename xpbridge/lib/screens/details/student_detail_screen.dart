@@ -1,47 +1,49 @@
 import 'package:flutter/material.dart';
 
 import '../../app.dart';
-import '../../data/dummy_data.dart';
-import '../../models/student_profile.dart';
+import '../../services/link_service.dart';
+import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/verified_badges_section.dart';
-import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
-import '../../widgets/xp_chip.dart';
-import '../../widgets/xp_premium.dart';
-import '../../widgets/xp_section_title.dart';
+import '../../widgets/xp_empty_state.dart';
+import '../../widgets/xp_page_scaffold.dart';
 
 class StudentDetailScreen extends StatelessWidget {
   const StudentDetailScreen({super.key, required this.studentId});
 
   final String studentId;
 
-  StudentProfile? get _student {
+  Future<void> _openLink(BuildContext context, String? link) async {
     try {
-      return DummyData.students.firstWhere((s) => s.id == studentId);
-    } catch (_) {
-      return null;
+      await LinkService.openExternal(link);
+    } on XpServiceException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final student = _student;
     final appState = AppStateScope.of(context);
+    final student = appState.getStudentById(studentId);
     final startupSkills = appState.startupProfile?.requiredSkills ?? [];
 
     if (student == null) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: XPScene(
-          compact: true,
-          child: SafeArea(
-            child: Column(
-              children: const [
-                XPAppBar(title: 'Not Found'),
-                Expanded(child: Center(child: Text('Student not found'))),
-              ],
+      return const XPPageScaffold(
+        title: 'Student',
+        subtitle: 'Not found',
+        showBack: true,
+        compact: true,
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.page),
+            child: XPEmptyState(
+              icon: Icons.person_search_outlined,
+              title: 'Student not found',
+              message: 'This profile is no longer available.',
             ),
           ),
         ),
@@ -51,200 +53,116 @@ class StudentDetailScreen extends StatelessWidget {
     final matchingSkills = student.skills
         .where((skill) => startupSkills.contains(skill))
         .toList();
-    final badges = appState.getBadgesForStudent(student.id);
+    final resumeIsImage =
+        (student.resumeMimeType ?? '').toLowerCase().startsWith('image/');
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBody: true,
-      body: XPScene(
-        child: SafeArea(
-          child: Column(
-            children: [
-              XPAppBar(
-                title: student.name,
-                subtitle: student.education ?? 'Student',
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.page,
-                    AppSpacing.md,
-                    AppSpacing.page,
-                    130,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    return XPPageScaffold(
+      title: student.name,
+      subtitle: student.education ?? 'Student profile',
+      showBack: true,
+      compact: true,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.page,
+          AppSpacing.md,
+          AppSpacing.page,
+          AppSpacing.page,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            XPCard(
+              elevated: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
                     children: [
-                      XPGlassPanel(
-                        backgroundColor: AppTheme.primaryDeep.withValues(
-                          alpha: 0.82,
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppTheme.primaryDeep,
-                            AppTheme.primaryDark,
-                            AppTheme.primary.withValues(alpha: 0.88),
-                          ],
-                        ),
-                        borderColor: AppTheme.surface.withValues(alpha: 0.18),
-                        shadow: AppTheme.heroCardShadow,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 84,
-                                  height: 84,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.surface.withValues(
-                                      alpha: 0.16,
-                                    ),
-                                    borderRadius: BorderRadius.circular(28),
-                                    border: Border.all(
-                                      color: AppTheme.surface.withValues(
-                                        alpha: 0.18,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      student.name[0].toUpperCase(),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .displayMedium
-                                          ?.copyWith(color: AppTheme.surface),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.lg),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        student.name,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineMedium
-                                            ?.copyWith(color: AppTheme.surface),
-                                      ),
-                                      if (student.education?.isNotEmpty ==
-                                          true) ...[
-                                        const SizedBox(height: AppSpacing.xs),
-                                        Text(
-                                          student.education!,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                color: AppTheme.surface
-                                                    .withValues(alpha: 0.78),
-                                              ),
-                                        ),
-                                      ],
-                                      const SizedBox(height: AppSpacing.sm),
-                                      XPBadge(
-                                        label:
-                                            '${student.availabilityHours.round()} hrs / week',
-                                        icon: Icons.schedule_rounded,
-                                        color: AppTheme.surface.withValues(
-                                          alpha: 0.12,
-                                        ),
-                                        textColor: AppTheme.surface,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (student.bio?.isNotEmpty == true) ...[
-                              const SizedBox(height: AppSpacing.lg),
-                              Text(
-                                student.bio!,
-                                style: Theme.of(context).textTheme.bodyLarge
-                                    ?.copyWith(
-                                      color: AppTheme.surface.withValues(
-                                        alpha: 0.82,
-                                      ),
-                                    ),
-                              ),
-                            ],
-                            if (student.portfolioUrl?.isNotEmpty == true) ...[
-                              const SizedBox(height: AppSpacing.md),
-                              XPBadge(
-                                label: student.portfolioUrl!,
-                                icon: Icons.link_rounded,
-                                color: AppTheme.surface.withValues(alpha: 0.12),
-                                textColor: AppTheme.surface,
-                              ),
-                            ],
-                          ],
-                        ),
+                      XPBadge(
+                        label: '${student.availabilityHours.round()} hrs/week',
+                        icon: Icons.schedule_rounded,
                       ),
-                      if (matchingSkills.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Alignment',
-                          subtitle:
-                              'These are the skills already overlapping with your current search.',
-                          child: Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: matchingSkills
-                                .map(
-                                  (skill) =>
-                                      XPSkillTag(label: skill, isMatched: true),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ],
-                      if (badges.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        XPSection(
-                          title: 'Verified badges',
-                          subtitle:
-                              'Non-transferable milestone credentials that add trust to founder review.',
-                          child: VerifiedBadgeStrip(badges: badges),
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.xl),
-                      const XPSectionTitle(title: 'Skills'),
-                      const SizedBox(height: AppSpacing.md),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: student.skills.map((skill) {
-                          return XPSkillTag(
-                            label: skill,
-                            isMatched: startupSkills.contains(skill),
-                          );
-                        }).toList(),
-                      ),
+                      XPBadge(label: 'Level ${student.level}'),
+                      XPBadge(label: '${student.xpPoints} XP'),
                     ],
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    student.bio ?? 'No bio added yet.',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: student.skills
+                        .map(
+                          (skill) => XPBadge(
+                            label: skill,
+                            color: matchingSkills.contains(skill)
+                                ? AppTheme.primarySoft
+                                : null,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: XPBottomActionBar(
-        child: XPButton(
-          label: 'Contact student',
-          icon: Icons.chat_bubble_outline_rounded,
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Messaging coming soon!'),
-                backgroundColor: AppTheme.primary,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            XPSection(
+              title: 'Proof of work',
+              subtitle: 'Resume and external links are reviewable from here.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if ((student.resumeUrl ?? '').isNotEmpty) ...[
+                    if (resumeIsImage)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.cornerRadius,
+                        ),
+                        child: Image.network(
+                          student.resumeUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return XPBadge(
+                              label: student.resumeFileName ?? 'Resume image',
+                              icon: Icons.description_outlined,
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.md),
+                    XPButton(
+                      label: 'Open CV',
+                      icon: Icons.open_in_new_rounded,
+                      onPressed: () => _openLink(context, student.resumeUrl),
+                    ),
+                  ] else
+                    const Text('No CV uploaded yet.'),
+                  if ((student.portfolioUrl ?? '').isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    XPOutlinedButton(
+                      label: 'Open portfolio',
+                      icon: Icons.language_rounded,
+                      onPressed: () => _openLink(context, student.portfolioUrl),
+                    ),
+                  ],
+                  if ((student.githubUrl ?? '').isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    XPOutlinedButton(
+                      label: 'Open GitHub',
+                      icon: Icons.code_rounded,
+                      onPressed: () => _openLink(context, student.githubUrl),
+                    ),
+                  ],
+                ],
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );

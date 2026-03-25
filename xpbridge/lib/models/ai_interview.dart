@@ -172,16 +172,23 @@ class AiInterview {
 
     return AiInterview(
       id: map['id'] as String? ?? '',
-      applicationId: map['applicationId'] as String? ?? '',
-      missionId: map['missionId'] as String? ?? '',
-      studentId: map['studentId'] as String? ?? '',
-      startupId: map['startupId'] as String? ?? '',
+      applicationId:
+          (map['applicationId'] ?? map['application_id']) as String? ?? '',
+      missionId: (map['missionId'] ?? map['mission_id']) as String? ?? '',
+      studentId: (map['studentId'] ?? map['student_id']) as String? ?? '',
+      startupId: (map['startupId'] ?? map['startup_id']) as String? ?? '',
       questions: stringList(map['questions']),
       responses: responseList(map['responses']),
-      completedAt: DateTime.tryParse(map['completedAt'] as String? ?? ''),
-      communicationScore: (map['communicationScore'] as num?)?.toInt(),
-      confidenceScore: (map['confidenceScore'] as num?)?.toInt(),
-      relevanceScore: (map['relevanceScore'] as num?)?.toInt(),
+      completedAt: DateTime.tryParse(
+        (map['completedAt'] ?? map['completed_at']) as String? ?? '',
+      ),
+      communicationScore:
+          ((map['communicationScore'] ?? map['communication_score']) as num?)
+              ?.toInt(),
+      confidenceScore:
+          ((map['confidenceScore'] ?? map['confidence_score']) as num?)?.toInt(),
+      relevanceScore:
+          ((map['relevanceScore'] ?? map['relevance_score']) as num?)?.toInt(),
       summary: map['summary'] as String?,
       recommendation: parseRecommendation(map['recommendation']),
       status: parseStatus(map['status']),

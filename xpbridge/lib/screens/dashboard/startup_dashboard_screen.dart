@@ -2,22 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app.dart';
-import '../../data/dummy_data.dart';
-import '../../services/supabase_service.dart';
-import '../../models/ai_interview.dart';
 import '../../models/application.dart';
-import '../../models/guild_application.dart';
 import '../../models/student_profile.dart';
-import '../../services/ai_interview_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/team_mission_widgets.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
-import '../../widgets/xp_chip.dart';
-import '../../widgets/xp_input.dart';
-import '../../widgets/xp_navigation.dart';
-import '../../widgets/xp_premium.dart';
+import '../../widgets/xp_empty_state.dart';
+import '../../widgets/xp_page_scaffold.dart';
 
 class StartupDashboardScreen extends StatefulWidget {
   const StartupDashboardScreen({super.key});
@@ -27,10 +19,9 @@ class StartupDashboardScreen extends StatefulWidget {
 }
 
 class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  int _bottomNavIndex = 0;
-  String? _selectedSkill;
-  String _query = '';
+  final _searchController = TextEditingController();
+  int _segment = 0;
+  String? _skillFilter;
 
   @override
   void dispose() {
@@ -38,119 +29,95 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
     super.dispose();
   }
 
-  List<StudentProfile> _applyFilters(List<StudentProfile> students) {
-    var filtered = [...students];
-
-    if (_selectedSkill != null) {
-      filtered = filtered
-          .where((student) => student.skills.contains(_selectedSkill))
-          .toList();
+  Color _statusColor(ApplicationStatus status) {
+    switch (status) {
+      case ApplicationStatus.pending:
+        return AppTheme.warning;
+      case ApplicationStatus.interviewing:
+        return AppTheme.primary;
+      case ApplicationStatus.accepted:
+        return AppTheme.primaryDark;
+      case ApplicationStatus.hired:
+        return AppTheme.primaryDeep;
+      case ApplicationStatus.completed:
+        return AppTheme.successDark;
+      case ApplicationStatus.rejected:
+        return AppTheme.error;
     }
-
-    if (_query.trim().isNotEmpty) {
-      final query = _query.trim().toLowerCase();
-      filtered = filtered.where((student) {
-        final haystack = [
-          student.name,
-          student.education ?? '',
-          student.bio ?? '',
-          ...student.skills,
-        ].join(' ').toLowerCase();
-        return haystack.contains(query);
-      }).toList();
-    }
-
-    return filtered;
   }
 
-  Future<void> _markApplicationCompleted(Application application) async {
-    final appState = AppStateScope.of(context);
-    await appState.updateApplicationStatus(
-      application.id,
-      ApplicationStatus.completed,
-    );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Marked as completed'),
-        backgroundColor: AppTheme.successDark,
-      ),
-    );
+  String _statusText(ApplicationStatus status) {
+    switch (status) {
+      case ApplicationStatus.pending:
+        return 'Pending';
+      case ApplicationStatus.interviewing:
+        return 'Interviewing';
+      case ApplicationStatus.accepted:
+        return 'Accepted';
+      case ApplicationStatus.hired:
+        return 'In progress';
+      case ApplicationStatus.completed:
+        return 'Completed';
+      case ApplicationStatus.rejected:
+        return 'Rejected';
+    }
   }
 
-  void _showFeedbackSheet(Application application) {
+  Future<void> _showFeedbackSheet(Application application) async {
     final appState = AppStateScope.of(context);
-    StudentProfile? student;
-    try {
-      student = DummyData.students.firstWhere(
-        (s) => s.id == application.studentId,
-      );
-    } catch (_) {
-      student = null;
-    }
-    final skills = student?.skills ?? [];
-    final strengthsOptions = [
+    final student = appState.getStudentById(application.studentId);
+    final feedbackController = TextEditingController(
+      text: application.mentorFeedbackText ?? '',
+    );
+    int rating = application.mentorRating ?? 0;
+    final strengths = <String>{...application.strengths};
+    final growthAreas = <String>{...application.growthAreas};
+    final endorsedSkills = <String>{...application.endorsedSkills};
+    final strengthOptions = const [
       'Ownership',
       'Communication',
       'Craft',
-      'Collaboration',
       'Speed',
+      'Collaboration',
     ];
-    final growthOptions = [
+    final growthOptions = const [
       'Planning',
       'Documentation',
       'Testing',
       'Autonomy',
-      'Focus',
+      'Scope management',
     ];
 
-    int rating = application.mentorRating ?? 0;
-    final feedbackController = TextEditingController(
-      text: application.mentorFeedbackText ?? '',
-    );
-    final selectedStrengths = <String>{...application.strengths};
-    final selectedGrowth = <String>{...application.growthAreas};
-    final endorsedSkills = <String>{...application.endorsedSkills};
-
-    showModalBottomSheet(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return XPPremiumSheet(
-              title: 'Leave mentor feedback',
-              subtitle: application.studentName,
-              footer: XPButton(
-                label: 'Save feedback',
-                icon: Icons.arrow_upward_rounded,
-                onPressed: () async {
-                  await appState.saveMentorFeedback(
-                    application.id,
-                    rating: rating == 0 ? null : rating,
-                    feedback: feedbackController.text.trim().isNotEmpty
-                        ? feedbackController.text.trim()
-                        : null,
-                    strengths: selectedStrengths.toList(),
-                    growthAreas: selectedGrowth.toList(),
-                    endorsedSkills: endorsedSkills.toList(),
-                  );
-                  if (sheetContext.mounted) {
-                    Navigator.pop(sheetContext);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Feedback saved'),
-                        backgroundColor: AppTheme.successDark,
-                      ),
-                    );
-                  }
-                },
+            return Padding(
+              padding: EdgeInsets.only(
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                top: AppSpacing.md,
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
               ),
-              child: SingleChildScrollView(
+              child: XPSection(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      'Mentor feedback',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      student?.name ?? application.studentName,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
                     Row(
                       children: List.generate(5, (index) {
                         final star = index + 1;
@@ -168,22 +135,22 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       'Strengths',
-                      style: Theme.of(context).textTheme.titleLarge,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Wrap(
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
-                      children: strengthsOptions.map((item) {
-                        return XPChoiceChip(
-                          label: item,
-                          selected: selectedStrengths.contains(item),
-                          onSelected: (value) {
+                      children: strengthOptions.map((item) {
+                        return FilterChip(
+                          label: Text(item),
+                          selected: strengths.contains(item),
+                          onSelected: (selected) {
                             setModalState(() {
-                              if (value) {
-                                selectedStrengths.add(item);
+                              if (selected) {
+                                strengths.add(item);
                               } else {
-                                selectedStrengths.remove(item);
+                                strengths.remove(item);
                               }
                             });
                           },
@@ -193,66 +160,95 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'Growth areas',
-                      style: Theme.of(context).textTheme.titleLarge,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Wrap(
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
                       children: growthOptions.map((item) {
-                        return XPChoiceChip(
-                          label: item,
-                          selected: selectedGrowth.contains(item),
-                          onSelected: (value) {
+                        return FilterChip(
+                          label: Text(item),
+                          selected: growthAreas.contains(item),
+                          onSelected: (selected) {
                             setModalState(() {
-                              if (value) {
-                                selectedGrowth.add(item);
+                              if (selected) {
+                                growthAreas.add(item);
                               } else {
-                                selectedGrowth.remove(item);
+                                growthAreas.remove(item);
                               }
                             });
                           },
                         );
                       }).toList(),
                     ),
+                    if (student != null && student.skills.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Endorsed skills',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: student.skills.map((skill) {
+                          final selected = endorsedSkills.contains(skill);
+                          final canSelect = selected || endorsedSkills.length < 3;
+                          return FilterChip(
+                            label: Text(skill),
+                            selected: selected,
+                            onSelected: canSelect
+                                ? (value) {
+                                    setModalState(() {
+                                      if (value) {
+                                        endorsedSkills.add(skill);
+                                      } else {
+                                        endorsedSkills.remove(skill);
+                                      }
+                                    });
+                                  }
+                                : null,
+                          );
+                        }).toList(),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'Endorse up to 2 skills',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: skills.map((skill) {
-                        final selected = endorsedSkills.contains(skill);
-                        final canSelect = selected || endorsedSkills.length < 2;
-                        return XPChoiceChip(
-                          label: skill,
-                          selected: selected,
-                          onSelected: canSelect
-                              ? (value) {
-                                  setModalState(() {
-                                    if (value) {
-                                      endorsedSkills.add(skill);
-                                    } else {
-                                      endorsedSkills.remove(skill);
-                                    }
-                                  });
-                                }
-                              : (_) {},
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    XPTextField(
+                    TextField(
                       controller: feedbackController,
-                      labelText: 'Feedback note',
-                      hintText:
-                          'What stood out, and what should they focus on next?',
-                      prefixIcon: Icons.feedback_outlined,
-                      maxLines: 4,
-                      textCapitalization: TextCapitalization.sentences,
+                      minLines: 4,
+                      maxLines: 5,
+                      decoration: const InputDecoration(
+                        labelText: 'Feedback note',
+                        hintText: 'What went well, and what should improve next?',
+                        prefixIcon: Icon(Icons.feedback_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    XPButton(
+                      label: 'Save feedback',
+                      icon: Icons.check_rounded,
+                      onPressed: () async {
+                        final navigator = Navigator.of(sheetContext);
+                        await appState.saveMentorFeedback(
+                          application.id,
+                          rating: rating == 0 ? null : rating,
+                          feedback: feedbackController.text.trim().isEmpty
+                              ? null
+                              : feedbackController.text.trim(),
+                          strengths: strengths.toList(),
+                          growthAreas: growthAreas.toList(),
+                          endorsedSkills: endorsedSkills.toList(),
+                        );
+                        navigator.pop();
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Feedback saved.'),
+                            backgroundColor: AppTheme.successDark,
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -264,162 +260,101 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
     );
   }
 
-  void _showFiltersSheet(List<String> skillsForFilters) {
-    String? selectedSkill = _selectedSkill;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return XPPremiumSheet(
-              title: 'Filter students',
-              subtitle: 'Narrow the list by the skills you need most.',
-              footer: Row(
-                children: [
-                  Expanded(
-                    child: XPOutlinedButton(
-                      label: 'Reset',
-                      onPressed: () =>
-                          setModalState(() => selectedSkill = null),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: XPButton(
-                      label: 'Apply',
-                      onPressed: () {
-                        setState(() => _selectedSkill = selectedSkill);
-                        Navigator.pop(sheetContext);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              child: Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  XPChoiceChip(
-                    label: 'All skills',
-                    selected: selectedSkill == null,
-                    onSelected: (_) =>
-                        setModalState(() => selectedSkill = null),
-                  ),
-                  ...skillsForFilters.map(
-                    (skill) => XPChoiceChip(
-                      label: skill,
-                      selected: selectedSkill == skill,
-                      onSelected: (_) =>
-                          setModalState(() => selectedSkill = skill),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+  Future<void> _requestInterview(Application application) async {
+    final appState = AppStateScope.of(context);
+    final interview = await appState.requestAiInterview(application.id);
+    if (!mounted || interview == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('AI interview requested for ${application.studentName}.'),
+        backgroundColor: AppTheme.successDark,
+      ),
     );
   }
 
-  Color _statusColor(ApplicationStatus status) {
-    switch (status) {
-      case ApplicationStatus.pending:
-        return AppTheme.warning;
-      case ApplicationStatus.accepted:
-        return AppTheme.successDark;
-      case ApplicationStatus.rejected:
-        return AppTheme.error;
-      case ApplicationStatus.interviewing:
-        return AppTheme.primary;
-      case ApplicationStatus.hired:
-        return AppTheme.primaryDeep;
-      case ApplicationStatus.completed:
-        return AppTheme.successDark;
-    }
-  }
-
-  String _statusLabel(ApplicationStatus status) {
-    switch (status) {
-      case ApplicationStatus.pending:
-        return 'Pending';
-      case ApplicationStatus.accepted:
-        return 'Accepted';
-      case ApplicationStatus.rejected:
-        return 'Rejected';
-      case ApplicationStatus.interviewing:
-        return 'Interviewing';
-      case ApplicationStatus.hired:
-        return 'In progress';
-      case ApplicationStatus.completed:
-        return 'Completed';
-    }
-  }
-
-  double _statusProgress(ApplicationStatus status) {
-    switch (status) {
-      case ApplicationStatus.pending:
-        return 0.2;
-      case ApplicationStatus.interviewing:
-        return 0.45;
-      case ApplicationStatus.accepted:
-        return 0.62;
-      case ApplicationStatus.hired:
-        return 0.82;
-      case ApplicationStatus.completed:
-      case ApplicationStatus.rejected:
-        return 1;
-    }
+  Future<void> _changeStatus(
+    Application application,
+    ApplicationStatus status,
+  ) async {
+    final appState = AppStateScope.of(context);
+    await appState.updateApplicationStatus(application.id, status);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${application.studentName} marked ${_statusText(status)}.'),
+        backgroundColor: AppTheme.successDark,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
-    final startupProfile = appState.startupProfile;
-    final startupApplications = startupProfile != null
-        ? appState.getApplicationsForStartup(startupProfile.id)
-        : <Application>[];
-    final applications = startupApplications.isNotEmpty
-        ? startupApplications
-        : appState.applications;
-    final guildApplications = startupProfile != null
-        ? appState.getGuildApplicationsForStartup(startupProfile.id)
-        : <GuildApplication>[];
-    final skillsForFilters = startupProfile?.requiredSkills ?? [];
+    final startup = appState.startupProfile;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBody: true,
-      bottomNavigationBar: XPBottomNavBar(
-        currentIndex: _bottomNavIndex,
-        onTap: (index) {
-          if (index == 2) {
-            context.pushNamed('startupProfile');
-          } else {
-            setState(() => _bottomNavIndex = index);
-          }
-        },
-        items: const [
-          XPBottomNavItem(
-            label: 'Talent',
-            icon: Icons.people_outline_rounded,
-            activeIcon: Icons.people_rounded,
+    if (startup == null) {
+      return XPPageScaffold(
+        title: 'Startup dashboard',
+        subtitle: 'Finish setup first',
+        compact: true,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.page),
+            child: XPEmptyState(
+              icon: Icons.business_center_outlined,
+              title: 'Finish your startup setup',
+              message:
+                  'Add your company details, website, and at least one mission before reviewing talent.',
+              actionLabel: 'Complete setup',
+              onAction: () => context.goNamed('startupSetup'),
+            ),
           ),
-          XPBottomNavItem(
-            label: 'Learners',
-            icon: Icons.inbox_outlined,
-            activeIcon: Icons.inbox_rounded,
+        ),
+      );
+    }
+
+    final applications = appState.getApplicationsForStartup(startup.id);
+    final students = appState.students.where((student) {
+      if (_skillFilter != null && !student.skills.contains(_skillFilter)) {
+        return false;
+      }
+      final query = _searchController.text.trim().toLowerCase();
+      if (query.isEmpty) return true;
+      final haystack = [
+        student.name,
+        student.education ?? '',
+        student.bio ?? '',
+        ...student.skills,
+      ].join(' ').toLowerCase();
+      return haystack.contains(query);
+    }).toList();
+
+    final availableSkills = appState.students
+        .expand((student) => student.skills)
+        .toSet()
+        .toList()
+      ..sort();
+
+    return XPPageScaffold(
+      title: startup.companyName,
+      subtitle: 'Review applicants and browse verified student profiles.',
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          XPHeaderButton(
+            icon: Icons.badge_outlined,
+            onTap: () => context.goNamed('startupProfile'),
           ),
-          XPBottomNavItem(
-            label: 'Profile',
-            icon: Icons.business_outlined,
-            activeIcon: Icons.business_rounded,
-          ),
+          if (appState.isAdmin) ...[
+            const SizedBox(width: AppSpacing.sm),
+            XPHeaderButton(
+              icon: Icons.admin_panel_settings_outlined,
+              onTap: () => context.goNamed('admin'),
+            ),
+          ],
         ],
       ),
+<<<<<<< Updated upstream
       body: XPScene(
         child: SafeArea(
           child: Column(
@@ -581,463 +516,323 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                       ),
               ),
             ],
+=======
+      body: RefreshIndicator(
+        onRefresh: appState.refreshSession,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            AppSpacing.md,
+            AppSpacing.page,
+            AppSpacing.page,
+>>>>>>> Stashed changes
           ),
+          children: [
+            XPSection(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${applications.length} applicant records, ${appState.missions.where((mission) => mission.startupId == startup.id).length} active missions.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment<int>(
+                        value: 0,
+                        icon: Icon(Icons.inbox_outlined),
+                        label: Text('Applicants'),
+                      ),
+                      ButtonSegment<int>(
+                        value: 1,
+                        icon: Icon(Icons.search_rounded),
+                        label: Text('Talent'),
+                      ),
+                    ],
+                    selected: {_segment},
+                    onSelectionChanged: (selection) {
+                      setState(() => _segment = selection.first);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  TextField(
+                    controller: _searchController,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText: _segment == 0
+                          ? 'Search applicants'
+                          : 'Search students',
+                      hintText: 'Name, education, or skill',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  DropdownButtonFormField<String>(
+                    initialValue: _skillFilter,
+                    decoration: const InputDecoration(
+                      labelText: 'Filter by skill',
+                    ),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('All skills'),
+                      ),
+                      ...availableSkills.map(
+                        (skill) => DropdownMenuItem<String>(
+                          value: skill,
+                          child: Text(skill),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) => setState(() => _skillFilter = value),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            if (_segment == 0)
+              _ApplicantsView(
+                applications: applications.where((application) {
+                  final query = _searchController.text.trim().toLowerCase();
+                  final skillPass = _skillFilter == null ||
+                      (appState
+                              .getStudentById(application.studentId)
+                              ?.skills
+                              .contains(_skillFilter) ??
+                          false);
+                  if (!skillPass) return false;
+                  if (query.isEmpty) return true;
+                  final haystack = [
+                    application.studentName,
+                    application.roleTitle ?? '',
+                    application.startupName,
+                  ].join(' ').toLowerCase();
+                  return haystack.contains(query);
+                }).toList(),
+                statusText: _statusText,
+                statusColor: _statusColor,
+                onRequestInterview: _requestInterview,
+                onFeedback: _showFeedbackSheet,
+                onStatusChange: _changeStatus,
+              )
+            else
+              _TalentView(students: students),
+          ],
         ),
       ),
     );
   }
 }
 
-class _BrowseStudentsTab extends StatelessWidget {
-  const _BrowseStudentsTab({
-    required this.students,
-    required this.startupSkills,
+class _ApplicantsView extends StatelessWidget {
+  const _ApplicantsView({
+    required this.applications,
+    required this.statusText,
+    required this.statusColor,
+    required this.onRequestInterview,
+    required this.onFeedback,
+    required this.onStatusChange,
   });
 
-  final List<StudentProfile> students;
-  final List<String> startupSkills;
+  final List<Application> applications;
+  final String Function(ApplicationStatus) statusText;
+  final Color Function(ApplicationStatus) statusColor;
+  final Future<void> Function(Application) onRequestInterview;
+  final Future<void> Function(Application) onFeedback;
+  final Future<void> Function(Application, ApplicationStatus) onStatusChange;
 
   @override
   Widget build(BuildContext context) {
-    if (students.isEmpty) {
-      return ListView(
-        padding: const EdgeInsets.all(AppSpacing.page),
-        children: [
-          XPSection(
-            child: Column(
-              children: [
-                Container(
-                  width: 92,
-                  height: 92,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGlowGradient,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: AppTheme.softGlowShadow,
-                  ),
-                  child: const Icon(
-                    Icons.person_search_rounded,
-                    size: 36,
-                    color: AppTheme.surface,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'No students match this filter',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ],
-            ),
-          ),
-        ],
+    if (applications.isEmpty) {
+      return const XPEmptyState(
+        icon: Icons.inbox_outlined,
+        title: 'No applicants yet',
+        message:
+            'New applications will appear here once students apply to your live missions.',
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.page,
-        0,
-        AppSpacing.page,
-        120,
-      ),
-      itemCount: students.length,
-      itemBuilder: (context, index) {
-        final student = students[index];
-        final matchedSkills = student.skills
-            .where((skill) => startupSkills.contains(skill))
-            .toList();
+    return Column(
+      children: applications.map((application) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-          child: XPGlassPanel(
-            onTap: () => context.pushNamed(
-              'studentDetail',
-              pathParameters: {'id': student.id},
-            ),
-            backgroundColor: AppTheme.surface.withValues(alpha: 0.78),
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: XPCard(
+            elevated: true,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    XPAvatar(initial: student.name[0]),
-                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  student.name,
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              XPBadge(
-                                label: '${student.availabilityHours.round()} h/w',
-                                icon: Icons.schedule_rounded,
-                              ),
-                              const SizedBox(width: AppSpacing.xs),
-                              XPBadge(
-                                label: '${student.xpPoints} XP',
-                                icon: Icons.auto_awesome_rounded,
-                                color: AppTheme.primarySoft,
-                              ),
-                            ],
+                          Text(
+                            application.studentName,
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
-                          if (student.education?.isNotEmpty == true) ...[
-                            const SizedBox(height: AppSpacing.xxs),
-                            Text(
-                              student.education!,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            application.roleTitle ?? 'Mission application',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         ],
                       ),
                     ),
+                    XPBadge(
+                      label: statusText(application.status),
+                      color: statusColor(application.status).withValues(alpha: 0.14),
+                      textColor: statusColor(application.status),
+                    ),
                   ],
                 ),
-                if (student.bio?.isNotEmpty == true) ...[
-                  const SizedBox(height: AppSpacing.sm),
+                if ((application.message ?? '').isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
                   Text(
-                    student.bio!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    application.message!,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.lg),
                 Wrap(
                   spacing: AppSpacing.sm,
                   runSpacing: AppSpacing.sm,
-                  children: student.skills
-                      .take(6)
-                      .map(
-                        (skill) => XPSkillTag(
-                          label: skill,
-                          isMatched: matchedSkills.contains(skill),
+                  children: [
+                    XPOutlinedButton(
+                      label: 'View profile',
+                      size: XPButtonSize.small,
+                      expand: false,
+                      onPressed: () => context.pushNamed(
+                        'studentDetail',
+                        pathParameters: {'id': application.studentId},
+                      ),
+                    ),
+                    if (application.status == ApplicationStatus.pending)
+                      XPOutlinedButton(
+                        label: 'Request AI interview',
+                        size: XPButtonSize.small,
+                        expand: false,
+                        onPressed: () => onRequestInterview(application),
+                      ),
+                    if (application.status != ApplicationStatus.accepted &&
+                        application.status != ApplicationStatus.completed)
+                      XPButton(
+                        label: 'Accept',
+                        size: XPButtonSize.small,
+                        expand: false,
+                        onPressed: () => onStatusChange(
+                          application,
+                          ApplicationStatus.accepted,
                         ),
-                      )
-                      .toList(),
+                      ),
+                    if (application.status == ApplicationStatus.accepted)
+                      XPButton(
+                        label: 'Mark complete',
+                        size: XPButtonSize.small,
+                        expand: false,
+                        onPressed: () => onStatusChange(
+                          application,
+                          ApplicationStatus.completed,
+                        ),
+                      ),
+                    XPOutlinedButton(
+                      label: 'Feedback',
+                      size: XPButtonSize.small,
+                      expand: false,
+                      onPressed: () => onFeedback(application),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         );
-      },
+      }).toList(),
     );
   }
 }
 
-class _ApplicationsTab extends StatelessWidget {
-  const _ApplicationsTab({
-    required this.appState,
-    required this.applications,
-    required this.guildApplications,
-    required this.statusColor,
-    required this.statusLabel,
-    required this.statusProgress,
-    required this.onMarkCompleted,
-    required this.onLeaveFeedback,
-  });
+class _TalentView extends StatelessWidget {
+  const _TalentView({required this.students});
 
-  final AppState appState;
-  final List<Application> applications;
-  final List<GuildApplication> guildApplications;
-  final Color Function(ApplicationStatus status) statusColor;
-  final String Function(ApplicationStatus status) statusLabel;
-  final double Function(ApplicationStatus status) statusProgress;
-  final ValueChanged<Application> onMarkCompleted;
-  final ValueChanged<Application> onLeaveFeedback;
+  final List<StudentProfile> students;
 
   @override
   Widget build(BuildContext context) {
-    if (applications.isEmpty && guildApplications.isEmpty) {
-      return ListView(
-        padding: const EdgeInsets.all(AppSpacing.page),
-        children: [
-          XPSection(
-            child: Column(
-              children: [
-                Container(
-                  width: 92,
-                  height: 92,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGlowGradient,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: AppTheme.softGlowShadow,
-                  ),
-                  child: const Icon(
-                    Icons.inbox_outlined,
-                    size: 36,
-                    color: AppTheme.surface,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'No learner applications yet',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ],
-            ),
-          ),
-        ],
+    if (students.isEmpty) {
+      return const XPEmptyState(
+        icon: Icons.group_outlined,
+        title: 'No student profiles match',
+        message: 'Clear the current filters or wait for more profiles to be completed.',
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.page,
-        0,
-        AppSpacing.page,
-        120,
-      ),
-      children: [
-        ...applications.map((application) {
-          final canMarkCompleted =
-              application.status != ApplicationStatus.completed;
-          final interview = appState.getInterviewForApplication(application.id);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-            child: XPApplicationStatusCard(
-              title: application.studentName,
-              subtitle: application.roleTitle ?? 'Mission application',
-              statusLabel: statusLabel(application.status),
-              statusColor: statusColor(application.status),
-              progress: statusProgress(application.status),
-              summary: application.message?.isNotEmpty == true
-                  ? application.message!
-                  : 'Open the learner profile, leave feedback, or move this mission forward.',
-              trailing: Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  if (interview != null)
-                    XPBadge(
-                      label: interview.status == AiInterviewStatus.completed
-                          ? 'AI interview complete'
-                          : interview.status == AiInterviewStatus.inProgress
-                              ? 'AI interview live'
-                              : 'AI interview requested',
-                      icon: interview.status == AiInterviewStatus.completed
-                          ? Icons.verified_rounded
-                          : Icons.record_voice_over_rounded,
-                      color: interview.status == AiInterviewStatus.completed
-                          ? AppTheme.primarySoft
-                          : AppTheme.surface.withValues(alpha: 0.72),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 980 ? 2 : 1;
+        final itemWidth =
+            (constraints.maxWidth - ((columns - 1) * AppSpacing.lg)) / columns;
+
+        return Wrap(
+          spacing: AppSpacing.lg,
+          runSpacing: AppSpacing.lg,
+          children: students.map((student) {
+            return SizedBox(
+              width: itemWidth,
+              child: XPCard(
+                elevated: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      student.name,
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                  if (application.reflectionDid?.isNotEmpty == true ||
-                      application.reflectionLearned?.isNotEmpty == true)
-                    XPBadge(
-                      label: 'Reflection submitted',
-                      icon: Icons.auto_stories_rounded,
-                      color: AppTheme.primarySoft,
-                    ),
-                ],
-              ),
-              footer: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (interview == null) ...[
-                    XPContainer(
-                      color: AppTheme.primarySoft,
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.record_voice_over_rounded,
-                            color: AppTheme.primaryDark,
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Text(
-                              'Trigger a short AI interview before manual review.',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          XPButton(
-                            label: 'Request',
-                            icon: Icons.auto_awesome_rounded,
-                            expand: false,
-                            size: XPButtonSize.small,
-                            onPressed: () => appState.requestAiInterview(
-                              application.id,
-                            ),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      student.education ?? 'Student',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: AppSpacing.md),
-                  ] else if (interview.status == AiInterviewStatus.completed) ...[
-                    XPContainer(
-                      color: AppTheme.primarySoft,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'AI interview summary',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const Spacer(),
-                              XPBadge(
-                                label: interview.recommendation == null
-                                    ? 'Ready'
-                                    : AiInterviewService.recommendationLabel(
-                                        interview.recommendation!,
-                                      ),
-                                color: AppTheme.primaryDeep,
-                                textColor: AppTheme.surface,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: [
-                              XPBadge(
-                                label:
-                                    'Communication ${interview.communicationScore ?? 0}',
-                              ),
-                              XPBadge(
-                                label:
-                                    'Confidence ${interview.confidenceScore ?? 0}',
-                              ),
-                              XPBadge(
-                                label:
-                                    'Relevance ${interview.relevanceScore ?? 0}',
-                              ),
-                            ],
-                          ),
-                          if (interview.summary?.isNotEmpty == true) ...[
-                            const SizedBox(height: AppSpacing.sm),
-                            Text(
-                              interview.summary!,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ],
-                      ),
+                    Text(
+                      student.bio ?? 'No bio added yet.',
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: AppSpacing.md),
-                  ],
-                  Row(
-                    children: [
-                      Expanded(
-                        child: XPOutlinedButton(
-                          label: 'Feedback',
-                          icon: Icons.feedback_outlined,
-                          size: XPButtonSize.medium,
-                          onPressed: () => onLeaveFeedback(application),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: XPButton(
-                          label: canMarkCompleted ? 'Finish' : 'Done',
-                          icon: canMarkCompleted
-                              ? Icons.check_circle_outline_rounded
-                              : Icons.check_circle_rounded,
-                          size: XPButtonSize.medium,
-                          onPressed: canMarkCompleted
-                              ? () => onMarkCompleted(application)
-                              : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-        if (guildApplications.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
-          XPSection(
-            title: 'Guild applications',
-            subtitle:
-                'Review cross-functional team submissions alongside individual learners.',
-            child: Column(
-              children: guildApplications.map((guildApplication) {
-                final guild = appState.getGuildById(guildApplication.guildId);
-                final members = appState.getGuildMembers(guildApplication.guildId);
-                if (guild == null) {
-                  return const SizedBox.shrink();
-                }
-                final role = appState.getStartupRole(
-                  guildApplication.startupId,
-                  guildApplication.missionTitle,
-                );
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: GuildPreviewCard(
-                    guild: guild,
-                    members: members,
-                    activeMissions: appState.getActiveGuildMissionCount(guild.id),
-                    footer: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: student.skills
+                          .take(5)
+                          .map((skill) => XPBadge(label: skill))
+                          .toList(),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
                       children: [
-                        if (role?.teamMissionConfig != null) ...[
-                          TeamMissionHighlights(
-                            config: role!.teamMissionConfig!,
-                            showOutcome: false,
+                        Expanded(
+                          child: XPOutlinedButton(
+                            label: 'View profile',
+                            size: XPButtonSize.small,
+                            onPressed: () => context.pushNamed(
+                              'studentDetail',
+                              pathParameters: {'id': student.id},
+                            ),
                           ),
-                          const SizedBox(height: AppSpacing.sm),
-                        ],
-                        Text(
-                          '${guildApplication.missionTitle} • ${guildApplication.startupName}',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          guildApplication.message,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: XPOutlinedButton(
-                                label: 'Advance',
-                                icon: Icons.trending_up_rounded,
-                                size: XPButtonSize.medium,
-                                onPressed: () => appState.advanceGuildApplication(
-                                  guildApplication.id,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: XPButton(
-                                label: guildApplication.status ==
-                                        ApplicationStatus.completed
-                                    ? 'Completed'
-                                    : 'Complete',
-                                icon: Icons.check_circle_outline_rounded,
-                                size: XPButtonSize.medium,
-                                onPressed: guildApplication.status ==
-                                        ApplicationStatus.completed
-                                    ? null
-                                    : () => appState.completeGuildApplication(
-                                          guildApplication.id,
-                                        ),
-                              ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ],
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

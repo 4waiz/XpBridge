@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xpbridge/app.dart';
+import 'package:xpbridge/config/env_loader.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+  final config = await EnvLoader.load();
 
   await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL'] ?? '',
-    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    url: config.supabaseUrl,
+    anonKey: config.supabaseAnonKey,
   );
 
   runApp(const XPBridgeApp());
