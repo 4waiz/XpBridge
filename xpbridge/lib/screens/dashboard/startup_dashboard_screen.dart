@@ -194,7 +194,8 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                         runSpacing: AppSpacing.sm,
                         children: student.skills.map((skill) {
                           final selected = endorsedSkills.contains(skill);
-                          final canSelect = selected || endorsedSkills.length < 3;
+                          final canSelect =
+                              selected || endorsedSkills.length < 3;
                           return FilterChip(
                             label: Text(skill),
                             selected: selected,
@@ -281,7 +282,9 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${application.studentName} marked ${_statusText(status)}.'),
+        content: Text(
+          '${application.studentName} marked ${_statusText(status)}.',
+        ),
         backgroundColor: AppTheme.successDark,
       ),
     );
@@ -354,169 +357,6 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
           ],
         ],
       ),
-<<<<<<< Updated upstream
-      body: XPScene(
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.page,
-                  AppSpacing.md,
-                  AppSpacing.page,
-                  0,
-                ),
-                child: Column(
-                  children: [
-                    XPDashboardAppBar(
-                      eyebrow: startupProfile?.companyName ?? 'Your company',
-                      title: 'Talent',
-                      leading: XPAvatar(
-                        initial: (startupProfile?.companyName.isNotEmpty == true
-                            ? startupProfile!.companyName[0]
-                            : '?'),
-                      ),
-                      trailing: XPHeaderButton(
-                        icon: Icons.business_outlined,
-                        foregroundColor: AppTheme.surface,
-                        backgroundColor: AppTheme.surface.withValues(
-                          alpha: 0.14,
-                        ),
-                        onTap: () => context.pushNamed('startupProfile'),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    XPPremiumSearchBar(
-                      controller: _searchController,
-                      hintText: 'Search students, skills, or profiles',
-                      onChanged: (value) => setState(() => _query = value),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            onPressed: () => _showFiltersSheet(skillsForFilters),
-                            icon: const Icon(
-                              Icons.tune_rounded,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => context.pushNamed('startupAiChat'),
-                            icon: const Icon(
-                              Icons.auto_awesome_rounded,
-                              color: AppTheme.primaryDark,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    if (_bottomNavIndex == 0)
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            XPFilterChip(
-                              label: 'All skills',
-                              isSelected: _selectedSkill == null,
-                              onTap: () => setState(() => _selectedSkill = null),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            ...skillsForFilters
-                                .take(8)
-                                .map(
-                                  (skill) => Padding(
-                                    padding: const EdgeInsets.only(
-                                      right: AppSpacing.sm,
-                                    ),
-                                    child: XPFilterChip(
-                                      label: skill,
-                                      isSelected: _selectedSkill == skill,
-                                      onTap: () => setState(
-                                        () => _selectedSkill = skill,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Expanded(
-                child: _bottomNavIndex == 0
-                    ? StreamBuilder<List<Map<String, dynamic>>>(
-                        stream: SupabaseService.studentsStream(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                               ConnectionState.waiting &&
-                              !snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-
-                          final data = snapshot.data ?? [];
-                          final cloudStudents = data
-                              .map((m) => StudentProfile.fromMap(m))
-                              .toList();
-
-                          // Use cloud students only for demo fresh start
-                          final students = cloudStudents;
-
-                          return _BrowseStudentsTab(
-                            students: _applyFilters(students),
-                            startupSkills: skillsForFilters,
-                          );
-                        },
-                      )
-                    : StreamBuilder<List<Map<String, dynamic>>>(
-                        stream: SupabaseService.applicationsStreamForStartup(
-                          startupProfile?.id ?? '',
-                        ),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                               ConnectionState.waiting &&
-                              !snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-
-                          final data = snapshot.data ?? [];
-                          final cloudApps = data
-                              .map((m) => Application.fromMap(m))
-                              .toList();
-
-                          // Merge with local state to ensure no UI flicker
-                          final localApps = startupProfile != null
-                              ? appState.getApplicationsForStartup(startupProfile.id)
-                              : <Application>[];
-                          final merged = [...cloudApps];
-                          for (final local in localApps) {
-                            if (!merged.any((a) => a.id == local.id)) {
-                              merged.add(local);
-                            }
-                          }
-                          merged.sort((a, b) => b.appliedAt.compareTo(a.appliedAt));
-
-                          return _ApplicationsTab(
-                            appState: appState,
-                            applications: merged,
-                            guildApplications: guildApplications,
-                            statusColor: _statusColor,
-                            statusLabel: _statusLabel,
-                            statusProgress: _statusProgress,
-                            onMarkCompleted: _markApplicationCompleted,
-                            onLeaveFeedback: _showFeedbackSheet,
-                          );
-                        },
-                      ),
-              ),
-            ],
-=======
       body: RefreshIndicator(
         onRefresh: appState.refreshSession,
         child: ListView(
@@ -525,7 +365,6 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
             AppSpacing.md,
             AppSpacing.page,
             AppSpacing.page,
->>>>>>> Stashed changes
           ),
           children: [
             XPSection(
@@ -568,18 +407,18 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  DropdownButtonFormField<String>(
+                  DropdownButtonFormField<String?>(
                     initialValue: _skillFilter,
                     decoration: const InputDecoration(
                       labelText: 'Filter by skill',
                     ),
                     items: [
-                      const DropdownMenuItem<String>(
+                      const DropdownMenuItem<String?>(
                         value: null,
                         child: Text('All skills'),
                       ),
                       ...availableSkills.map(
-                        (skill) => DropdownMenuItem<String>(
+                        (skill) => DropdownMenuItem<String?>(
                           value: skill,
                           child: Text(skill),
                         ),
@@ -683,7 +522,8 @@ class _ApplicantsView extends StatelessWidget {
                     ),
                     XPBadge(
                       label: statusText(application.status),
-                      color: statusColor(application.status).withValues(alpha: 0.14),
+                      color: statusColor(application.status)
+                          .withValues(alpha: 0.14),
                       textColor: statusColor(application.status),
                     ),
                   ],
@@ -765,7 +605,8 @@ class _TalentView extends StatelessWidget {
       return const XPEmptyState(
         icon: Icons.group_outlined,
         title: 'No student profiles match',
-        message: 'Clear the current filters or wait for more profiles to be completed.',
+        message:
+            'Clear the current filters or wait for more profiles to be completed.',
       );
     }
 

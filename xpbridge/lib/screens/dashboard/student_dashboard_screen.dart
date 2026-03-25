@@ -22,143 +22,9 @@ class StudentDashboardScreen extends StatefulWidget {
 }
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
-<<<<<<< Updated upstream
-  final TextEditingController _searchController = TextEditingController();
-  String? _selectedIndustry;
-  String? _selectedSkill;
-  String _query = '';
-  bool _feedExpanded = false;
-
-  void _showApplySheet(
-    BuildContext context, {
-    required Map<String, dynamic> mission,
-    required String title,
-  }) {
-    final appState = AppStateScope.of(context);
-    final profile = appState.studentProfile;
-
-    if (profile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please complete your profile first (add your name and bio).'),
-          backgroundColor: AppTheme.error,
-          action: SnackBarAction(
-            label: 'Go to Profile',
-            textColor: Colors.white,
-            onPressed: () => context.pushNamed('studentProfile'),
-          ),
-        ),
-      );
-      return;
-    }
-
-    final messageController = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => StatefulBuilder(
-        builder: (context, setModalState) => XPPremiumSheet(
-          title: 'Apply for $title',
-          subtitle: 'Share why you are the right fit for this mission.',
-          footer: XPButton(
-            label: 'Submit application',
-            icon: Icons.send_rounded,
-            onPressed: () async {
-              final application = Application(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                studentId: profile.id,
-                startupId: mission['startup_id'] ?? '',
-                studentName: profile.name,
-                startupName: mission['startup_name'] ?? 'Startup',
-                roleTitle: title,
-                status: ApplicationStatus.pending,
-                message: messageController.text.trim(),
-                appliedAt: DateTime.now(),
-              );
-
-              // This updates local state AND pushes to Supabase
-              await appState.addApplication(application);
-
-              if (sheetCtx.mounted) Navigator.pop(sheetCtx);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Applied for $title! The startup will see your application instantly.'),
-                    backgroundColor: AppTheme.successDark,
-                  ),
-                );
-              }
-            },
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              XPTextField(
-                controller: messageController,
-                labelText: 'Message',
-                hintText: 'Share your background and interest...',
-                maxLines: 4,
-                prefixIcon: Icons.chat_bubble_outline_rounded,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<StartupProfile> _sortedStartups(List<String> studentSkills) {
-    final startups = [..._filteredStartups];
-    startups.sort((a, b) {
-      final aMatch = a.requiredSkills
-          .where((skill) => studentSkills.contains(skill))
-          .length;
-      final bMatch = b.requiredSkills
-          .where((skill) => studentSkills.contains(skill))
-          .length;
-      return bMatch.compareTo(aMatch);
-    });
-    return startups;
-  }
-
-  List<StartupProfile> get _filteredStartups {
-    var startups = <StartupProfile>[]; // No dummy fallback for demo fresh start
-
-    if (_selectedIndustry != null) {
-      startups = startups
-          .where((startup) => startup.industry == _selectedIndustry)
-          .toList();
-    }
-
-    if (_selectedSkill != null) {
-      startups = startups
-          .where((startup) => startup.requiredSkills.contains(_selectedSkill))
-          .toList();
-    }
-
-    if (_query.trim().isNotEmpty) {
-      final query = _query.trim().toLowerCase();
-      startups = startups.where((startup) {
-        final haystack = [
-          startup.companyName,
-          startup.description,
-          startup.industry,
-          ...startup.requiredSkills,
-          ...startup.openRoles.map((role) => role.title),
-        ].join(' ').toLowerCase();
-        return haystack.contains(query);
-      }).toList();
-    }
-
-    return startups;
-  }
-=======
   final _searchController = TextEditingController();
   String? _industryFilter;
   String? _skillFilter;
->>>>>>> Stashed changes
 
   @override
   void dispose() {
@@ -328,7 +194,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       if (_industryFilter != null && mission.industry != _industryFilter) {
         return false;
       }
-      if (_skillFilter != null && !mission.requiredSkills.contains(_skillFilter)) {
+      if (_skillFilter != null &&
+          !mission.requiredSkills.contains(_skillFilter)) {
         return false;
       }
       final query = _searchController.text.trim().toLowerCase();
@@ -410,44 +277,46 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: DropdownButtonFormField<String>(
+                        child: DropdownButtonFormField<String?>(
                           initialValue: _industryFilter,
                           decoration: const InputDecoration(
                             labelText: 'Industry',
                           ),
                           items: [
-                            const DropdownMenuItem<String>(
+                            const DropdownMenuItem<String?>(
                               value: null,
                               child: Text('All industries'),
                             ),
                             ...industries.map(
-                              (industry) => DropdownMenuItem<String>(
+                              (industry) => DropdownMenuItem<String?>(
                                 value: industry,
                                 child: Text(industry),
                               ),
                             ),
                           ],
-                          onChanged: (value) => setState(() => _industryFilter = value),
+                          onChanged: (value) =>
+                              setState(() => _industryFilter = value),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
-                        child: DropdownButtonFormField<String>(
+                        child: DropdownButtonFormField<String?>(
                           initialValue: _skillFilter,
                           decoration: const InputDecoration(labelText: 'Skill'),
                           items: [
-                            const DropdownMenuItem<String>(
+                            const DropdownMenuItem<String?>(
                               value: null,
                               child: Text('All skills'),
                             ),
                             ...skills.map(
-                              (skill) => DropdownMenuItem<String>(
+                              (skill) => DropdownMenuItem<String?>(
                                 value: skill,
                                 child: Text(skill),
                               ),
                             ),
                           ],
-                          onChanged: (value) => setState(() => _skillFilter = value),
+                          onChanged: (value) =>
+                              setState(() => _skillFilter = value),
                         ),
                       ),
                     ],
@@ -501,11 +370,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                       children: [
                                         Text(
                                           mission.startupName,
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.labelLarge?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelLarge
+                                              ?.copyWith(
+                                                color: AppTheme.textSecondary,
+                                              ),
                                         ),
                                         const SizedBox(height: AppSpacing.xs),
                                         Text(
@@ -545,7 +415,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                         : '${mission.requiredSkills.length} skills',
                                   ),
                                   if (mission.durationWeeks != null)
-                                    XPBadge(label: '${mission.durationWeeks} weeks'),
+                                    XPBadge(
+                                      label: '${mission.durationWeeks} weeks',
+                                    ),
                                 ],
                               ),
                               if (mission.requiredSkills.isNotEmpty) ...[
@@ -575,7 +447,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                       size: XPButtonSize.small,
                                       onPressed: () => context.pushNamed(
                                         'startupDetail',
-                                        pathParameters: {'id': mission.startupId},
+                                        pathParameters: {
+                                          'id': mission.startupId,
+                                        },
                                       ),
                                     ),
                                   ),
