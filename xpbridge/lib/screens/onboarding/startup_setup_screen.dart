@@ -349,27 +349,57 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                             actionLabel: '${_requiredSkills.length}/4',
                           ),
                           const SizedBox(height: AppSpacing.lg),
-                          Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: DummyData.skillPool.map((skill) {
-                              return XPChoiceChip(
-                                label: skill,
-                                selected: _requiredSkills.contains(skill),
-                                onSelected: (selected) {
-                                  setState(() {
-                                    if (selected) {
-                                      if (_requiredSkills.length < 4) {
-                                        _requiredSkills.add(skill);
-                                      }
-                                    } else {
-                                      _requiredSkills.remove(skill);
-                                    }
-                                  });
-                                },
-                              );
-                            }).toList(),
+                          DropdownButtonFormField<String>(
+                            key: ValueKey(
+                              'required-skills-${_requiredSkills.join("|")}',
+                            ),
+                            initialValue: null,
+                            decoration: const InputDecoration(
+                              labelText: 'Add a skill',
+                              hintText: 'Choose a required skill',
+                              prefixIcon: Icon(Icons.auto_awesome_outlined),
+                            ),
+                            items: DummyData.skillPool
+                                .where((skill) => !_requiredSkills.contains(skill))
+                                .map((skill) {
+                                  return DropdownMenuItem<String>(
+                                    value: skill,
+                                    child: Text(skill),
+                                  );
+                                })
+                                .toList(),
+                            onChanged: _requiredSkills.length >= 4
+                                ? null
+                                : (value) {
+                                    if (value == null) return;
+                                    setState(() {
+                                      _requiredSkills.add(value);
+                                    });
+                                  },
                           ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            _requiredSkills.length >= 4
+                                ? 'Maximum 4 skills selected.'
+                                : 'Use the dropdown to add up to 4 skills.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (_requiredSkills.isNotEmpty) ...[
+                            const SizedBox(height: AppSpacing.lg),
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: _requiredSkills.map((skill) {
+                                return XPSkillTag(
+                                  label: skill,
+                                  isMatched: true,
+                                  onTap: () => setState(() {
+                                    _requiredSkills.remove(skill);
+                                  }),
+                                );
+                              }).toList(),
+                            ),
+                          ],
                         ],
                       ),
                     ),
