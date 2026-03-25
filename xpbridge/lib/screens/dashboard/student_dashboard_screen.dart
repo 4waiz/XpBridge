@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,6 +16,7 @@ import '../../widgets/xp_chip.dart';
 import '../../widgets/xp_navigation.dart';
 import '../../widgets/xp_premium.dart';
 import '../../widgets/xp_section_title.dart';
+import '../../services/supabase_service.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key});
@@ -835,6 +837,157 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   }),
                 ],
               ],
+              // ── Live Opportunities from Supabase (real-time) ──
+              const SizedBox(height: AppSpacing.xl),
+              const XPSectionTitle(
+                title: 'Live opportunities',
+                subtitle:
+                    'Posted by startups right now — updates in real time.',
+              ),
+              const SizedBox(height: AppSpacing.md),
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: SupabaseService.missionsStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(AppSpacing.xl),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+                  if (snapshot.hasError ||
+                      !snapshot.hasData ||
+                      snapshot.data!.isEmpty) {
+                    return XPGlassPanel(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      backgroundColor:
+                          AppTheme.surface.withValues(alpha: 0.52),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.cloud_off_rounded,
+                            color: AppTheme.textSecondary,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              snapshot.hasError
+                                  ? 'Could not load live missions. Check your connection.'
+                                  : 'No live missions yet — new ones will appear instantly.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  final missions = snapshot.data!;
+                  return Column(
+                    children: missions.take(6).map((mission) {
+                      final title =
+                          mission['title'] as String? ?? 'Untitled';
+                      final desc =
+                          mission['description'] as String? ?? '';
+                      final skills = List<String>.from(
+                        mission['required_skills'] ?? [],
+                      );
+                      final hours =
+                          mission['estimated_hours'] as int?;
+                      final commitment =
+                          mission['commitment'] as String?;
+                      return Padding(
+                        padding: const EdgeInsets.only(
+                          bottom: AppSpacing.md,
+                        ),
+                        child: XPCard(
+                          backgroundColor:
+                              AppTheme.surface.withValues(alpha: 0.56),
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.successDark
+                                          .withValues(alpha: 0.12),
+                                      borderRadius:
+                                          BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.wifi_tethering_rounded,
+                                      color: AppTheme.successDark,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Expanded(
+                                    child: Text(
+                                      title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge,
+                                    ),
+                                  ),
+                                  if (hours != null)
+                                    XPBadge(
+                                      label: '${hours}h',
+                                      color: AppTheme.primaryDeep,
+                                      textColor: AppTheme.surface,
+                                    ),
+                                ],
+                              ),
+                              if (commitment != null &&
+                                  commitment.isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.xs),
+                                XPBadge(
+                                  label: commitment,
+                                  icon: Icons.schedule_rounded,
+                                ),
+                              ],
+                              if (desc.isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(
+                                  desc,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall,
+                                ),
+                              ],
+                              if (skills.isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                Wrap(
+                                  spacing: AppSpacing.sm,
+                                  runSpacing: AppSpacing.sm,
+                                  children: skills
+                                      .take(4)
+                                      .map(
+                                        (skill) => XPSkillTag(
+                                          label: skill,
+                                          isMatched: studentSkills
+                                              .contains(skill),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
               if (!feedOptOut && feedEvents.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.sm),
                 XPSection(

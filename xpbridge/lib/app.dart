@@ -20,6 +20,7 @@ import 'models/startup_role.dart';
 import 'services/ai_interview_service.dart';
 import 'services/badge_service.dart';
 import 'services/guild_service.dart';
+import 'services/supabase_service.dart';
 
 enum UserRole { student, startup }
 
@@ -588,6 +589,13 @@ class AppState extends ChangeNotifier {
     _refreshDerivedState();
     notifyListeners();
     await _persistApplications();
+
+    // Sync to Supabase
+    try {
+      await SupabaseService.submitApplication(application);
+    } catch (_) {
+      // Offline-safe: local save already succeeded
+    }
   }
 
   Future<void> updateApplicationStatus(
@@ -612,6 +620,15 @@ class AppState extends ChangeNotifier {
     _refreshDerivedState();
     notifyListeners();
     await _persistApplications();
+
+    // Sync status to Supabase
+    try {
+      await SupabaseService.updateApplicationStatus(
+        applicationId,
+        status.name,
+      );
+    } catch (_) {}
+
     if (status == ApplicationStatus.completed && updatedApplication != null) {
       _logEvent(
         'completion',
@@ -651,6 +668,22 @@ class AppState extends ChangeNotifier {
     _refreshDerivedState();
     notifyListeners();
     await _persistApplications();
+
+    // Sync reflection to Supabase
+    try {
+      await SupabaseService.updateApplicationReflection(
+        applicationId,
+        {
+          'reflection_did': did,
+          'reflection_learned': learned,
+          'skills_practiced': skillsPracticed,
+          'hours_spent': hoursSpent,
+          'deliverable_url': deliverableUrl,
+          'deliverable_type': deliverableType,
+        },
+      );
+    } catch (_) {}
+
     if (updatedApp != null) {
       _logEvent(
         'reflection',
@@ -688,6 +721,21 @@ class AppState extends ChangeNotifier {
     _refreshDerivedState();
     notifyListeners();
     await _persistApplications();
+
+    // Sync mentor feedback to Supabase
+    try {
+      await SupabaseService.updateApplicationFeedback(
+        applicationId,
+        {
+          'mentor_rating': rating,
+          'mentor_feedback_text': feedback,
+          'strengths': strengths,
+          'growth_areas': growthAreas,
+          'endorsed_skills': endorsedSkills,
+        },
+      );
+    } catch (_) {}
+
     if (updatedApp != null) {
       _logEvent(
         'feedback',

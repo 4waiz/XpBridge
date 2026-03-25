@@ -138,6 +138,34 @@ class Application {
     };
   }
 
+  /// Supabase-friendly map with snake_case keys
+  Map<String, dynamic> toSupabaseMap() {
+    return {
+      'student_id': studentId,
+      'startup_id': startupId,
+      'student_name': studentName,
+      'startup_name': startupName,
+      'role_title': roleTitle,
+      'status': status.name,
+      'message': message,
+      'applied_at': appliedAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+      'completed_at': completedAt?.toIso8601String(),
+      'reflection_did': reflectionDid,
+      'reflection_learned': reflectionLearned,
+      'skills_practiced': skillsPracticed,
+      'hours_spent': hoursSpent,
+      'deliverable_url': deliverableUrl,
+      'deliverable_type': deliverableType,
+      'mentor_rating': mentorRating,
+      'mentor_feedback_text': mentorFeedbackText,
+      'strengths': strengths,
+      'growth_areas': growthAreas,
+      'endorsed_skills': endorsedSkills,
+      'feedback_at': feedbackAt?.toIso8601String(),
+    };
+  }
+
   factory Application.fromMap(Map<String, dynamic> map) {
     ApplicationStatus parseStatus(dynamic value) {
       if (value is String) {
@@ -179,30 +207,36 @@ class Application {
       return null;
     }
 
+    // Support both camelCase (local) and snake_case (Supabase) keys
+    T? pick<T>(String camel, String snake) {
+      return (map[camel] ?? map[snake]) as T?;
+    }
+
     return Application(
-      id: map['id'] as String? ?? '',
-      studentId: map['studentId'] as String? ?? '',
-      startupId: map['startupId'] as String? ?? '',
-      studentName: map['studentName'] as String? ?? '',
-      startupName: map['startupName'] as String? ?? '',
-      roleTitle: map['roleTitle'] as String?,
+      id: (map['id'] as String?) ?? '',
+      studentId: pick<String>('studentId', 'student_id') ?? '',
+      startupId: pick<String>('startupId', 'startup_id') ?? '',
+      studentName: pick<String>('studentName', 'student_name') ?? '',
+      startupName: pick<String>('startupName', 'startup_name') ?? '',
+      roleTitle: pick<String>('roleTitle', 'role_title'),
       status: parseStatus(map['status']),
       message: map['message'] as String?,
-      appliedAt: parseDate(map['appliedAt']) ?? DateTime.now(),
-      updatedAt: parseDate(map['updatedAt']),
-      completedAt: parseDate(map['completedAt']),
-      reflectionDid: map['reflectionDid'] as String?,
-      reflectionLearned: map['reflectionLearned'] as String?,
-      skillsPracticed: stringList(map['skillsPracticed']),
-      hoursSpent: map['hoursSpent'] as int?,
-      deliverableUrl: map['deliverableUrl'] as String?,
-      deliverableType: map['deliverableType'] as String?,
-      mentorRating: map['mentorRating'] as int?,
-      mentorFeedbackText: map['mentorFeedbackText'] as String?,
-      strengths: stringList(map['strengths']),
-      growthAreas: stringList(map['growthAreas']),
-      endorsedSkills: stringList(map['endorsedSkills']),
-      feedbackAt: parseDate(map['feedbackAt']),
+      appliedAt: parseDate(pick('appliedAt', 'applied_at')) ?? DateTime.now(),
+      updatedAt: parseDate(pick('updatedAt', 'updated_at')),
+      completedAt: parseDate(pick('completedAt', 'completed_at')),
+      reflectionDid: pick<String>('reflectionDid', 'reflection_did'),
+      reflectionLearned: pick<String>('reflectionLearned', 'reflection_learned'),
+      skillsPracticed: stringList(pick('skillsPracticed', 'skills_practiced')),
+      hoursSpent: pick<int>('hoursSpent', 'hours_spent'),
+      deliverableUrl: pick<String>('deliverableUrl', 'deliverable_url'),
+      deliverableType: pick<String>('deliverableType', 'deliverable_type'),
+      mentorRating: pick<int>('mentorRating', 'mentor_rating'),
+      mentorFeedbackText: pick<String>('mentorFeedbackText', 'mentor_feedback_text'),
+      strengths: stringList(pick('strengths', 'strengths')),
+      growthAreas: stringList(pick('growthAreas', 'growth_areas')),
+      endorsedSkills: stringList(pick('endorsedSkills', 'endorsed_skills')),
+      feedbackAt: parseDate(pick('feedbackAt', 'feedback_at')),
     );
   }
 }
+

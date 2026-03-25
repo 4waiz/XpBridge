@@ -11,6 +11,7 @@ import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
 import '../../models/team_mission_config.dart';
 import '../../services/logo_image_service.dart';
+import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
@@ -203,6 +204,18 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
               );
               appState.saveStartupProfile(updated);
               await _persistRoles(updated.openRoles);
+
+              // Push to Supabase so students see it in real-time
+              try {
+                await SupabaseService.createMissionFromRole(
+                  startupId: profile.id,
+                  role: role,
+                  requiredSkills: profile.requiredSkills,
+                );
+              } catch (_) {
+                // Offline-safe: local save already succeeded
+              }
+
               if (ctx.mounted) {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
