@@ -43,8 +43,10 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _validateEmail(String? value) {
     final email = value?.trim() ?? '';
     if (email.isEmpty) return 'Email is required';
-    final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-    if (!regex.hasMatch(email)) return 'Enter a valid email address';
+    final regex = RegExp(r'^[^@]+@gmail\.com$');
+    if (!regex.hasMatch(email)) {
+      return 'Please use a real @gmail.com address';
+    }
     return null;
   }
 
@@ -53,6 +55,30 @@ class _SignupScreenState extends State<SignupScreen> {
     if (password.isEmpty) return 'Password is required';
     if (password.length < 8) return 'Use at least 8 characters';
     return null;
+  }
+
+  Future<void> _signUpWithGoogle() async {
+    if (_selectedRole == null) {
+      setState(() => _submitError = 'Select a role to continue.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _submitError = null;
+    });
+
+    try {
+      await SupabaseService.signInWithGoogle();
+      // Role handling will be needed in the post-login callback 
+      // or through standard profile syncing.
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _submit() async {
@@ -224,6 +250,12 @@ class _SignupScreenState extends State<SignupScreen> {
                             icon: Icons.arrow_forward_rounded,
                             loading: _isLoading,
                             onPressed: _isLoading ? null : _submit,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          XPGoogleButton(
+                            label: 'Sign up with Google',
+                            onPressed: _isLoading ? null : _signUpWithGoogle,
+                            loading: _isLoading,
                           ),
                         ],
                       ),

@@ -249,3 +249,30 @@ _ButtonStyleSpec _styleForSize(XPButtonSize size) {
       );
   }
 }
+
+class XPGoogleButton extends StatelessWidget {
+  const XPGoogleButton({
+    super.key,
+    required this.onPressed,
+    this.label = 'Continue with Google',
+    this.expand = true,
+    this.loading = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool expand;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return XPButton(
+      label: label,
+      onPressed: onPressed,
+      loading: loading,
+      expand: expand,
+      backgroundColor: Colors.white,
+      tonal: true, // Use tonal style for a lighter look
+    );
+  }
+}

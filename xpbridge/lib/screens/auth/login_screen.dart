@@ -33,14 +33,35 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _validateEmail(String? value) {
     final email = value?.trim() ?? '';
     if (email.isEmpty) return 'Email is required';
-    final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-    if (!regex.hasMatch(email)) return 'Enter a valid email address';
+    final regex = RegExp(r'^[^@]+@gmail\.com$');
+    if (!regex.hasMatch(email)) {
+      return 'Please use a real @gmail.com address';
+    }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if ((value ?? '').isEmpty) return 'Password is required';
     return null;
+  }
+
+  Future<void> _signInByGoogle() async {
+    setState(() {
+      _isLoading = true;
+      _submitError = null;
+    });
+
+    try {
+      await SupabaseService.signInWithGoogle();
+      // Supabase OAuth usually handles redirection. 
+      // The session refresh will happen after callback.
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _submit() async {
@@ -180,10 +201,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                           const SizedBox(height: AppSpacing.xl),
                           XPButton(
-                            label: 'Continue',
+                            label: 'Log in',
                             icon: Icons.arrow_forward_rounded,
                             loading: _isLoading,
                             onPressed: _isLoading ? null : _submit,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          XPGoogleButton(
+                            onPressed: _isLoading ? null : _signInByGoogle,
+                            loading: _isLoading,
                           ),
                           const SizedBox(height: AppSpacing.md),
                           Text(

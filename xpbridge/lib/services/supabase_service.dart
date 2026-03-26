@@ -36,7 +36,7 @@ class SupabaseService {
       throw XpServiceException(error.message);
     } catch (error) {
       if (error is XpServiceException) rethrow;
-      throw XpServiceException('Unexpected network error. Please try again.');
+      throw XpServiceException('Unexpected network error ($error). Please try again.');
     }
   }
 
@@ -76,6 +76,13 @@ class SupabaseService {
     return _run(
       () => client.auth.signInWithPassword(email: email, password: password),
     );
+  }
+
+  static Future<void> signInWithGoogle() {
+    return _run(() => client.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: 'io.supabase.xpbridge://login-callback',
+        ));
   }
 
   static Future<void> signOut() {
