@@ -123,6 +123,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         }
                       },
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    XPOutlinedButton(
+                      label: 'Go back',
+                      icon: Icons.arrow_back_rounded,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
                   ],
                 ),
               ),

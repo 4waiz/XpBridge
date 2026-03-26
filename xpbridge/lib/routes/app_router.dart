@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app.dart';
+import '../screens/admin/admin_preview_screen.dart';
 import '../screens/admin/admin_screen.dart';
 import '../screens/ai/ai_chat_screen.dart';
 import '../screens/applications/student_applications_screen.dart';
@@ -73,6 +74,7 @@ class AppRouter {
           path != '/student/setup' &&
           path != '/startup/setup' &&
           path != '/admin' &&
+          path != '/admin/preview' &&
           path != '/privacy-policy' &&
           path != '/delete-account') {
         return appState.defaultAuthenticatedLocation;
@@ -82,7 +84,8 @@ class AppRouter {
         return appState.defaultAuthenticatedLocation;
       }
 
-      if (!appState.isAdmin && path == '/admin') {
+      if (!appState.isAdmin &&
+          (path == '/admin' || path == '/admin/preview')) {
         return appState.defaultAuthenticatedLocation;
       }
 
@@ -204,6 +207,11 @@ class AppRouter {
         name: 'admin',
         path: '/admin',
         pageBuilder: (context, state) => _slide(const AdminScreen()),
+      ),
+      GoRoute(
+        name: 'adminPreview',
+        path: '/admin/preview',
+        pageBuilder: (context, state) => _slide(const AdminPreviewScreen()),
       ),
     ],
   );

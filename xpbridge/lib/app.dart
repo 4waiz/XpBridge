@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/app_config.dart';
+import 'data/dummy_data.dart';
 import 'models/ai_interview.dart';
 import 'models/application.dart';
 import 'models/event_log_entry.dart';
@@ -31,6 +32,7 @@ class AppState extends ChangeNotifier {
   bool _onboardingComplete = false;
   bool _isLoggedIn = false;
   bool _isAdmin = false;
+  UserRole? _adminPreviewRole;
   bool _requiresAccountCompletion = false;
   bool _xpFeedOptOut = false;
   String? _errorMessage;
@@ -60,16 +62,22 @@ class AppState extends ChangeNotifier {
   bool get xpFeedOptOut => _xpFeedOptOut;
   String? get errorMessage => _errorMessage;
   UserRole? get userRole => _userRole;
-  bool get isStudent => _userRole == UserRole.student;
-  bool get isStartup => _userRole == UserRole.startup;
+  bool get isPreviewingAsAdmin => _isAdmin && _adminPreviewRole != null;
+  UserRole? get activeRole => _adminPreviewRole ?? _userRole;
+  bool get isStudent => activeRole == UserRole.student;
+  bool get isStartup => activeRole == UserRole.startup;
 
-  StudentProfile? get studentProfile => _studentProfile;
-  StartupProfile? get startupProfile => _startupProfile;
-  List<StudentProfile> get students => _students;
-  List<StartupProfile> get startups => _startups;
-  List<Mission> get missions => _missions;
-  List<Application> get applications => _applications;
-  List<AiInterview> get aiInterviews => _aiInterviews;
+  StudentProfile? get studentProfile =>
+      isPreviewingAsAdmin && isStudent ? _previewStudentProfile : _studentProfile;
+  StartupProfile? get startupProfile =>
+      isPreviewingAsAdmin && isStartup ? _previewStartupProfile : _startupProfile;
+  List<StudentProfile> get students => isPreviewingAsAdmin ? _previewStudents : _students;
+  List<StartupProfile> get startups => isPreviewingAsAdmin ? _previewStartups : _startups;
+  List<Mission> get missions => isPreviewingAsAdmin ? _previewMissions : _missions;
+  List<Application> get applications =>
+      isPreviewingAsAdmin ? _previewApplications : _applications;
+  List<AiInterview> get aiInterviews =>
+      isPreviewingAsAdmin ? _previewAiInterviews : _aiInterviews;
   List<Guild> get guilds => _guilds;
   List<GuildApplication> get guildApplications => _guildApplications;
   List<SkillBadge> get skillBadges => _skillBadges;
@@ -79,12 +87,19 @@ class AppState extends ChangeNotifier {
 
   bool get needsProfileSetup {
     if (!_isLoggedIn) return false;
+    if (_isAdmin) return false;
     if (isStudent) return !_isStudentProfileComplete(_studentProfile);
     if (isStartup) return !_isStartupProfileComplete(_startupProfile);
     return false;
   }
 
   String get defaultAuthenticatedLocation {
+    if (isPreviewingAsAdmin) {
+      return isStudent ? '/student/dashboard' : '/startup/dashboard';
+    }
+    if (_isAdmin) {
+      return '/admin';
+    }
     if (needsProfileSetup) {
       return isStudent ? '/student/setup' : '/startup/setup';
     }
@@ -161,6 +176,7 @@ class AppState extends ChangeNotifier {
 
       _requiresAccountCompletion = false;
       _isLoggedIn = true;
+      _adminPreviewRole = null;
       final roleString = profileRecord['role'] as String? ?? 'student';
       _userRole = roleString == 'startup'
           ? UserRole.startup
@@ -293,19 +309,21 @@ class AppState extends ChangeNotifier {
   }
 
   List<StudentProfile> get allStudents {
-    final current = _studentProfile;
-    if (current == null) return List<StudentProfile>.from(_students);
-    return _students.any((item) => item.id == current.id)
-        ? List<StudentProfile>.from(_students)
-        : [current, ..._students];
+    final current = studentProfile;
+    final source = students;
+    if (current == null) return List<StudentProfile>.from(source);
+    return source.any((item) => item.id == current.id)
+        ? List<StudentProfile>.from(source)
+        : [current, ...source];
   }
 
   List<StartupProfile> get allStartups {
-    final current = _startupProfile;
-    if (current == null) return List<StartupProfile>.from(_startups);
-    return _startups.any((item) => item.id == current.id)
-        ? List<StartupProfile>.from(_startups)
-        : [current, ..._startups];
+    final current = startupProfile;
+    final source = startups;
+    if (current == null) return List<StartupProfile>.from(source);
+    return source.any((item) => item.id == current.id)
+        ? List<StartupProfile>.from(source)
+        : [current, ...source];
   }
 
   StudentProfile? getStudentById(String studentId) {
@@ -368,13 +386,13 @@ class AppState extends ChangeNotifier {
   List<SkillBadge> getBadgesForStudent(String studentId) => [];
 
   List<Application> getApplicationsForStudent(String studentId) {
-    return _applications
+    return applications
         .where((application) => application.studentId == studentId)
         .toList();
   }
 
   List<Application> getApplicationsForStartup(String startupId) {
-    return _applications
+    return applications
         .where((application) => application.startupId == startupId)
         .toList();
   }
@@ -722,6 +740,7 @@ class AppState extends ChangeNotifier {
   void _resetSessionState() {
     _isLoggedIn = false;
     _isAdmin = false;
+    _adminPreviewRole = null;
     _userRole = null;
     _studentProfile = null;
     _startupProfile = null;
@@ -734,6 +753,48 @@ class AppState extends ChangeNotifier {
     _guildApplications = [];
     _skillBadges = [];
     _eventLog = [];
+  }
+
+  StudentProfile get _previewStudentProfile => _previewStudents.first;
+  StartupProfile get _previewStartupProfile => _previewStartups.first;
+  List<StudentProfile> get _previewStudents => DummyData.students;
+  List<StartupProfile> get _previewStartups => DummyData.startups;
+  List<Mission> get _previewMissions => [
+        for (final startup in DummyData.startups)
+          for (var i = 0; i < startup.openRoles.length; i++)
+            Mission(
+              id: 'demo_${startup.id}_$i',
+              startupId: startup.id,
+              startupName: startup.companyName,
+              title: startup.openRoles[i].title,
+              description: startup.openRoles[i].description ??
+                  startup.openRoles[i].learningOutcome,
+              commitment: startup.openRoles[i].commitment,
+              estimatedHours: startup.openRoles[i].estimatedHours,
+              durationWeeks: startup.openRoles[i].durationWeeks,
+              learningOutcome: startup.openRoles[i].learningOutcome,
+              requiredSkills: startup.requiredSkills,
+              status: 'open',
+              createdAt: startup.createdAt,
+              websiteUrl: startup.websiteUrl,
+              logoUrl: startup.logoUrl,
+              industry: startup.industry,
+              teamMissionConfig: startup.openRoles[i].teamMissionConfig,
+            ),
+      ];
+  List<Application> get _previewApplications => DummyData.applications;
+  List<AiInterview> get _previewAiInterviews => const [];
+
+  void enterAdminPreview(UserRole role) {
+    if (!_isAdmin) return;
+    _adminPreviewRole = role;
+    notifyListeners();
+  }
+
+  void exitAdminPreview() {
+    if (_adminPreviewRole == null) return;
+    _adminPreviewRole = null;
+    notifyListeners();
   }
 
   @visibleForTesting
