@@ -371,7 +371,7 @@ class _RoleCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               subtitle,
-              maxLines: compact ? 2 : 3,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall,
             ),

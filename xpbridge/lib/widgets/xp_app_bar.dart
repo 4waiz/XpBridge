@@ -160,21 +160,21 @@ class XPDashboardAppBar extends StatelessWidget {
                       eyebrow.toUpperCase(),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         letterSpacing: 2,
-                        color: AppTheme.surface.withValues(alpha: 0.76),
+                        color: AppTheme.pageSubtitle.withValues(alpha: 0.82),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       title,
                       style: Theme.of(context).textTheme.displayMedium
-                          ?.copyWith(color: AppTheme.surface, fontSize: 42),
+                          ?.copyWith(color: AppTheme.pageTitle, fontSize: 42),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         subtitle!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.surface.withValues(alpha: 0.82),
+                          color: AppTheme.pageSubtitle,
                         ),
                       ),
                     ],

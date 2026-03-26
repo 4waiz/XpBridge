@@ -20,17 +20,20 @@ class _IntroScreenState extends State<IntroScreen> {
     _OnboardingPage(
       imagePath: 'assets/illustrations/pb.png',
       title: 'Close the experience gap',
-      eyebrow: 'Launch stronger',
+      eyebrow: 'XPBridge missions',
+      supportingLine: 'Work on real startup missions before anyone asks for experience.',
     ),
     _OnboardingPage(
       imagePath: 'assets/illustrations/pc.png',
       title: 'Build proof while you learn',
-      eyebrow: 'Move faster',
+      eyebrow: 'Proof over promises',
+      supportingLine: 'Turn small wins into visible work that actually moves your profile forward.',
     ),
     _OnboardingPage(
       imagePath: 'assets/illustrations/pa.png',
       title: 'Turn missions into growth',
-      eyebrow: 'Show momentum',
+      eyebrow: 'Earn visible momentum',
+      supportingLine: 'Earn trust, sharpen your skills, and show startups what you can do.',
     ),
   ];
 
@@ -67,35 +70,66 @@ class _IntroScreenState extends State<IntroScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final compact = constraints.maxHeight < 760;
             return Padding(
               padding: const EdgeInsets.all(AppSpacing.page),
               child: Column(
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
-                        ),
+                      DecoratedBox(
                         decoration: BoxDecoration(
-                          color: AppTheme.surface,
+                          color: AppTheme.surface.withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(
                             AppTheme.pillRadius,
                           ),
+                          border: Border.all(
+                            color: AppTheme.primary.withValues(alpha: 0.08),
+                          ),
                           boxShadow: AppTheme.cardShadow,
                         ),
-                        child: Text(
-                          '${_currentPage + 1}/${_pages.length}',
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(color: AppTheme.textSecondary),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                '${_currentPage + 1}/${_pages.length}',
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(color: AppTheme.pageTitle),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const Spacer(),
                       if (!isLastPage)
-                        TextButton(
-                          onPressed: _completeOnboarding,
-                          child: const Text('Skip'),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AppTheme.surface.withValues(alpha: 0.76),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.pillRadius,
+                            ),
+                            border: Border.all(
+                              color: AppTheme.primary.withValues(alpha: 0.08),
+                            ),
+                          ),
+                          child: TextButton(
+                            onPressed: _completeOnboarding,
+                            child: const Text('Skip'),
+                          ),
                         ),
                     ],
                   ),
@@ -118,122 +152,271 @@ class _IntroScreenState extends State<IntroScreen> {
                           ),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              begin: Alignment.topCenter,
+                              begin: Alignment.topLeft,
                               end: Alignment.bottomCenter,
                               colors: [
                                 Color(0xFFFFFFFF),
-                                Color(0xFFF5FFFC),
+                                Color(0xFFF7FEFC),
+                                Color(0xFFEEF9F6),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(
                               AppTheme.cornerRadiusLarge,
                             ),
+                            border: Border.all(
+                              color: AppTheme.primary.withValues(alpha: 0.1),
+                            ),
                             boxShadow: AppTheme.elevatedShadow,
                           ),
-                          child: Column(
+                          child: Stack(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.md,
-                                  vertical: AppSpacing.sm,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(
-                                    AppTheme.pillRadius,
+                              Positioned(
+                                top: 8,
+                                right: 2,
+                                child: Container(
+                                  width: 132,
+                                  height: 132,
+                                  decoration: BoxDecoration(
+                                    gradient: RadialGradient(
+                                      colors: [
+                                        AppTheme.primary.withValues(alpha: 0.16),
+                                        Colors.transparent,
+                                      ],
+                                    ),
                                   ),
                                 ),
-                                child: Text(
-                                  page.eyebrow,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelMedium
-                                      ?.copyWith(
-                                        color: AppTheme.primaryDeep,
-                                      ),
+                              ),
+                              Positioned(
+                                left: -20,
+                                bottom: 124,
+                                child: Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF6F0E7),
+                                    borderRadius: BorderRadius.circular(38),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: AppSpacing.md),
-                              Text(
-                                page.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              Positioned(
+                                top: 14,
+                                left: 12,
+                                right: 12,
+                                bottom: 0,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppTheme.primary.withValues(alpha: 0.12),
+                                        AppTheme.surface.withValues(alpha: 0.98),
+                                        const Color(0xFFFFFCF6),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(32),
+                                  ),
+                                ),
                               ),
-                              const SizedBox(height: AppSpacing.md),
-                              Expanded(
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Positioned(
-                                      top: 8,
-                                      right: 4,
-                                      child: Container(
-                                        width: 104,
-                                        height: 104,
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.primary.withValues(
-                                            alpha: 0.08,
+                              Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.md,
+                                      vertical: AppSpacing.sm,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primary.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(
+                                        AppTheme.pillRadius,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      page.eyebrow,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelMedium
+                                          ?.copyWith(
+                                            color: AppTheme.primaryDeep,
                                           ),
-                                          borderRadius:
-                                              BorderRadius.circular(36),
-                                        ),
-                                      ),
                                     ),
-                                    Positioned(
-                                      left: 0,
-                                      bottom: 28,
-                                      child: Container(
-                                        width: 84,
-                                        height: 84,
-                                        decoration: BoxDecoration(
-                                          color:
-                                              AppTheme.text.withValues(alpha: 0.04),
-                                          borderRadius:
-                                              BorderRadius.circular(30),
-                                        ),
-                                      ),
+                                  ),
+                                  SizedBox(
+                                    height: compact
+                                        ? AppSpacing.md
+                                        : AppSpacing.lg,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.md,
                                     ),
-                                    Positioned.fill(
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          gradient: RadialGradient(
-                                            center: const Alignment(0, 0.2),
-                                            radius: 0.85,
-                                            colors: [
-                                              AppTheme.primary.withValues(
-                                                alpha: 0.14,
+                                    child: Text(
+                                      page.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF17212B),
+                                          ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    height: compact
+                                        ? AppSpacing.xs
+                                        : AppSpacing.md,
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: compact
+                                          ? AppSpacing.lg
+                                          : AppSpacing.xl,
+                                    ),
+                                    child: Text(
+                                      page.supportingLine,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: const Color(0xFF394B5D),
+                                            height: 1.4,
+                                          ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    height: compact
+                                        ? AppSpacing.md
+                                        : AppSpacing.lg,
+                                  ),
+                                  Expanded(
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Positioned(
+                                          left: 10,
+                                          right: 10,
+                                          top: compact ? 4 : 8,
+                                          bottom: compact ? 10 : 12,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(30),
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  AppTheme.surface.withValues(alpha: 0.58),
+                                                  AppTheme.surface.withValues(alpha: 0.96),
+                                                ],
                                               ),
-                                              Colors.transparent,
-                                            ],
+                                              border: Border.all(
+                                                color: AppTheme.primary.withValues(
+                                                  alpha: 0.1,
+                                                ),
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: AppTheme.primary.withValues(
+                                                    alpha: 0.06,
+                                                  ),
+                                                  blurRadius: 24,
+                                                  offset: const Offset(0, 12),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                        Positioned.fill(
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              gradient: RadialGradient(
+                                                center: const Alignment(0, 0.42),
+                                                radius: 0.82,
+                                                colors: [
+                                                  AppTheme.primary.withValues(
+                                                    alpha: 0.18,
+                                                  ),
+                                                  Colors.transparent,
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: EdgeInsets.fromLTRB(
+                                            constraints.maxWidth < 360
+                                                ? AppSpacing.sm
+                                                : AppSpacing.lg,
+                                            0,
+                                            constraints.maxWidth < 360
+                                                ? AppSpacing.sm
+                                                : AppSpacing.lg,
+                                            compact ? 2 : 8,
+                                          ),
+                                          child: Image.asset(
+                                            page.imagePath,
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: constraints.maxWidth < 360
-                                            ? AppSpacing.sm
-                                            : AppSpacing.lg,
-                                      ),
-                                      child: Image.asset(
-                                        page.imagePath,
-                                        fit: BoxFit.contain,
-                                      ),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      compact ? AppSpacing.sm : AppSpacing.md,
+                                      AppSpacing.md,
+                                      compact ? AppSpacing.sm : AppSpacing.md,
+                                      compact ? AppSpacing.md : AppSpacing.lg,
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              XPButton(
-                                label:
-                                    isLastPage ? 'Start now' : 'Continue',
-                                icon: Icons.arrow_forward_rounded,
-                                onPressed: _nextPage,
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          children: List.generate(
+                                            _pages.length,
+                                            (indicatorIndex) => Expanded(
+                                              child: AnimatedContainer(
+                                                duration: const Duration(
+                                                  milliseconds: 220,
+                                                ),
+                                                margin: EdgeInsets.only(
+                                                  right: indicatorIndex ==
+                                                          _pages.length - 1
+                                                      ? 0
+                                                      : AppSpacing.sm,
+                                                ),
+                                                height: 6,
+                                                decoration: BoxDecoration(
+                                                  color: _currentPage ==
+                                                          indicatorIndex
+                                                      ? AppTheme.primary
+                                                      : const Color(0xFFBFD8D3),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    AppTheme.pillRadius,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: AppSpacing.lg),
+                                        XPButton(
+                                          label: isLastPage
+                                              ? 'Start now'
+                                              : 'Continue',
+                                          icon: Icons.arrow_forward_rounded,
+                                          onPressed: _nextPage,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -256,9 +439,11 @@ class _OnboardingPage {
     required this.imagePath,
     required this.title,
     required this.eyebrow,
+    required this.supportingLine,
   });
 
   final String imagePath;
   final String title;
   final String eyebrow;
+  final String supportingLine;
 }

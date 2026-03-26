@@ -635,6 +635,8 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 420;
     if (!appState.isAdmin) {
       return const XPPageScaffold(
         title: 'Admin',
@@ -813,18 +815,38 @@ class _AdminScreenState extends State<AdminScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment<int>(value: 0, label: Text('Profiles')),
-                      ButtonSegment<int>(value: 1, label: Text('Missions')),
-                      ButtonSegment<int>(value: 2, label: Text('Applications')),
-                      ButtonSegment<int>(value: 3, label: Text('Interviews')),
-                    ],
-                    selected: {_tabIndex},
-                    onSelectionChanged: (selection) {
-                      setState(() => _tabIndex = selection.first);
-                    },
-                  ),
+                  if (isNarrow)
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: List.generate(4, (index) {
+                        final labels = [
+                          'Profiles',
+                          'Missions',
+                          'Applications',
+                          'Interviews',
+                        ];
+                        final selected = _tabIndex == index;
+                        return ChoiceChip(
+                          label: Text(labels[index]),
+                          selected: selected,
+                          onSelected: (_) => setState(() => _tabIndex = index),
+                        );
+                      }),
+                    )
+                  else
+                    SegmentedButton<int>(
+                      segments: const [
+                        ButtonSegment<int>(value: 0, label: Text('Profiles')),
+                        ButtonSegment<int>(value: 1, label: Text('Missions')),
+                        ButtonSegment<int>(value: 2, label: Text('Applications')),
+                        ButtonSegment<int>(value: 3, label: Text('Interviews')),
+                      ],
+                      selected: {_tabIndex},
+                      onSelectionChanged: (selection) {
+                        setState(() => _tabIndex = selection.first);
+                      },
+                    ),
                   const SizedBox(height: AppSpacing.lg),
                   TextField(
                     controller: _searchController,
@@ -894,11 +916,17 @@ class _CountChip extends StatelessWidget {
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
+      constraints: const BoxConstraints(minWidth: 118),
       decoration: BoxDecoration(
         color: AppTheme.primarySoft,
         borderRadius: BorderRadius.circular(AppTheme.pillRadius),
       ),
-      child: Text('$label: $value'),
+      child: Text(
+        '$label: $value',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 14,
+            ),
+      ),
     );
   }
 }
@@ -920,42 +948,51 @@ class _AdminTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isNarrow = MediaQuery.of(context).size.width < 420;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: XPCard(
         elevated: true,
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontSize: isNarrow ? 18 : null,
+                  ),
             ),
-            const SizedBox(width: AppSpacing.md),
-            XPOutlinedButton(
-              label: 'View',
-              expand: false,
-              size: XPButtonSize.small,
-              onPressed: onView,
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: isNarrow ? 14 : null,
+                  ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            XPOutlinedButton(
-              label: 'Edit',
-              expand: false,
-              size: XPButtonSize.small,
-              onPressed: onEdit,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            XPOutlinedButton(
-              label: 'Delete',
-              expand: false,
-              size: XPButtonSize.small,
-              onPressed: () async => onDelete(),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                XPOutlinedButton(
+                  label: 'View',
+                  expand: false,
+                  size: XPButtonSize.small,
+                  onPressed: onView,
+                ),
+                XPOutlinedButton(
+                  label: 'Edit',
+                  expand: false,
+                  size: XPButtonSize.small,
+                  onPressed: onEdit,
+                ),
+                XPOutlinedButton(
+                  label: 'Delete',
+                  expand: false,
+                  size: XPButtonSize.small,
+                  onPressed: () async => onDelete(),
+                ),
+              ],
             ),
           ],
         ),
