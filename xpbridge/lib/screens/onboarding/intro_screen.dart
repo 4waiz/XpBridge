@@ -187,18 +187,6 @@ class _IntroScreenState extends State<IntroScreen> {
                                 ),
                               ),
                               Positioned(
-                                left: -20,
-                                bottom: 124,
-                                child: Container(
-                                  width: 120,
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF6F0E7),
-                                    borderRadius: BorderRadius.circular(38),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
                                 top: 14,
                                 left: 12,
                                 right: 12,
@@ -298,40 +286,6 @@ class _IntroScreenState extends State<IntroScreen> {
                                     child: Stack(
                                       alignment: Alignment.center,
                                       children: [
-                                        Positioned(
-                                          left: 10,
-                                          right: 10,
-                                          top: compact ? 4 : 8,
-                                          bottom: compact ? 10 : 12,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(30),
-                                              gradient: LinearGradient(
-                                                begin: Alignment.topCenter,
-                                                end: Alignment.bottomCenter,
-                                                colors: [
-                                                  AppTheme.surface.withValues(alpha: 0.58),
-                                                  AppTheme.surface.withValues(alpha: 0.96),
-                                                ],
-                                              ),
-                                              border: Border.all(
-                                                color: AppTheme.primary.withValues(
-                                                  alpha: 0.1,
-                                                ),
-                                              ),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: AppTheme.primary.withValues(
-                                                    alpha: 0.06,
-                                                  ),
-                                                  blurRadius: 24,
-                                                  offset: const Offset(0, 12),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
                                         Positioned.fill(
                                           child: DecoratedBox(
                                             decoration: BoxDecoration(

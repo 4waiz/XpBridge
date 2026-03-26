@@ -103,155 +103,162 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                 bottom:
                     MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
               ),
-              child: XPSection(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Mentor feedback',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      student?.name ?? application.studentName,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      children: List.generate(5, (index) {
-                        final star = index + 1;
-                        return IconButton(
-                          onPressed: () => setModalState(() => rating = star),
-                          icon: Icon(
-                            star <= rating
-                                ? Icons.star_rounded
-                                : Icons.star_border_rounded,
-                            color: AppTheme.primary,
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Strengths',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: strengthOptions.map((item) {
-                        return FilterChip(
-                          label: Text(item),
-                          selected: strengths.contains(item),
-                          onSelected: (selected) {
-                            setModalState(() {
-                              if (selected) {
-                                strengths.add(item);
-                              } else {
-                                strengths.remove(item);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'Growth areas',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: growthOptions.map((item) {
-                        return FilterChip(
-                          label: Text(item),
-                          selected: growthAreas.contains(item),
-                          onSelected: (selected) {
-                            setModalState(() {
-                              if (selected) {
-                                growthAreas.add(item);
-                              } else {
-                                growthAreas.remove(item);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    if (student != null && student.skills.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'Endorsed skills',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: student.skills.map((skill) {
-                          final selected = endorsedSkills.contains(skill);
-                          final canSelect =
-                              selected || endorsedSkills.length < 3;
-                          return FilterChip(
-                            label: Text(skill),
-                            selected: selected,
-                            onSelected: canSelect
-                                ? (value) {
-                                    setModalState(() {
-                                      if (value) {
-                                        endorsedSkills.add(skill);
-                                      } else {
-                                        endorsedSkills.remove(skill);
-                                      }
-                                    });
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.88,
+                ),
+                child: XPSection(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Mentor feedback',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          student?.name ?? application.studentName,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        Row(
+                          children: List.generate(5, (index) {
+                            final star = index + 1;
+                            return IconButton(
+                              onPressed: () => setModalState(() => rating = star),
+                              icon: Icon(
+                                star <= rating
+                                    ? Icons.star_rounded
+                                    : Icons.star_border_rounded,
+                                color: AppTheme.primary,
+                              ),
+                            );
+                          }),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Strengths',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Wrap(
+                          spacing: AppSpacing.sm,
+                          runSpacing: AppSpacing.sm,
+                          children: strengthOptions.map((item) {
+                            return FilterChip(
+                              label: Text(item),
+                              selected: strengths.contains(item),
+                              onSelected: (selected) {
+                                setModalState(() {
+                                  if (selected) {
+                                    strengths.add(item);
+                                  } else {
+                                    strengths.remove(item);
                                   }
-                                : null,
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.md),
-                    TextField(
-                      controller: feedbackController,
-                      minLines: 4,
-                      maxLines: 5,
-                      decoration: const InputDecoration(
-                        labelText: 'Feedback note',
-                        hintText: 'What went well, and what should improve next?',
-                        prefixIcon: Icon(Icons.feedback_outlined),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    XPButton(
-                      label: 'Save feedback',
-                      icon: Icons.check_rounded,
-                      onPressed: () async {
-                        final navigator = Navigator.of(sheetContext);
-                        await appState.saveMentorFeedback(
-                          application.id,
-                          rating: rating == 0 ? null : rating,
-                          feedback: feedbackController.text.trim().isEmpty
-                              ? null
-                              : feedbackController.text.trim(),
-                          strengths: strengths.toList(),
-                          growthAreas: growthAreas.toList(),
-                          endorsedSkills: endorsedSkills.toList(),
-                        );
-                        navigator.pop();
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Feedback saved.'),
-                            backgroundColor: AppTheme.successDark,
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          'Growth areas',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Wrap(
+                          spacing: AppSpacing.sm,
+                          runSpacing: AppSpacing.sm,
+                          children: growthOptions.map((item) {
+                            return FilterChip(
+                              label: Text(item),
+                              selected: growthAreas.contains(item),
+                              onSelected: (selected) {
+                                setModalState(() {
+                                  if (selected) {
+                                    growthAreas.add(item);
+                                  } else {
+                                    growthAreas.remove(item);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                        if (student != null && student.skills.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            'Endorsed skills',
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
-                        );
-                      },
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: student.skills.map((skill) {
+                              final selected = endorsedSkills.contains(skill);
+                              final canSelect =
+                                  selected || endorsedSkills.length < 3;
+                              return FilterChip(
+                                label: Text(skill),
+                                selected: selected,
+                                onSelected: canSelect
+                                    ? (value) {
+                                        setModalState(() {
+                                          if (value) {
+                                            endorsedSkills.add(skill);
+                                          } else {
+                                            endorsedSkills.remove(skill);
+                                          }
+                                        });
+                                      }
+                                    : null,
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.md),
+                        TextField(
+                          controller: feedbackController,
+                          minLines: 4,
+                          maxLines: 5,
+                          decoration: const InputDecoration(
+                            labelText: 'Feedback note',
+                            hintText: 'What went well, and what should improve next?',
+                            prefixIcon: Icon(Icons.feedback_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+                        XPButton(
+                          label: 'Save feedback',
+                          icon: Icons.check_rounded,
+                          onPressed: () async {
+                            final navigator = Navigator.of(sheetContext);
+                            await appState.saveMentorFeedback(
+                              application.id,
+                              rating: rating == 0 ? null : rating,
+                              feedback: feedbackController.text.trim().isEmpty
+                                  ? null
+                                  : feedbackController.text.trim(),
+                              strengths: strengths.toList(),
+                              growthAreas: growthAreas.toList(),
+                              endorsedSkills: endorsedSkills.toList(),
+                            );
+                            navigator.pop();
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Feedback saved.'),
+                                backgroundColor: AppTheme.successDark,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             );
