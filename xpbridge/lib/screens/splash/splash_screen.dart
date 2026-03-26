@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../theme/app_theme.dart';
 
@@ -69,9 +70,9 @@ class _SplashScreenState extends State<SplashScreen>
                                 borderRadius: BorderRadius.circular(
                                   AppTheme.cornerRadiusLarge,
                                 ),
-                                child: Image.asset(
-                                  'assets/image.png',
-                                  fit: BoxFit.cover,
+                                child: SvgPicture.asset(
+                                  'assets/image.svg',
+                                  fit: BoxFit.contain,
                                 ),
                               ),
                             ),

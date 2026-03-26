@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../app.dart';
 import '../../services/supabase_service.dart';
@@ -97,7 +98,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(
                         AppTheme.cornerRadiusLarge,
                       ),
-                      child: Image.asset('assets/image.png', fit: BoxFit.cover),
+                      child: SvgPicture.asset(
+                        'assets/image.svg',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xxl),
@@ -149,7 +153,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: InputDecoration(
                               labelText: 'Password',
                               hintText: 'Enter your password',
-                              prefixIcon: const Icon(Icons.lock_outline_rounded),
+                              prefixIcon: const Icon(
+                                Icons.lock_outline_rounded,
+                              ),
                               suffixIcon: IconButton(
                                 onPressed: () {
                                   setState(
