@@ -551,4 +551,32 @@ class SupabaseService {
       () => client.from('applications').delete().eq('id', applicationId),
     );
   }
+
+  static Future<void> requestDeletionOtp() {
+    return _run(() async {
+      final response = await client.functions.invoke(
+        'account-deletion',
+        body: {'action': 'request-otp'},
+      );
+      if (response.status != 200) {
+        throw XpServiceException(
+          response.data['error'] ?? 'Failed to send OTP.',
+        );
+      }
+    });
+  }
+
+  static Future<void> confirmAccountDeletion(String otp) {
+    return _run(() async {
+      final response = await client.functions.invoke(
+        'account-deletion',
+        body: {'action': 'confirm-deletion', 'otp': otp},
+      );
+      if (response.status != 200) {
+        throw XpServiceException(
+          response.data['error'] ?? 'Invalid or expired OTP.',
+        );
+      }
+    });
+  }
 }

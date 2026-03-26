@@ -33,7 +33,7 @@ class AppRouter {
       final path = state.matchedLocation;
       final isGuestOnly =
           path == '/intro' || path == '/login' || path == '/signup';
-      final isPublic = path == '/' || isGuestOnly || path == '/privacy-policy';
+      final isPublic = path == '/' || isGuestOnly || path == '/privacy-policy' || path == '/delete-account';
 
       if (!appState.isInitialized) {
         if (path == '/' || isPublic) {
@@ -60,7 +60,8 @@ class AppRouter {
           path != '/student/setup' &&
           path != '/startup/setup' &&
           path != '/admin' &&
-          path != '/privacy-policy') {
+          path != '/privacy-policy' &&
+          path != '/delete-account') {
         return appState.defaultAuthenticatedLocation;
       }
 
@@ -111,6 +112,11 @@ class AppRouter {
         name: 'privacyPolicy',
         path: '/privacy-policy',
         pageBuilder: (context, state) => _fade(const PrivacyPolicyScreen()),
+      ),
+      GoRoute(
+        name: 'deleteAccount',
+        path: '/delete-account',
+        pageBuilder: (context, state) => _fade(DeleteAccountScreen()),
       ),
       GoRoute(
         name: 'studentSetup',

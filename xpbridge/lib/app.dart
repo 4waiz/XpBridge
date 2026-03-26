@@ -256,6 +256,22 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> requestDeleteAccount() async {
+    await SupabaseService.requestDeletionOtp();
+  }
+
+  Future<void> confirmDeleteAccount(String otp) async {
+    _isBusy = true;
+    notifyListeners();
+    try {
+      await SupabaseService.confirmAccountDeletion(otp);
+      _resetSessionState();
+    } finally {
+      _isBusy = false;
+      notifyListeners();
+    }
+  }
+
   List<StudentProfile> get allStudents {
     final current = _studentProfile;
     if (current == null) return List<StudentProfile>.from(_students);

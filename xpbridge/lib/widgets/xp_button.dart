@@ -14,6 +14,7 @@ class XPButton extends StatefulWidget {
     this.expand = true,
     this.size = XPButtonSize.large,
     this.loading = false,
+    this.backgroundColor,
   });
 
   final String label;
@@ -23,6 +24,7 @@ class XPButton extends StatefulWidget {
   final bool expand;
   final XPButtonSize size;
   final bool loading;
+  final Color? backgroundColor;
 
   @override
   State<XPButton> createState() => _XPButtonState();
@@ -48,12 +50,14 @@ class _XPButtonState extends State<XPButton> {
               ? null
               : widget.tonal
               ? AppTheme.whiteGlowGradient
-              : AppTheme.primaryGlowGradient,
+              : widget.backgroundColor != null
+                  ? null
+                  : AppTheme.primaryGlowGradient,
           color: isDisabled
               ? AppTheme.primarySoft
-              : widget.tonal
+              : widget.backgroundColor ?? (widget.tonal
               ? null
-              : AppTheme.primary,
+              : AppTheme.primary),
           borderRadius: BorderRadius.circular(AppTheme.pillRadius),
           border: Border.all(
             color: widget.tonal

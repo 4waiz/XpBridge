@@ -161,6 +161,155 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     }
   }
 
+  Future<void> _showDeleteDialog() async {
+    final appState = AppStateScope.of(context);
+    final otpController = TextEditingController();
+    final confirmTextController = TextEditingController();
+    bool otpSent = false;
+    String? dialogError;
+    bool processing = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.sheetBackground,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.md),
+              ),
+              title: const Text(
+                'Delete Account',
+                style: TextStyle(color: AppTheme.error),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'This action is PERMANENT. All your data, levels, and progress will be erased forever.',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (!otpSent) ...[
+                      const Text(
+                        'To continue, we will send a 6-digit confirmation code to your registered email.',
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      XPButton(
+                        label: 'Send OTP',
+                        loading: processing,
+                        onPressed: processing
+                            ? null
+                            : () async {
+                                setDialogState(() {
+                                  processing = true;
+                                  dialogError = null;
+                                });
+                                try {
+                                  await appState.requestDeleteAccount();
+                                  setDialogState(() {
+                                    otpSent = true;
+                                    processing = false;
+                                  });
+                                } catch (e) {
+                                  setDialogState(() {
+                                    processing = false;
+                                    dialogError = e.toString();
+                                  });
+                                }
+                              },
+                      ),
+                    ] else ...[
+                      const Text(
+                        'Enter the 6-digit code sent to your email:',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      TextField(
+                        controller: otpController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          hintText: '000000',
+                          counterText: '',
+                        ),
+                        maxLength: 6,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      const Text(
+                        'Type "DELETE" below to confirm final decision:',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      TextField(
+                        controller: confirmTextController,
+                        decoration: const InputDecoration(hintText: 'DELETE'),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      XPButton(
+                        label: 'Verify & Delete Forever',
+                        backgroundColor: AppTheme.error,
+                        loading: processing,
+                        enabled: !processing,
+                        onPressed: () async {
+                          if (confirmTextController.text.trim() != 'DELETE') {
+                            setDialogState(
+                              () => dialogError = 'Please type DELETE to confirm.',
+                            );
+                            return;
+                          }
+                          if (otpController.text.trim().length != 6) {
+                            setDialogState(
+                              () => dialogError = 'Please enter a valid OTP.',
+                            );
+                            return;
+                          }
+                          setDialogState(() {
+                            processing = true;
+                            dialogError = null;
+                          });
+                          try {
+                            await appState.confirmDeleteAccount(
+                              otpController.text.trim(),
+                            );
+                            if (!mounted) return;
+                            Navigator.pop(dialogContext); // Close dialog
+                            context.goNamed('login');
+                          } catch (e) {
+                            setDialogState(() {
+                              processing = false;
+                              dialogError = e.toString();
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                    if (dialogError != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        dialogError!,
+                        style: const TextStyle(color: AppTheme.error, fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: processing ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
@@ -369,6 +518,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 icon: Icons.check_rounded,
                 loading: _isSaving,
                 onPressed: _isSaving ? null : _save,
+              ),
+              const SizedBox(height: AppSpacing.xxxl),
+              Center(
+                child: Opacity(
+                  opacity: 0.6,
+                  child: XPButton(
+                    label: 'Delete account',
+                    size: XPButtonSize.small,
+                    backgroundColor: AppTheme.error,
+                    onPressed: _showDeleteDialog,
+                  ),
+                ),
               ),
             ],
           ),
