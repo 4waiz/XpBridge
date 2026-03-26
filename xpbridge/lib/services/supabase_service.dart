@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_config.dart';
@@ -648,18 +650,72 @@ class SupabaseService {
     required String contentType,
   }) {
     return _run(() async {
-      final bucket = AppConfig.instance.storageBucket;
+      final config = AppConfig.instance;
+      final bucket = config.storageBucket;
       final objectPath =
           '$folder/${DateTime.now().millisecondsSinceEpoch}_$fileName';
-      await client.storage.from(bucket).uploadBinary(
-            objectPath,
-            bytes,
-            fileOptions: FileOptions(
-              contentType: contentType,
-              upsert: true,
-            ),
+
+      if (kIsWeb) {
+        final session = client.auth.currentSession;
+        final accessToken = session?.accessToken;
+        if (accessToken == null || accessToken.isEmpty) {
+          throw const XpServiceException(
+            'Your session is missing. Log in again, then retry the upload.',
           );
-      return client.storage.from(bucket).getPublicUrl(objectPath);
+        }
+
+        final encodedObjectPath = objectPath
+            .split('/')
+            .map(Uri.encodeComponent)
+            .join('/');
+        final uploadUri = Uri.parse(
+          '${config.supabaseUrl}/storage/v1/object/$bucket/$encodedObjectPath',
+        );
+
+        final response = await http.post(
+          uploadUri,
+          headers: {
+            'apikey': config.supabaseAnonKey,
+            'Authorization': 'Bearer $accessToken',
+            'Content-Type': contentType,
+            'x-upsert': 'false',
+          },
+          body: bytes,
+        );
+
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          final body = response.body.trim();
+          String message = 'Upload failed (${response.statusCode}).';
+          if (body.isNotEmpty) {
+            try {
+              final parsed = jsonDecode(body);
+              if (parsed is Map<String, dynamic>) {
+                message = parsed['message']?.toString() ??
+                    parsed['error']?.toString() ??
+                    message;
+              } else {
+                message = body;
+              }
+            } catch (_) {
+              message = body;
+            }
+          }
+          throw XpServiceException(message);
+        }
+      } else {
+        await client.storage.from(bucket).uploadBinary(
+              objectPath,
+              bytes,
+              fileOptions: FileOptions(
+                contentType: contentType,
+                upsert: false,
+              ),
+            );
+      }
+
+      final encodedPublicPath =
+          objectPath.split('/').map(Uri.encodeComponent).join('/');
+      return '${config.supabaseUrl}/storage/v1/object/public/$bucket/$encodedPublicPath';
     });
   }
 

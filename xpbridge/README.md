@@ -22,7 +22,7 @@ The app fails fast on missing required keys during startup.
 
 ## Supabase setup
 1. Run [`supabase/schema.sql`](/c:/Users/awaiz/OneDrive/Desktop/Git/XpBridge/xpbridge/supabase/schema.sql) in your Supabase SQL editor.
-2. Create a public storage bucket matching `STORAGE_BUCKET`.
+2. Run [`supabase/storage_policies.sql`](/c:/Users/omerj/Downloads/XpBridge/xpbridge/supabase/storage_policies.sql) to create the storage bucket and its upload policies.
 3. Mark any admin account by setting `profiles.is_admin = true`.
 4. Make sure Supabase Auth email/password sign-in is enabled.
 
