@@ -33,6 +33,19 @@ class SupabaseService {
       throw XpServiceException(error.message);
     } on AuthException catch (error) {
       throw XpServiceException(error.message);
+    } on FunctionException catch (error) {
+      final details = error.details?.toString() ?? '';
+      final reason = error.reasonPhrase?.toString() ?? '';
+      final fallbackMessage = error.toString();
+      final combined = '$fallbackMessage $details $reason'.toLowerCase();
+      if (combined.contains('invalid jwt') ||
+          combined.contains('unauthorized') ||
+          combined.contains('401')) {
+        throw const XpServiceException(
+          'Your session has expired. Log in again, then retry account deletion.',
+        );
+      }
+      throw XpServiceException(fallbackMessage);
     } on StorageException catch (error) {
       throw XpServiceException(error.message);
     } catch (error) {
@@ -674,13 +687,29 @@ class SupabaseService {
 
   static Future<void> requestDeletionOtp() {
     return _run(() async {
+      final session = client.auth.currentSession;
+      if (session == null || currentUser == null) {
+        throw const XpServiceException(
+          'Your session has expired. Log in again, then retry account deletion.',
+        );
+      }
+
       final response = await client.functions.invoke(
         'account-deletion',
         body: {'action': 'request-otp'},
       );
       if (response.status != 200) {
+        final errorData = response.data;
+        final errorMessage = errorData is Map<String, dynamic>
+            ? errorData['error'] as String?
+            : null;
+        if (response.status == 401 || errorMessage == 'Unauthorized') {
+          throw const XpServiceException(
+            'Your session has expired. Log in again, then retry account deletion.',
+          );
+        }
         throw XpServiceException(
-          response.data['error'] ?? 'Failed to send OTP.',
+          errorMessage ?? 'Failed to send OTP.',
         );
       }
     });
@@ -688,13 +717,29 @@ class SupabaseService {
 
   static Future<void> confirmAccountDeletion(String otp) {
     return _run(() async {
+      final session = client.auth.currentSession;
+      if (session == null || currentUser == null) {
+        throw const XpServiceException(
+          'Your session has expired. Log in again, then retry account deletion.',
+        );
+      }
+
       final response = await client.functions.invoke(
         'account-deletion',
         body: {'action': 'confirm-deletion', 'otp': otp},
       );
       if (response.status != 200) {
+        final errorData = response.data;
+        final errorMessage = errorData is Map<String, dynamic>
+            ? errorData['error'] as String?
+            : null;
+        if (response.status == 401 || errorMessage == 'Unauthorized') {
+          throw const XpServiceException(
+            'Your session has expired. Log in again, then retry account deletion.',
+          );
+        }
         throw XpServiceException(
-          response.data['error'] ?? 'Invalid or expired OTP.',
+          errorMessage ?? 'Invalid or expired OTP.',
         );
       }
     });

@@ -30,11 +30,16 @@ Your role is to:
 3. When you have enough information, recommend suitable job roles
 
 Guidelines:
-- Be conversational and encouraging
-- Ask follow-up questions to understand them better
+- Be conversational, direct, and brief
+- Keep most replies to 2-4 short sentences
+- Ask only 1 follow-up question at a time
+- Do not give long intros, long summaries, or motivational filler
+- Do not praise the user repeatedly
+- End naturally with a complete sentence
+- If a longer answer is needed, give a short version first and offer to expand
 - Consider their skills, education level, and interests
-- Suggest 3-5 specific job roles that would be a good fit
-- Explain WHY each role suits them
+- Suggest at most 3 specific job roles when you have enough information
+- Keep each role explanation to one short line
 
 When you're ready to give recommendations, format them clearly like:
 "Based on our conversation, here are roles that would suit you:
@@ -49,7 +54,8 @@ Also extract and remember:
 - Interests and preferred industries
 - Hours available per week
 
-Keep responses concise but helpful. Don't be overly formal.
+If the user is vague, ask a short clarifying question instead of writing a long answer.
+Keep responses concise and not overly formal.
 ''';
 
   static const String _startupSystemPrompt = '''
@@ -214,7 +220,7 @@ Now respond to their message: $message
 
     final response = await _post(_buildUrl(), {
       'contents': contents,
-      'generationConfig': _createGenerationConfig(1024),
+      'generationConfig': _createGenerationConfig(360, temperature: 0.5),
     });
 
     if (response.statusCode == 200) {
@@ -280,7 +286,7 @@ Help this startup find suitable student talent. Respond to: $message
     final response = await _post(url, {
       'contents': contents,
       'tools': _searchStudentsTool,
-      'generationConfig': _createGenerationConfig(512),
+      'generationConfig': _createGenerationConfig(320, temperature: 0.4),
     });
 
     if (response.statusCode != 200) {
@@ -374,7 +380,7 @@ Help this startup find suitable student talent. Respond to: $message
     final response = await _post(url, {
       'contents': _startupChatHistory,
       'tools': _searchStudentsTool,
-      'generationConfig': _createGenerationConfig(256),
+      'generationConfig': _createGenerationConfig(260, temperature: 0.4),
     });
 
     if (response.statusCode == 200) {

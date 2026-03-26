@@ -216,9 +216,20 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                     processing = false;
                                   });
                                 } catch (e) {
+                                  final errorText = e.toString();
+                                  if (errorText.contains('session has expired')) {
+                                    if (!dialogContext.mounted || !context.mounted) {
+                                      return;
+                                    }
+                                    if (Navigator.of(dialogContext).canPop()) {
+                                      Navigator.pop(dialogContext);
+                                    }
+                                    context.goNamed('login');
+                                    return;
+                                  }
                                   setDialogState(() {
                                     processing = false;
-                                    dialogError = e.toString();
+                                    dialogError = errorText;
                                   });
                                 }
                               },
@@ -274,13 +285,26 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                             await appState.confirmDeleteAccount(
                               otpController.text.trim(),
                             );
-                            if (!mounted) return;
+                            if (!mounted || !dialogContext.mounted || !context.mounted) {
+                              return;
+                            }
                             Navigator.pop(dialogContext); // Close dialog
                             context.goNamed('login');
                           } catch (e) {
+                            final errorText = e.toString();
+                            if (errorText.contains('session has expired')) {
+                              if (!dialogContext.mounted || !context.mounted) {
+                                return;
+                              }
+                              if (Navigator.of(dialogContext).canPop()) {
+                                Navigator.pop(dialogContext);
+                              }
+                              context.goNamed('login');
+                              return;
+                            }
                             setDialogState(() {
                               processing = false;
-                              dialogError = e.toString();
+                              dialogError = errorText;
                             });
                           }
                         },
