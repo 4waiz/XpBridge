@@ -1,5 +1,5 @@
-import 'dart:typed_data';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_config.dart';
@@ -21,6 +21,7 @@ class XpServiceException implements Exception {
 
 class SupabaseService {
   static final client = Supabase.instance.client;
+  static const _pendingOAuthRoleKey = 'pending_oauth_role';
 
   static User? get currentUser => client.auth.currentUser;
   static bool get isAuthenticated => currentUser != null;
@@ -56,6 +57,13 @@ class SupabaseService {
         throw const XpServiceException('Could not create your account.');
       }
 
+      final authenticatedUser = client.auth.currentUser;
+      if (authenticatedUser == null || authenticatedUser.id != response.user!.id) {
+        throw const XpServiceException(
+          'Account created. Verify your email first, then log in to finish setup.',
+        );
+      }
+
       await client.from('profiles').upsert({
         'id': response.user!.id,
         'name': role == 'student' ? name : null,
@@ -78,11 +86,24 @@ class SupabaseService {
     );
   }
 
-  static Future<void> signInWithGoogle() {
-    return _run(() => client.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: 'io.supabase.xpbridge://login-callback',
-        ));
+  static Future<void> signInWithGoogle({String? role}) {
+    final redirectTo = kIsWeb
+        ? '${Uri.base.origin}/login'
+        : 'io.supabase.xpbridge://login-callback';
+
+    return _run(() async {
+      final prefs = await SharedPreferences.getInstance();
+      if (role == null) {
+        await prefs.remove(_pendingOAuthRoleKey);
+      } else {
+        await prefs.setString(_pendingOAuthRoleKey, role);
+      }
+
+      await client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: redirectTo,
+      );
+    });
   }
 
   static Future<void> signOut() {
@@ -104,6 +125,98 @@ class SupabaseService {
       }
       return Map<String, dynamic>.from(response);
     });
+  }
+
+  static Future<Map<String, dynamic>?> ensureProfileForCurrentUser() async {
+    final user = currentUser;
+    if (user == null) return null;
+
+    final existingProfile = await getCurrentProfileRecord();
+    if (existingProfile != null) {
+      await _clearPendingOAuthRole();
+      return existingProfile;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final pendingRole = prefs.getString(_pendingOAuthRoleKey);
+    if (pendingRole != 'student' && pendingRole != 'startup') {
+      return null;
+    }
+
+    final email = user.email?.trim().toLowerCase();
+    if (email == null || email.isEmpty) {
+      throw const XpServiceException('Google account is missing an email.');
+    }
+
+    final metadata = user.userMetadata ?? const <String, dynamic>{};
+    final fallbackName = email.split('@').first;
+    final displayName =
+        (metadata['full_name'] ??
+                metadata['name'] ??
+                metadata['user_name'] ??
+                fallbackName)
+            .toString()
+            .trim();
+
+    final profile = <String, dynamic>{
+      'id': user.id,
+      'email': email,
+      'role': pendingRole,
+      'name': pendingRole == 'startup' ? displayName : displayName,
+      'company_name': pendingRole == 'startup' ? displayName : null,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    await client.from('profiles').upsert(profile);
+    await _clearPendingOAuthRole();
+    return profile;
+  }
+
+  static Future<Map<String, dynamic>> completeOAuthProfile({
+    required String role,
+    String? name,
+  }) async {
+    return _run(() async {
+      final user = currentUser;
+      if (user == null) {
+        throw const XpServiceException('No authenticated Google user found.');
+      }
+
+      final email = user.email?.trim().toLowerCase();
+      if (email == null || email.isEmpty) {
+        throw const XpServiceException('Google account is missing an email.');
+      }
+
+      final metadata = user.userMetadata ?? const <String, dynamic>{};
+      final fallbackName = email.split('@').first;
+      final displayName =
+          (name?.trim().isNotEmpty == true
+                  ? name!.trim()
+                  : metadata['full_name'] ??
+                      metadata['name'] ??
+                      metadata['user_name'] ??
+                      fallbackName)
+              .toString()
+              .trim();
+
+      final profile = <String, dynamic>{
+        'id': user.id,
+        'email': email,
+        'role': role,
+        'name': displayName,
+        'company_name': role == 'startup' ? displayName : null,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      await client.from('profiles').upsert(profile);
+      await _clearPendingOAuthRole();
+      return profile;
+    });
+  }
+
+  static Future<void> _clearPendingOAuthRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingOAuthRoleKey);
   }
 
   static Future<StudentProfile?> getStudentProfile(String id) async {

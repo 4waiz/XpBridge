@@ -95,6 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = AppStateScope.of(context);
+    final visibleError = _submitError ?? appState.errorMessage;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
@@ -191,10 +194,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          if (_submitError != null) ...[
+                          if (visibleError != null) ...[
                             const SizedBox(height: AppSpacing.md),
                             Text(
-                              _submitError!,
+                              visibleError,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: AppTheme.error),
                             ),

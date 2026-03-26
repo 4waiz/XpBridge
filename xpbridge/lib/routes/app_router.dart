@@ -43,6 +43,18 @@ class AppRouter {
         return '/';
       }
 
+      if (appState.requiresAccountCompletion) {
+        if (path == '/' || path == '/login') {
+          return '/signup';
+        }
+        if (path != '/signup' &&
+            path != '/privacy-policy' &&
+            path != '/delete-account') {
+          return '/signup';
+        }
+        return null;
+      }
+
       if (!appState.isLoggedIn) {
         if (path == '/') {
           return appState.onboardingComplete ? '/login' : '/intro';

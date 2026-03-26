@@ -69,7 +69,8 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      await SupabaseService.signInWithGoogle();
+      final role = _selectedRole == UserRole.student ? 'student' : 'startup';
+      await SupabaseService.signInWithGoogle(role: role);
       // Role handling will be needed in the post-login callback 
       // or through standard profile syncing.
     } on XpServiceException catch (error) {
@@ -83,7 +84,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate() || _selectedRole == null) {
+    final hasOAuthUser = SupabaseService.currentUser != null;
+    final isFormValid = hasOAuthUser ? true : _formKey.currentState!.validate();
+    if (!isFormValid || _selectedRole == null) {
       setState(() {
         _submitError = _selectedRole == null ? 'Select a role to continue.' : null;
       });
@@ -97,19 +100,25 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       final role = _selectedRole == UserRole.student ? 'student' : 'startup';
-      await SupabaseService.signUp(
-        email: _emailController.text.trim().toLowerCase(),
-        password: _passwordController.text,
-        name: _nameController.text.trim(),
-        role: role,
-      );
+      if (hasOAuthUser) {
+        await SupabaseService.completeOAuthProfile(
+          role: role,
+          name: _nameController.text.trim(),
+        );
+      } else {
+        await SupabaseService.signUp(
+          email: _emailController.text.trim().toLowerCase(),
+          password: _passwordController.text,
+          name: _nameController.text.trim(),
+          role: role,
+        );
+      }
 
       if (!mounted) return;
       final appState = AppStateScope.of(context);
-      appState.login(role: _selectedRole!);
-      context.goNamed(
-        _selectedRole == UserRole.student ? 'studentSetup' : 'startupSetup',
-      );
+      await appState.refreshSession();
+      if (!mounted) return;
+      context.go(appState.defaultAuthenticatedLocation);
     } on XpServiceException catch (error) {
       setState(() => _submitError = error.message);
     } finally {
@@ -121,6 +130,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasOAuthUser = SupabaseService.currentUser != null;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
@@ -138,14 +149,16 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
-                    'Create your account',
+                    hasOAuthUser ? 'Finish your account' : 'Create your account',
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Choose the workspace you need first. Students must upload a CV in setup, and startups move straight into company profile creation.',
+                    hasOAuthUser
+                        ? 'Your Google sign-in worked. Choose whether this account is for a student or a startup, then continue.'
+                        : 'Choose the workspace you need first. Students must upload a CV in setup, and startups move straight into company profile creation.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppTheme.textSecondary,
                     ),
@@ -192,50 +205,52 @@ class _SignupScreenState extends State<SignupScreen> {
                       key: _formKey,
                       child: Column(
                         children: [
-                          TextFormField(
-                            controller: _nameController,
-                            validator: _validateName,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: const InputDecoration(
-                              labelText: 'Full name or company owner name',
-                              prefixIcon: Icon(Icons.person_outline_rounded),
+                          if (!hasOAuthUser) ...[
+                            TextFormField(
+                              controller: _nameController,
+                              validator: _validateName,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(
+                                labelText: 'Full name or company owner name',
+                                prefixIcon: Icon(Icons.person_outline_rounded),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _emailController,
-                            validator: _validateEmail,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
-                              hintText: 'you@example.com',
-                              prefixIcon: Icon(Icons.mail_outline_rounded),
+                            const SizedBox(height: AppSpacing.md),
+                            TextFormField(
+                              controller: _emailController,
+                              validator: _validateEmail,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                labelText: 'Email',
+                                hintText: 'you@example.com',
+                                prefixIcon: Icon(Icons.mail_outline_rounded),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _passwordController,
-                            validator: _validatePassword,
-                            obscureText: _obscurePassword,
-                            onFieldSubmitted: (_) => _submit(),
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              helperText: 'Use at least 8 characters.',
-                              prefixIcon: const Icon(Icons.lock_outline_rounded),
-                              suffixIcon: IconButton(
-                                onPressed: () {
-                                  setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  );
-                                },
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off_rounded
-                                      : Icons.visibility_rounded,
+                            const SizedBox(height: AppSpacing.md),
+                            TextFormField(
+                              controller: _passwordController,
+                              validator: _validatePassword,
+                              obscureText: _obscurePassword,
+                              onFieldSubmitted: (_) => _submit(),
+                              decoration: InputDecoration(
+                                labelText: 'Password',
+                                helperText: 'Use at least 8 characters.',
+                                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                suffixIcon: IconButton(
+                                  onPressed: () {
+                                    setState(
+                                      () => _obscurePassword = !_obscurePassword,
+                                    );
+                                  },
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off_rounded
+                                        : Icons.visibility_rounded,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                           if (_submitError != null) ...[
                             const SizedBox(height: AppSpacing.md),
                             Text(
@@ -246,17 +261,19 @@ class _SignupScreenState extends State<SignupScreen> {
                           ],
                           const SizedBox(height: AppSpacing.xl),
                           XPButton(
-                            label: 'Create account',
+                            label: hasOAuthUser ? 'Continue' : 'Create account',
                             icon: Icons.arrow_forward_rounded,
                             loading: _isLoading,
                             onPressed: _isLoading ? null : _submit,
                           ),
-                          const SizedBox(height: AppSpacing.md),
-                          XPGoogleButton(
-                            label: 'Sign up with Google',
-                            onPressed: _isLoading ? null : _signUpWithGoogle,
-                            loading: _isLoading,
-                          ),
+                          if (!hasOAuthUser) ...[
+                            const SizedBox(height: AppSpacing.md),
+                            XPGoogleButton(
+                              label: 'Sign up with Google',
+                              onPressed: _isLoading ? null : _signUpWithGoogle,
+                              loading: _isLoading,
+                            ),
+                          ],
                         ],
                       ),
                     ),

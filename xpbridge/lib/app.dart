@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/app_config.dart';
 import 'models/ai_interview.dart';
@@ -28,6 +31,7 @@ class AppState extends ChangeNotifier {
   bool _onboardingComplete = false;
   bool _isLoggedIn = false;
   bool _isAdmin = false;
+  bool _requiresAccountCompletion = false;
   bool _xpFeedOptOut = false;
   String? _errorMessage;
   UserRole? _userRole;
@@ -52,6 +56,7 @@ class AppState extends ChangeNotifier {
   bool get onboardingComplete => _onboardingComplete;
   bool get isLoggedIn => _isLoggedIn;
   bool get isAdmin => _isAdmin;
+  bool get requiresAccountCompletion => _requiresAccountCompletion;
   bool get xpFeedOptOut => _xpFeedOptOut;
   String? get errorMessage => _errorMessage;
   UserRole? get userRole => _userRole;
@@ -140,16 +145,21 @@ class AppState extends ChangeNotifier {
     try {
       final user = SupabaseService.currentUser;
       if (user == null) {
+        _requiresAccountCompletion = false;
         _resetSessionState();
         return;
       }
 
-      final profileRecord = await SupabaseService.getCurrentProfileRecord();
+      final profileRecord = await SupabaseService.ensureProfileForCurrentUser();
       if (profileRecord == null) {
+        _errorMessage =
+            'Finish account setup for this Google account by choosing Student or Startup.';
+        _requiresAccountCompletion = true;
         _resetSessionState();
         return;
       }
 
+      _requiresAccountCompletion = false;
       _isLoggedIn = true;
       final roleString = profileRecord['role'] as String? ?? 'student';
       _userRole = roleString == 'startup'
@@ -247,6 +257,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> logout() async {
     await SupabaseService.signOut();
+    _requiresAccountCompletion = false;
     _resetSessionState();
     notifyListeners();
   }
@@ -265,6 +276,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       await SupabaseService.confirmAccountDeletion(otp);
+      _requiresAccountCompletion = false;
       _resetSessionState();
     } finally {
       _isBusy = false;
@@ -767,6 +779,7 @@ class XPBridgeApp extends StatefulWidget {
 class _XPBridgeAppState extends State<XPBridgeApp> {
   late final AppState _state;
   late final GoRouter _router;
+  StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
@@ -774,6 +787,17 @@ class _XPBridgeAppState extends State<XPBridgeApp> {
     _state = AppState();
     _state.initialize();
     _router = AppRouter(appState: _state).router;
+    _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen((
+      _,
+    ) {
+      _state.refreshSession();
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   @override
