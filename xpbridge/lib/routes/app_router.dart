@@ -15,6 +15,7 @@ import '../screens/interview/ai_interview_screen.dart';
 import '../screens/onboarding/intro_screen.dart';
 import '../screens/onboarding/startup_setup_screen.dart';
 import '../screens/onboarding/student_setup_screen.dart';
+import '../screens/legal/privacy_policy_screen.dart';
 import '../screens/profile/startup_profile_screen.dart';
 import '../screens/profile/student_profile_screen.dart';
 import '../screens/splash/splash_screen.dart';
@@ -30,13 +31,15 @@ class AppRouter {
     refreshListenable: appState,
     redirect: (context, state) {
       final path = state.matchedLocation;
-      final isPublic = path == '/' ||
-          path == '/intro' ||
-          path == '/login' ||
-          path == '/signup';
+      final isGuestOnly =
+          path == '/intro' || path == '/login' || path == '/signup';
+      final isPublic = path == '/' || isGuestOnly || path == '/privacy-policy';
 
       if (!appState.isInitialized) {
-        return path == '/' ? null : '/';
+        if (path == '/' || isPublic) {
+          return null;
+        }
+        return '/';
       }
 
       if (!appState.isLoggedIn) {
@@ -56,11 +59,12 @@ class AppRouter {
       if (appState.needsProfileSetup &&
           path != '/student/setup' &&
           path != '/startup/setup' &&
-          path != '/admin') {
+          path != '/admin' &&
+          path != '/privacy-policy') {
         return appState.defaultAuthenticatedLocation;
       }
 
-      if (isPublic) {
+      if (isGuestOnly) {
         return appState.defaultAuthenticatedLocation;
       }
 
@@ -104,6 +108,11 @@ class AppRouter {
         pageBuilder: (context, state) => _slide(const SignupScreen()),
       ),
       GoRoute(
+        name: 'privacyPolicy',
+        path: '/privacy-policy',
+        pageBuilder: (context, state) => _fade(const PrivacyPolicyScreen()),
+      ),
+      GoRoute(
         name: 'studentSetup',
         path: '/student/setup',
         pageBuilder: (context, state) => _slide(const StudentSetupScreen()),
@@ -114,7 +123,8 @@ class AppRouter {
           GoRoute(
             name: 'studentDashboard',
             path: '/student/dashboard',
-            pageBuilder: (context, state) => _fade(const StudentDashboardScreen()),
+            pageBuilder: (context, state) =>
+                _fade(const StudentDashboardScreen()),
           ),
           GoRoute(
             name: 'atChat',
@@ -130,7 +140,8 @@ class AppRouter {
           GoRoute(
             name: 'studentProfile',
             path: '/student/profile',
-            pageBuilder: (context, state) => _slide(const StudentProfileScreen()),
+            pageBuilder: (context, state) =>
+                _slide(const StudentProfileScreen()),
           ),
         ],
       ),
@@ -194,12 +205,13 @@ class AppRouter {
     return CustomTransitionPage<void>(
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final offsetAnimation = Tween<Offset>(
-          begin: const Offset(0, 0.03),
-          end: Offset.zero,
-        ).animate(
-          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-        );
+        final offsetAnimation =
+            Tween<Offset>(
+              begin: const Offset(0, 0.03),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            );
         return SlideTransition(
           position: offsetAnimation,
           child: FadeTransition(
@@ -211,4 +223,3 @@ class AppRouter {
     );
   }
 }
-
