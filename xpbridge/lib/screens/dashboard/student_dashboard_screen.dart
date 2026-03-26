@@ -7,7 +7,6 @@ import '../../models/mission.dart';
 import '../../services/link_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
 import '../../widgets/xp_empty_state.dart';
@@ -265,7 +264,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           items: [
                             const DropdownMenuItem<String?>(
                               value: null,
-                              child: Text('All industries'),
+                              child: Text('All'),
                             ),
                             ...industries.map(
                               (industry) => DropdownMenuItem<String?>(
@@ -290,7 +289,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           items: [
                             const DropdownMenuItem<String?>(
                               value: null,
-                              child: Text('All skills'),
+                              child: Text('All'),
                             ),
                             ...skills.map(
                               (skill) => DropdownMenuItem<String?>(

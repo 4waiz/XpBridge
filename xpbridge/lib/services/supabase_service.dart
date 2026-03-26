@@ -602,6 +602,18 @@ class SupabaseService {
     });
   }
 
+  static Future<List<AiInterview>> getAllAiInterviews() async {
+    return _run(() async {
+      final response = await client
+          .from('ai_interviews')
+          .select()
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response)
+          .map(AiInterview.fromMap)
+          .toList();
+    });
+  }
+
   static Future<AiInterview> createAiInterview(AiInterview interview) {
     return _run(() async {
       final response = await client
@@ -735,10 +747,18 @@ class SupabaseService {
     return _run(() => client.from('missions').upsert(data));
   }
 
+  static Future<void> upsertAiInterviewRow(Map<String, dynamic> data) {
+    return _run(() => client.from('ai_interviews').upsert(data));
+  }
+
   static Future<void> deleteApplication(String applicationId) {
     return _run(
       () => client.from('applications').delete().eq('id', applicationId),
     );
+  }
+
+  static Future<void> deleteAiInterview(String interviewId) {
+    return _run(() => client.from('ai_interviews').delete().eq('id', interviewId));
   }
 
   static Future<void> requestDeletionOtp() {

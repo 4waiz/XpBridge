@@ -20,20 +20,17 @@ class _IntroScreenState extends State<IntroScreen> {
     _OnboardingPage(
       imagePath: 'assets/illustrations/pb.png',
       title: 'Close the experience gap',
-      description:
-          'Breaking into the professional world is hard when experience is required before you even begin.',
+      eyebrow: 'Launch stronger',
     ),
     _OnboardingPage(
       imagePath: 'assets/illustrations/pc.png',
-      title: 'Build real-world proof while you learn',
-      description:
-          'Discover startup micro-projects that turn learning into portfolio-ready work and momentum.',
+      title: 'Build proof while you learn',
+      eyebrow: 'Move faster',
     ),
     _OnboardingPage(
       imagePath: 'assets/illustrations/pa.png',
       title: 'Turn missions into growth',
-      description:
-          'Create a verified track record, unlock XP, and show startups what you can already do.',
+      eyebrow: 'Show momentum',
     ),
   ];
 
@@ -68,190 +65,186 @@ class _IntroScreenState extends State<IntroScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.page),
-          child: Column(
-            children: [
-              Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Padding(
+              padding: const EdgeInsets.all(AppSpacing.page),
+              child: Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-                      boxShadow: AppTheme.cardShadow,
-                    ),
-                    child: Text(
-                      '${_currentPage + 1}/${_pages.length}',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppTheme.textSecondary,
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface,
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.pillRadius,
+                          ),
+                          boxShadow: AppTheme.cardShadow,
+                        ),
+                        child: Text(
+                          '${_currentPage + 1}/${_pages.length}',
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(color: AppTheme.textSecondary),
+                        ),
                       ),
-                    ),
+                      const Spacer(),
+                      if (!isLastPage)
+                        TextButton(
+                          onPressed: _completeOnboarding,
+                          child: const Text('Skip'),
+                        ),
+                    ],
                   ),
-                  const Spacer(),
-                  if (!isLastPage)
-                    TextButton(
-                      onPressed: _completeOnboarding,
-                      child: const Text('Skip'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: (index) =>
-                      setState(() => _currentPage = index),
-                  itemCount: _pages.length,
-                  itemBuilder: (context, index) {
-                    final page = _pages[index];
-                    return Column(
-                      children: [
-                        Expanded(
-                          flex: 6,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(AppSpacing.xl),
-                            decoration: BoxDecoration(
-                              color: AppTheme.surface,
-                              borderRadius: BorderRadius.circular(
-                                AppTheme.cornerRadiusLarge,
-                              ),
-                              boxShadow: AppTheme.elevatedShadow,
-                            ),
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: Container(
-                                    width: 94,
-                                    height: 94,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primary.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(32),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: -10,
-                                  bottom: 36,
-                                  child: Container(
-                                    width: 76,
-                                    height: 76,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.text.withValues(
-                                        alpha: 0.04,
-                                      ),
-                                      borderRadius: BorderRadius.circular(28),
-                                    ),
-                                  ),
-                                ),
-                                Center(
-                                  child: Image.asset(
-                                    page.imagePath,
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
+                  const SizedBox(height: AppSpacing.md),
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: (index) =>
+                          setState(() => _currentPage = index),
+                      itemCount: _pages.length,
+                      itemBuilder: (context, index) {
+                        final page = _pages[index];
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.xl,
+                            AppSpacing.xl,
+                            AppSpacing.xl,
+                            AppSpacing.lg,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Color(0xFFFFFFFF),
+                                Color(0xFFF5FFFC),
                               ],
                             ),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.cornerRadiusLarge,
+                            ),
+                            boxShadow: AppTheme.elevatedShadow,
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Expanded(
-                          flex: 4,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.xl,
-                              AppSpacing.xxl,
-                              AppSpacing.xl,
-                              AppSpacing.xl,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.surface,
-                              borderRadius: BorderRadius.circular(
-                                AppTheme.cornerRadiusLarge,
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.md,
+                                  vertical: AppSpacing.sm,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.pillRadius,
+                                  ),
+                                ),
+                                child: Text(
+                                  page.eyebrow,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelMedium
+                                      ?.copyWith(
+                                        color: AppTheme.primaryDeep,
+                                      ),
+                                ),
                               ),
-                              boxShadow: AppTheme.cardShadow,
-                            ),
-                            child: SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  Text(
-                                    page.title,
-                                    textAlign: TextAlign.center,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineSmall
-                                        ?.copyWith(fontWeight: FontWeight.w800),
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Text(
-                                    page.description,
-                                    textAlign: TextAlign.center,
-                                    style: Theme.of(context).textTheme.bodyMedium
-                                        ?.copyWith(color: AppTheme.textSecondary),
-                                  ),
-                                  const SizedBox(height: AppSpacing.lg),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: List.generate(
-                                      _pages.length,
-                                      (index) => AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 220,
-                                        ),
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 4,
-                                        ),
-                                        width: _currentPage == index ? 28 : 8,
-                                        height: 8,
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                page.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Expanded(
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Positioned(
+                                      top: 8,
+                                      right: 4,
+                                      child: Container(
+                                        width: 104,
+                                        height: 104,
                                         decoration: BoxDecoration(
-                                          color: _currentPage == index
-                                              ? AppTheme.primary
-                                              : AppTheme.cardBackground,
-                                          borderRadius: BorderRadius.circular(
-                                            AppTheme.pillRadius,
+                                          color: AppTheme.primary.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(36),
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      left: 0,
+                                      bottom: 28,
+                                      child: Container(
+                                        width: 84,
+                                        height: 84,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              AppTheme.text.withValues(alpha: 0.04),
+                                          borderRadius:
+                                              BorderRadius.circular(30),
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned.fill(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          gradient: RadialGradient(
+                                            center: const Alignment(0, 0.2),
+                                            radius: 0.85,
+                                            colors: [
+                                              AppTheme.primary.withValues(
+                                                alpha: 0.14,
+                                              ),
+                                              Colors.transparent,
+                                            ],
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: AppSpacing.lg),
-                                  XPButton(
-                                    label: isLastPage
-                                        ? 'Get Started'
-                                        : 'Continue',
-                                    icon: Icons.arrow_forward_rounded,
-                                    onPressed: _nextPage,
-                                  ),
-                                  if (isLastPage) ...[
-                                    const SizedBox(height: AppSpacing.md),
-                                    TextButton(
-                                      onPressed: _completeOnboarding,
-                                      child: const Text(
-                                        'I already have an account',
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: constraints.maxWidth < 360
+                                            ? AppSpacing.sm
+                                            : AppSpacing.lg,
+                                      ),
+                                      child: Image.asset(
+                                        page.imagePath,
+                                        fit: BoxFit.contain,
                                       ),
                                     ),
                                   ],
-                                ],
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: AppSpacing.md),
+                              XPButton(
+                                label:
+                                    isLastPage ? 'Start now' : 'Continue',
+                                icon: Icons.arrow_forward_rounded,
+                                onPressed: _nextPage,
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -262,10 +255,10 @@ class _OnboardingPage {
   const _OnboardingPage({
     required this.imagePath,
     required this.title,
-    required this.description,
+    required this.eyebrow,
   });
 
   final String imagePath;
   final String title;
-  final String description;
+  final String eyebrow;
 }

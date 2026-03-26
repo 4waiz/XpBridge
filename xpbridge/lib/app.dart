@@ -195,11 +195,7 @@ class AppState extends ChangeNotifier {
 
     if (_isAdmin) {
       _applications = await SupabaseService.getAllApplications();
-      _aiInterviews = isStudent && _studentProfile != null
-          ? await SupabaseService.getInterviewsForStudent(_studentProfile!.id)
-          : isStartup && _startupProfile != null
-              ? await SupabaseService.getInterviewsForStartup(_startupProfile!.id)
-              : [];
+      _aiInterviews = await SupabaseService.getAllAiInterviews();
     } else if (isStudent && _studentProfile != null) {
       _applications = await SupabaseService.getApplicationsForStudent(
         _studentProfile!.id,

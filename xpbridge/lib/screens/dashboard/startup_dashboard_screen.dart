@@ -415,7 +415,7 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                     items: [
                       const DropdownMenuItem<String?>(
                         value: null,
-                        child: Text('All skills'),
+                        child: Text('All'),
                       ),
                       ...availableSkills.map(
                         (skill) => DropdownMenuItem<String?>(

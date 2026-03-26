@@ -135,160 +135,180 @@ class _SignupScreenState extends State<SignupScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.page),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  XPHeaderButton(
-                    icon: Icons.arrow_back_rounded,
-                    onTap: () => context.goNamed('login'),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    hasOAuthUser ? 'Finish your account' : 'Create your account',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    hasOAuthUser
-                        ? 'Your Google sign-in worked. Choose whether this account is for a student or a startup, then continue.'
-                        : 'Choose the workspace you need first. Students must upload a CV in setup, and startups move straight into company profile creation.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight < 860;
+            final sidePadding = compact ? AppSpacing.lg : AppSpacing.page;
+            final titleStyle = compact
+                ? Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  )
+                : Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  );
+
+            return Center(
+              child: Padding(
+                padding: EdgeInsets.all(sidePadding),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _RoleCard(
-                          title: 'Student',
-                          subtitle: 'Profile, CV, portfolio, and mission applications',
-                          icon: Icons.school_rounded,
-                          selected: _selectedRole == UserRole.student,
-                          onTap: () {
-                            setState(() {
-                              _selectedRole = UserRole.student;
-                              _submitError = null;
-                            });
-                          },
+                      XPHeaderButton(
+                        icon: Icons.arrow_back_rounded,
+                        onTap: () => context.goNamed('login'),
+                      ),
+                      SizedBox(height: compact ? AppSpacing.lg : AppSpacing.xl),
+                      Text(
+                        hasOAuthUser ? 'Finish your account' : 'Create your account',
+                        style: titleStyle,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        hasOAuthUser
+                            ? 'Pick a role and continue.'
+                            : 'Choose your lane and get moving.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _RoleCard(
-                          title: 'Startup',
-                          subtitle: 'Company setup, missions, applicants, and feedback',
-                          icon: Icons.rocket_launch_rounded,
-                          selected: _selectedRole == UserRole.startup,
-                          onTap: () {
-                            setState(() {
-                              _selectedRole = UserRole.startup;
-                              _submitError = null;
-                            });
-                          },
+                      SizedBox(height: compact ? AppSpacing.lg : AppSpacing.xl),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _RoleCard(
+                              title: 'Student',
+                              subtitle: 'Build profile and apply',
+                              icon: Icons.school_rounded,
+                              compact: compact,
+                              selected: _selectedRole == UserRole.student,
+                              onTap: () {
+                                setState(() {
+                                  _selectedRole = UserRole.student;
+                                  _submitError = null;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: _RoleCard(
+                              title: 'Startup',
+                              subtitle: 'Launch missions and hire',
+                              icon: Icons.rocket_launch_rounded,
+                              compact: compact,
+                              selected: _selectedRole == UserRole.startup,
+                              onTap: () {
+                                setState(() {
+                                  _selectedRole = UserRole.startup;
+                                  _submitError = null;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: compact ? AppSpacing.lg : AppSpacing.xl),
+                      XPCard(
+                        padding: EdgeInsets.all(
+                          compact ? AppSpacing.lg : AppSpacing.xl,
+                        ),
+                        elevated: true,
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              if (!hasOAuthUser) ...[
+                                TextFormField(
+                                  controller: _nameController,
+                                  validator: _validateName,
+                                  textCapitalization: TextCapitalization.words,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Full name',
+                                    prefixIcon: Icon(Icons.person_outline_rounded),
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                TextFormField(
+                                  controller: _emailController,
+                                  validator: _validateEmail,
+                                  keyboardType: TextInputType.emailAddress,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email',
+                                    hintText: 'you@example.com',
+                                    prefixIcon: Icon(Icons.mail_outline_rounded),
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                TextFormField(
+                                  controller: _passwordController,
+                                  validator: _validatePassword,
+                                  obscureText: _obscurePassword,
+                                  onFieldSubmitted: (_) => _submit(),
+                                  decoration: InputDecoration(
+                                    labelText: 'Password',
+                                    helperText: compact ? null : 'Use at least 8 characters.',
+                                    prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                    suffixIcon: IconButton(
+                                      onPressed: () {
+                                        setState(
+                                          () => _obscurePassword = !_obscurePassword,
+                                        );
+                                      },
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_off_rounded
+                                            : Icons.visibility_rounded,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (_submitError != null) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(
+                                  _submitError!,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: AppTheme.error),
+                                ),
+                              ],
+                              SizedBox(height: compact ? AppSpacing.lg : AppSpacing.xl),
+                              XPButton(
+                                label: hasOAuthUser ? 'Continue' : 'Create account',
+                                icon: Icons.arrow_forward_rounded,
+                                size: compact
+                                    ? XPButtonSize.medium
+                                    : XPButtonSize.large,
+                                loading: _isLoading,
+                                onPressed: _isLoading ? null : _submit,
+                              ),
+                              if (!hasOAuthUser) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                XPGoogleButton(
+                                  label: 'Sign up with Google',
+                                  onPressed: _isLoading ? null : _signUpWithGoogle,
+                                  loading: _isLoading,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: compact ? AppSpacing.sm : AppSpacing.lg),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => context.goNamed('login'),
+                          child: const Text('Already have an account? Log in'),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                  XPCard(
-                    padding: const EdgeInsets.all(AppSpacing.xl),
-                    elevated: true,
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          if (!hasOAuthUser) ...[
-                            TextFormField(
-                              controller: _nameController,
-                              validator: _validateName,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: const InputDecoration(
-                                labelText: 'Full name or company owner name',
-                                prefixIcon: Icon(Icons.person_outline_rounded),
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            TextFormField(
-                              controller: _emailController,
-                              validator: _validateEmail,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                hintText: 'you@example.com',
-                                prefixIcon: Icon(Icons.mail_outline_rounded),
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            TextFormField(
-                              controller: _passwordController,
-                              validator: _validatePassword,
-                              obscureText: _obscurePassword,
-                              onFieldSubmitted: (_) => _submit(),
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                helperText: 'Use at least 8 characters.',
-                                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                                suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(
-                                      () => _obscurePassword = !_obscurePassword,
-                                    );
-                                  },
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_rounded
-                                        : Icons.visibility_rounded,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (_submitError != null) ...[
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              _submitError!,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: AppTheme.error),
-                            ),
-                          ],
-                          const SizedBox(height: AppSpacing.xl),
-                          XPButton(
-                            label: hasOAuthUser ? 'Continue' : 'Create account',
-                            icon: Icons.arrow_forward_rounded,
-                            loading: _isLoading,
-                            onPressed: _isLoading ? null : _submit,
-                          ),
-                          if (!hasOAuthUser) ...[
-                            const SizedBox(height: AppSpacing.md),
-                            XPGoogleButton(
-                              label: 'Sign up with Google',
-                              onPressed: _isLoading ? null : _signUpWithGoogle,
-                              loading: _isLoading,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Center(
-                    child: TextButton(
-                      onPressed: () => context.goNamed('login'),
-                      child: const Text('Already have an account? Log in'),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -300,6 +320,7 @@ class _RoleCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
+    required this.compact,
     required this.selected,
     required this.onTap,
   });
@@ -307,6 +328,7 @@ class _RoleCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
+  final bool compact;
   final bool selected;
   final VoidCallback onTap;
 
@@ -316,7 +338,7 @@ class _RoleCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(compact ? AppSpacing.md : AppSpacing.lg),
         decoration: BoxDecoration(
           color: selected ? AppTheme.primaryLight : AppTheme.surface,
           borderRadius: BorderRadius.circular(AppTheme.cornerRadiusLarge),
@@ -331,15 +353,15 @@ class _RoleCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: compact ? 40 : 46,
+              height: compact ? 40 : 46,
               decoration: BoxDecoration(
                 color: selected ? AppTheme.primary : AppTheme.cardBackground,
                 borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
               ),
-              child: Icon(icon, color: AppTheme.text),
+              child: Icon(icon, color: AppTheme.text, size: compact ? 20 : 24),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: compact ? AppSpacing.md : AppSpacing.lg),
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -347,7 +369,12 @@ class _RoleCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
-            Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              subtitle,
+              maxLines: compact ? 2 : 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ],
         ),
       ),

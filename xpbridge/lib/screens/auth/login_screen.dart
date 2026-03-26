@@ -101,153 +101,147 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.page),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.cornerRadiusLarge,
-                      ),
-                      boxShadow: AppTheme.elevatedShadow,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.cornerRadiusLarge,
-                      ),
-                      child: SvgPicture.asset(
-                        'assets/image.svg',
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  Text(
-                    'Welcome back',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Sign in to review missions, applicants, and profile progress from live XPBridge data.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  XPCard(
-                    padding: const EdgeInsets.all(AppSpacing.xl),
-                    elevated: true,
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Log in',
-                            style: Theme.of(context).textTheme.titleLarge,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight < 860;
+            final sidePadding = compact ? AppSpacing.lg : AppSpacing.page;
+            final heroSize = compact ? 60.0 : 76.0;
+            final titleStyle = compact
+                ? Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  )
+                : Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  );
+
+            return Center(
+              child: Padding(
+                padding: EdgeInsets.all(sidePadding),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: heroSize,
+                        height: heroSize,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cornerRadiusLarge,
                           ),
-                          const SizedBox(height: AppSpacing.xl),
-                          TextFormField(
-                            controller: _emailController,
-                            validator: _validateEmail,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
-                              hintText: 'you@example.com',
-                              prefixIcon: Icon(Icons.mail_outline_rounded),
-                            ),
+                          boxShadow: AppTheme.elevatedShadow,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cornerRadiusLarge,
                           ),
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _passwordController,
-                            validator: _validatePassword,
-                            obscureText: _obscurePassword,
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) => _submit(),
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              hintText: 'Enter your password',
-                              prefixIcon: const Icon(
-                                Icons.lock_outline_rounded,
+                          child: SvgPicture.asset(
+                            'assets/image.svg',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: compact ? AppSpacing.lg : AppSpacing.xxl),
+                      Text('Welcome back', style: titleStyle),
+                      SizedBox(height: compact ? AppSpacing.lg : AppSpacing.xxl),
+                      XPCard(
+                        padding: EdgeInsets.all(
+                          compact ? AppSpacing.lg : AppSpacing.xl,
+                        ),
+                        elevated: true,
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Log in',
+                                style: Theme.of(context).textTheme.titleLarge,
                               ),
-                              suffixIcon: IconButton(
-                                onPressed: () {
-                                  setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  );
-                                },
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off_rounded
-                                      : Icons.visibility_rounded,
+                              SizedBox(
+                                height: compact ? AppSpacing.lg : AppSpacing.xl,
+                              ),
+                              TextFormField(
+                                controller: _emailController,
+                                validator: _validateEmail,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                  hintText: 'you@example.com',
+                                  prefixIcon: Icon(Icons.mail_outline_rounded),
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: AppSpacing.md),
+                              TextFormField(
+                                controller: _passwordController,
+                                validator: _validatePassword,
+                                obscureText: _obscurePassword,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => _submit(),
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  hintText: 'Enter your password',
+                                  prefixIcon: const Icon(
+                                    Icons.lock_outline_rounded,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    onPressed: () {
+                                      setState(
+                                        () => _obscurePassword = !_obscurePassword,
+                                      );
+                                    },
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_rounded
+                                          : Icons.visibility_rounded,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (visibleError != null) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(
+                                  visibleError,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: AppTheme.error),
+                                ),
+                              ],
+                              SizedBox(
+                                height: compact ? AppSpacing.lg : AppSpacing.xl,
+                              ),
+                              XPButton(
+                                label: 'Log in',
+                                icon: Icons.arrow_forward_rounded,
+                                size: compact
+                                    ? XPButtonSize.medium
+                                    : XPButtonSize.large,
+                                loading: _isLoading,
+                                onPressed: _isLoading ? null : _submit,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              XPGoogleButton(
+                                onPressed: _isLoading ? null : _signInByGoogle,
+                                loading: _isLoading,
+                              ),
+                            ],
                           ),
-                          if (visibleError != null) ...[
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              visibleError,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: AppTheme.error),
-                            ),
-                          ],
-                          const SizedBox(height: AppSpacing.xl),
-                          XPButton(
-                            label: 'Log in',
-                            icon: Icons.arrow_forward_rounded,
-                            loading: _isLoading,
-                            onPressed: _isLoading ? null : _submit,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          XPGoogleButton(
-                            onPressed: _isLoading ? null : _signInByGoogle,
-                            loading: _isLoading,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            'By continuing, you agree to your internal testing and reviewer access flow.',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  XPCard(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Need an account first? Create a student or startup workspace.',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        XPOutlinedButton(
-                          label: 'Sign up',
-                          expand: false,
-                          size: XPButtonSize.medium,
+                      SizedBox(height: compact ? AppSpacing.sm : AppSpacing.lg),
+                      Center(
+                        child: TextButton(
                           onPressed: () => context.goNamed('signup'),
+                          child: const Text('New here? Sign up'),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
