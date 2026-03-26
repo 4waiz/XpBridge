@@ -253,8 +253,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         label: 'Verify & Delete Forever',
                         backgroundColor: AppTheme.error,
                         loading: processing,
-                        enabled: !processing,
-                        onPressed: () async {
+                        onPressed: processing ? null : () async {
                           if (confirmTextController.text.trim() != 'DELETE') {
                             setDialogState(
                               () => dialogError = 'Please type DELETE to confirm.',

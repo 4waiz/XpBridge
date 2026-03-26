@@ -383,8 +383,7 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                         label: 'Verify & Delete Forever',
                         backgroundColor: AppTheme.error,
                         loading: processing,
-                        enabled: !processing,
-                        onPressed: () async {
+                        onPressed: processing ? null : () async {
                           if (confirmTextController.text.trim() != 'DELETE') {
                             setDialogState(
                               () => dialogError = 'Please type DELETE to confirm.',
@@ -687,7 +686,6 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                     label: 'Delete account',
                     size: XPButtonSize.small,
                     backgroundColor: AppTheme.error,
-                    style: XPButtonStyle.outline,
                     onPressed: _showDeleteDialog,
                   ),
                 ),

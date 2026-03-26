@@ -16,6 +16,7 @@ import '../screens/onboarding/intro_screen.dart';
 import '../screens/onboarding/startup_setup_screen.dart';
 import '../screens/onboarding/student_setup_screen.dart';
 import '../screens/legal/privacy_policy_screen.dart';
+import '../screens/legal/delete_account_screen.dart';
 import '../screens/profile/startup_profile_screen.dart';
 import '../screens/profile/student_profile_screen.dart';
 import '../screens/splash/splash_screen.dart';
