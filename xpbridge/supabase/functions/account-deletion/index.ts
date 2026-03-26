@@ -14,13 +14,32 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    const authHeader = req.headers.get("Authorization") ?? "";
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      throw new Error("Missing required Supabase function secrets");
+    }
+
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // 1. Get user from JWT
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -37,7 +56,7 @@ serve(async (req) => {
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins
 
       // Store in DB
-      const { error: otpDbError } = await supabaseClient
+      const { error: otpDbError } = await adminClient
         .from("account_deletion_otps")
         .upsert({ user_id: user.id, otp_code: generatedOtp, expires_at: expiresAt });
 
@@ -83,7 +102,7 @@ serve(async (req) => {
       if (!otp) throw new Error("OTP is required");
 
       // Verify OTP
-      const { data: otpData, error: otpFetchError } = await supabaseClient
+      const { data: otpData, error: otpFetchError } = await adminClient
         .from("account_deletion_otps")
         .select("*")
         .eq("user_id", user.id)
@@ -107,10 +126,10 @@ serve(async (req) => {
       // SUCCESS - Start Deletion
       
       // 1. Delete DB profile (Cascades will hit missions/applications/interviews)
-      await supabaseClient.from("profiles").delete().eq("id", user.id);
+      await adminClient.from("profiles").delete().eq("id", user.id);
 
       // 2. Delete OTP record
-      await supabaseClient.from("account_deletion_otps").delete().eq("user_id", user.id);
+      await adminClient.from("account_deletion_otps").delete().eq("user_id", user.id);
 
       // 3. Optional: Delete storage assets
       // (Implementation depends on bucket structure, e.g., 'avatars/USER_ID/')
@@ -118,7 +137,7 @@ serve(async (req) => {
       // if (files) await supabaseClient.storage.from('xpbridge-assets').remove(files.map(f => `${user.id}/${f.name}`));
 
       // 4. Delete Auth User
-      const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(user.id);
+      const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
       if (deleteError) throw deleteError;
 
       return new Response(JSON.stringify({ message: "Account deleted successfully" }), {
