@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../app.dart';
 import '../../services/ai_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_page_scaffold.dart';
 
 class AiChatScreen extends StatefulWidget {
@@ -27,7 +27,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void _addInitialMessage() {
     _messages.add(
       const ChatMessage(
-        text: "Hi there! 👋 I'm your XpBridge career assistant. I can help you find missions, improve your profile, or give you career advice. What's on your mind?",
+        text:
+            "Hi there! I'm your XPBridge career assistant. I can help you find missions, improve your profile, or give you career advice. What's on your mind?",
         isUser: false,
       ),
     );
@@ -66,12 +67,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
         });
         _scrollToBottom();
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _messages.add(
             const ChatMessage(
-              text: "Sorry, I'm having trouble connecting right now. Please try again later.",
+              text:
+                  "Sorry, I'm having trouble connecting right now. Please try again later.",
               isUser: false,
             ),
           );
@@ -135,7 +137,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(
+        border: const Border(
           top: BorderSide(
             color: AppTheme.border,
             width: 1,
@@ -188,12 +190,15 @@ class ChatMessage {
 }
 
 class ChatBubble extends StatelessWidget {
-  final ChatMessage message;
-
   const ChatBubble({super.key, required this.message});
+
+  final ChatMessage message;
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bubbleMaxWidth = screenWidth < 640 ? screenWidth * 0.78 : 480.0;
+
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -202,16 +207,18 @@ class ChatBubble extends StatelessWidget {
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
+        constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
         decoration: BoxDecoration(
           color: message.isUser ? AppTheme.primary : AppTheme.cardBackground,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(AppTheme.cornerRadiusLarge),
             topRight: const Radius.circular(AppTheme.cornerRadiusLarge),
-            bottomLeft: Radius.circular(message.isUser ? AppTheme.cornerRadiusLarge : 0),
-            bottomRight: Radius.circular(message.isUser ? 0 : AppTheme.cornerRadiusLarge),
+            bottomLeft: Radius.circular(
+              message.isUser ? AppTheme.cornerRadiusLarge : 0,
+            ),
+            bottomRight: Radius.circular(
+              message.isUser ? 0 : AppTheme.cornerRadiusLarge,
+            ),
           ),
           boxShadow: [
             BoxShadow(

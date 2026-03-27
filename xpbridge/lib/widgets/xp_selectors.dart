@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'xp_button.dart';
 import 'xp_card.dart';
 import 'xp_input.dart';
 import 'xp_premium.dart';
@@ -45,14 +46,25 @@ class XPMultiSelectField extends StatelessWidget {
             return XPPremiumSheet(
               title: label,
               subtitle: 'Select $minSelection-$maxSelection options.',
-              footer: FilledButton(
-                onPressed: selected.length < minSelection
-                    ? null
-                    : () {
-                        onChanged(selected.toList()..sort());
-                        Navigator.pop(sheetContext);
-                      },
-                child: const Text('Apply selection'),
+              footer: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FilledButton(
+                    onPressed: selected.length < minSelection
+                        ? null
+                        : () {
+                            onChanged(selected.toList()..sort());
+                            Navigator.pop(sheetContext);
+                          },
+                    child: const Text('Apply selection'),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  XPOutlinedButton(
+                    label: 'Go back',
+                    icon: Icons.arrow_back_rounded,
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
@@ -154,6 +166,11 @@ class XPSingleSelectField extends StatelessWidget {
             return XPPremiumSheet(
               title: label,
               subtitle: 'Pick the best fit.',
+              footer: XPOutlinedButton(
+                label: 'Go back',
+                icon: Icons.arrow_back_rounded,
+                onPressed: () => Navigator.of(sheetContext).pop(),
+              ),
               child: Column(
                 children: [
                   XPTextField(

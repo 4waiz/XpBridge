@@ -30,8 +30,8 @@ class AppTheme {
   static const Color text = Color(0xFF1F2933);
   static const Color textSecondary = Color(0xFF56616A);
   static const Color textMuted = Color(0xFF7E8A94);
-  static const Color pageTitle = Color(0xFF1B2430);
-  static const Color pageSubtitle = Color(0xFF425466);
+  static const Color pageTitle = Color(0xFFFFFFFF);
+  static const Color pageSubtitle = Color(0xFF000000);
   static const Color border = Color(0xFFE3E8E5);
 
   static const Color success = primaryDark;

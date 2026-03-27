@@ -47,6 +47,80 @@ class _AdminScreenState extends State<AdminScreen> {
     return '00000000-0000-0000-0000-${timestamp.substring(0, 12)}';
   }
 
+  InputDecoration _dropdownDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: AppTheme.surface.withValues(alpha: 0.88),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+    );
+  }
+
+  Widget _dropdownText(String text) {
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.bodyLarge,
+    );
+  }
+
+  List<Widget> _selectedDropdownItems(List<MapEntry<String, String>> items) {
+    return items
+        .map(
+          (item) => Align(
+            alignment: Alignment.centerLeft,
+            child: _dropdownText(item.value),
+          ),
+        )
+        .toList();
+  }
+
+  Widget _dialogShell({
+    required BuildContext context,
+    required String title,
+    required Widget child,
+    required List<Widget> actions,
+  }) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xl,
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.xl,
+        AppSpacing.xl,
+        0,
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        0,
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      title: Text(title),
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 520,
+          maxHeight: screenHeight * 0.62,
+        ),
+        child: SingleChildScrollView(child: child),
+      ),
+      actions: actions,
+    );
+  }
+
   Future<void> _showJsonDialog(String title, Map<String, dynamic> data) async {
     const encoder = JsonEncoder.withIndent('  ');
     await showDialog<void>(
@@ -122,27 +196,38 @@ class _AdminScreenState extends State<AdminScreen> {
 
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(student != null || startup != null ? 'Edit profile' : 'Add profile'),
-        content: SizedBox(
-          width: 520,
-          child: ValueListenableBuilder<String>(
-            valueListenable: role,
-            builder: (context, currentRole, child) => SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: currentRole,
-                    decoration: const InputDecoration(labelText: 'Role'),
-                    items: const [
-                      DropdownMenuItem(value: 'student', child: Text('Student')),
-                      DropdownMenuItem(value: 'startup', child: Text('Startup')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) role.value = value;
-                    },
-                  ),
+      builder: (context) => _dialogShell(
+        context: context,
+        title: student != null || startup != null ? 'Edit profile' : 'Add profile',
+        child: ValueListenableBuilder<String>(
+          valueListenable: role,
+          builder: (context, currentRole, child) {
+            const roleItems = [
+              MapEntry('student', 'Student'),
+              MapEntry('startup', 'Startup'),
+            ];
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: currentRole,
+                  isExpanded: true,
+                  menuMaxHeight: 260,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                  decoration: _dropdownDecoration('Role'),
+                  selectedItemBuilder: (_) => _selectedDropdownItems(roleItems),
+                  items: roleItems
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item.key,
+                          child: _dropdownText(item.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) role.value = value;
+                  },
+                ),
                   const SizedBox(height: AppSpacing.md),
                   TextField(
                     controller: nameController,
@@ -192,9 +277,8 @@ class _AdminScreenState extends State<AdminScreen> {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ),
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -270,32 +354,37 @@ class _AdminScreenState extends State<AdminScreen> {
 
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(mission == null ? 'Add mission' : 'Edit mission'),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ValueListenableBuilder<String?>(
-                  valueListenable: startupId,
-                  builder: (context, currentStartup, child) {
-                    return DropdownButtonFormField<String>(
-                      initialValue: currentStartup,
-                      decoration: const InputDecoration(labelText: 'Startup'),
-                      items: appState.startups
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item.id,
-                              child: Text(item.companyName),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => startupId.value = value,
-                    );
-                  },
-                ),
+      builder: (context) => _dialogShell(
+        context: context,
+        title: mission == null ? 'Add mission' : 'Edit mission',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ValueListenableBuilder<String?>(
+              valueListenable: startupId,
+              builder: (context, currentStartup, child) {
+                final startupItems = appState.startups
+                    .map((item) => MapEntry(item.id, item.companyName))
+                    .toList();
+                return DropdownButtonFormField<String>(
+                  initialValue: currentStartup,
+                  isExpanded: true,
+                  menuMaxHeight: 320,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                  decoration: _dropdownDecoration('Startup'),
+                  selectedItemBuilder: (_) => _selectedDropdownItems(startupItems),
+                  items: startupItems
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item.key,
+                          child: _dropdownText(item.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => startupId.value = value,
+                );
+              },
+            ),
                 const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: titleController,
@@ -327,25 +416,35 @@ class _AdminScreenState extends State<AdminScreen> {
                       const InputDecoration(labelText: 'Learning outcome'),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                ValueListenableBuilder<String>(
-                  valueListenable: statusController,
-                  builder: (context, currentStatus, child) {
-                    return DropdownButtonFormField<String>(
-                      initialValue: currentStatus,
-                      decoration: const InputDecoration(labelText: 'Status'),
-                      items: const [
-                        DropdownMenuItem(value: 'open', child: Text('Open')),
-                        DropdownMenuItem(value: 'closed', child: Text('Closed')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) statusController.value = value;
-                      },
-                    );
+            ValueListenableBuilder<String>(
+              valueListenable: statusController,
+              builder: (context, currentStatus, child) {
+                const statusItems = [
+                  MapEntry('open', 'Open'),
+                  MapEntry('closed', 'Closed'),
+                ];
+                return DropdownButtonFormField<String>(
+                  initialValue: currentStatus,
+                  isExpanded: true,
+                  menuMaxHeight: 260,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                  decoration: _dropdownDecoration('Status'),
+                  selectedItemBuilder: (_) => _selectedDropdownItems(statusItems),
+                  items: statusItems
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item.key,
+                          child: _dropdownText(item.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) statusController.value = value;
                   },
-                ),
-              ],
+                );
+              },
             ),
-          ),
+          ],
         ),
         actions: [
           TextButton(
@@ -395,82 +494,104 @@ class _AdminScreenState extends State<AdminScreen> {
 
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(application == null ? 'Add application' : 'Edit application'),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ValueListenableBuilder<String?>(
-                  valueListenable: studentId,
-                  builder: (context, currentStudent, child) {
-                    return DropdownButtonFormField<String>(
-                      initialValue: currentStudent,
-                      decoration: const InputDecoration(labelText: 'Student'),
-                      items: appState.students
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item.id,
-                              child: Text(item.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => studentId.value = value,
-                    );
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                ValueListenableBuilder<String?>(
-                  valueListenable: missionId,
-                  builder: (context, currentMission, child) {
-                    return DropdownButtonFormField<String>(
-                      initialValue: currentMission,
-                      decoration: const InputDecoration(labelText: 'Mission'),
-                      items: appState.missions
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item.id,
-                              child: Text('${item.startupName} - ${item.title}'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => missionId.value = value,
-                    );
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                ValueListenableBuilder<String>(
-                  valueListenable: status,
-                  builder: (context, currentStatus, child) {
-                    return DropdownButtonFormField<String>(
-                      initialValue: currentStatus,
-                      decoration: const InputDecoration(labelText: 'Status'),
-                      items: ApplicationStatus.values
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item.name,
-                              child: Text(item.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) status.value = value;
-                      },
-                    );
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: noteController,
-                  minLines: 3,
-                  maxLines: 4,
-                  decoration: const InputDecoration(labelText: 'Intro note'),
-                ),
-              ],
+      builder: (context) => _dialogShell(
+        context: context,
+        title: application == null ? 'Add application' : 'Edit application',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ValueListenableBuilder<String?>(
+              valueListenable: studentId,
+              builder: (context, currentStudent, child) {
+                final studentItems = appState.students
+                    .map((item) => MapEntry(item.id, item.name))
+                    .toList();
+                return DropdownButtonFormField<String>(
+                  initialValue: currentStudent,
+                  isExpanded: true,
+                  menuMaxHeight: 320,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                  decoration: _dropdownDecoration('Student'),
+                  selectedItemBuilder: (_) => _selectedDropdownItems(studentItems),
+                  items: studentItems
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item.key,
+                          child: _dropdownText(item.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => studentId.value = value,
+                );
+              },
             ),
-          ),
+            const SizedBox(height: AppSpacing.md),
+            ValueListenableBuilder<String?>(
+              valueListenable: missionId,
+              builder: (context, currentMission, child) {
+                final missionItems = appState.missions
+                    .map(
+                      (item) => MapEntry(
+                        item.id,
+                        '${item.startupName} - ${item.title}',
+                      ),
+                    )
+                    .toList();
+                return DropdownButtonFormField<String>(
+                  initialValue: currentMission,
+                  isExpanded: true,
+                  menuMaxHeight: 320,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                  decoration: _dropdownDecoration('Mission'),
+                  selectedItemBuilder: (_) => _selectedDropdownItems(missionItems),
+                  items: missionItems
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item.key,
+                          child: _dropdownText(item.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => missionId.value = value,
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ValueListenableBuilder<String>(
+              valueListenable: status,
+              builder: (context, currentStatus, child) {
+                final statusItems = ApplicationStatus.values
+                    .map((item) => MapEntry(item.name, item.name))
+                    .toList();
+                return DropdownButtonFormField<String>(
+                  initialValue: currentStatus,
+                  isExpanded: true,
+                  menuMaxHeight: 320,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                  decoration: _dropdownDecoration('Status'),
+                  selectedItemBuilder: (_) => _selectedDropdownItems(statusItems),
+                  items: statusItems
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item.key,
+                          child: _dropdownText(item.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) status.value = value;
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: noteController,
+              minLines: 3,
+              maxLines: 4,
+              decoration: const InputDecoration(labelText: 'Intro note'),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -521,75 +642,88 @@ class _AdminScreenState extends State<AdminScreen> {
 
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(interview == null ? 'Add interview' : 'Edit interview'),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ValueListenableBuilder<String?>(
-                  valueListenable: applicationId,
-                  builder: (context, currentApplication, child) {
-                    return DropdownButtonFormField<String>(
-                      initialValue: currentApplication,
-                      decoration:
-                          const InputDecoration(labelText: 'Application'),
-                      items: appState.applications
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item.id,
-                              child: Text(
-                                '${item.studentName} - ${item.roleTitle ?? 'Application'}',
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => applicationId.value = value,
-                    );
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                ValueListenableBuilder<String>(
-                  valueListenable: status,
-                  builder: (context, currentStatus, child) {
-                    return DropdownButtonFormField<String>(
-                      initialValue: currentStatus,
-                      decoration: const InputDecoration(labelText: 'Status'),
-                      items: AiInterviewStatus.values
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item.name,
-                              child: Text(item.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) status.value = value;
-                      },
-                    );
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: questionsController,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Questions (one per line)',
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: summaryController,
-                  minLines: 3,
-                  maxLines: 4,
-                  decoration: const InputDecoration(labelText: 'Summary'),
-                ),
-              ],
+      builder: (context) => _dialogShell(
+        context: context,
+        title: interview == null ? 'Add interview' : 'Edit interview',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ValueListenableBuilder<String?>(
+              valueListenable: applicationId,
+              builder: (context, currentApplication, child) {
+                final applicationItems = appState.applications
+                    .map(
+                      (item) => MapEntry(
+                        item.id,
+                        '${item.studentName} - ${item.roleTitle ?? 'Application'}',
+                      ),
+                    )
+                    .toList();
+                return DropdownButtonFormField<String>(
+                  initialValue: currentApplication,
+                  isExpanded: true,
+                  menuMaxHeight: 320,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                  decoration: _dropdownDecoration('Application'),
+                  selectedItemBuilder: (_) =>
+                      _selectedDropdownItems(applicationItems),
+                  items: applicationItems
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item.key,
+                          child: _dropdownText(item.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => applicationId.value = value,
+                );
+              },
             ),
-          ),
+            const SizedBox(height: AppSpacing.md),
+            ValueListenableBuilder<String>(
+              valueListenable: status,
+              builder: (context, currentStatus, child) {
+                final statusItems = AiInterviewStatus.values
+                    .map((item) => MapEntry(item.name, item.name))
+                    .toList();
+                return DropdownButtonFormField<String>(
+                  initialValue: currentStatus,
+                  isExpanded: true,
+                  menuMaxHeight: 260,
+                  borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
+                  decoration: _dropdownDecoration('Status'),
+                  selectedItemBuilder: (_) => _selectedDropdownItems(statusItems),
+                  items: statusItems
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item.key,
+                          child: _dropdownText(item.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) status.value = value;
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: questionsController,
+              minLines: 3,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Questions (one per line)',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: summaryController,
+              minLines: 3,
+              maxLines: 4,
+              decoration: const InputDecoration(labelText: 'Summary'),
+            ),
+          ],
         ),
         actions: [
           TextButton(

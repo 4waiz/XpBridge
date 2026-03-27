@@ -232,6 +232,12 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                         Navigator.pop(sheetContext);
                       },
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    XPOutlinedButton(
+                      label: 'Go back',
+                      icon: Icons.arrow_back_rounded,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
                   ],
                 ),
               ),

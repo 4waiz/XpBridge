@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app.dart';
 import '../../models/application.dart';
 import '../../models/student_profile.dart';
+import '../../services/link_service.dart';
+import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
@@ -27,6 +30,106 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showReachOutSheet(StudentProfile student) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final mediaQuery = MediaQuery.of(sheetContext);
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: AppSpacing.md,
+              right: AppSpacing.md,
+              top: AppSpacing.md,
+              bottom: mediaQuery.viewInsets.bottom + AppSpacing.md,
+            ),
+            child: XPCard(
+              elevated: true,
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Reach out to ${student.name}',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Use the student email below to contact them directly.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  XPContainer(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.mail_outline_rounded,
+                          color: AppTheme.primaryDeep,
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: SelectableText(
+                            student.email,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  XPButton(
+                    label: 'Open email app',
+                    icon: Icons.send_rounded,
+                    onPressed: () async {
+                      try {
+                        await LinkService.openExternal(
+                          'mailto:${student.email}?subject=${Uri.encodeComponent('XPBridge opportunity')}',
+                        );
+                      } on XpServiceException catch (error) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error.message)),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  XPOutlinedButton(
+                    label: 'Copy email',
+                    icon: Icons.copy_rounded,
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: student.email),
+                      );
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${student.email} copied.'),
+                          backgroundColor: AppTheme.successDark,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  XPOutlinedButton(
+                    label: 'Go back',
+                    icon: Icons.arrow_back_rounded,
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Color _statusColor(ApplicationStatus status) {
@@ -95,142 +198,158 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.md,
-                right: AppSpacing.md,
-                top: AppSpacing.md,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.88,
+            final mediaQuery = MediaQuery.of(context);
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  top: AppSpacing.md,
+                  bottom: mediaQuery.viewInsets.bottom + AppSpacing.md,
                 ),
-                child: XPSection(
-                  child: SingleChildScrollView(
+                child: SizedBox(
+                  height: mediaQuery.size.height * 0.88,
+                  child: XPCard(
+                    elevated: true,
+                    padding: const EdgeInsets.all(AppSpacing.xl),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Mentor feedback',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          student?.name ?? application.studentName,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Row(
-                          children: List.generate(5, (index) {
-                            final star = index + 1;
-                            return IconButton(
-                              onPressed: () => setModalState(() => rating = star),
-                              icon: Icon(
-                                star <= rating
-                                    ? Icons.star_rounded
-                                    : Icons.star_border_rounded,
-                                color: AppTheme.primary,
-                              ),
-                            );
-                          }),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'Strengths',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: strengthOptions.map((item) {
-                            return FilterChip(
-                              label: Text(item),
-                              selected: strengths.contains(item),
-                              onSelected: (selected) {
-                                setModalState(() {
-                                  if (selected) {
-                                    strengths.add(item);
-                                  } else {
-                                    strengths.remove(item);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'Growth areas',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: growthOptions.map((item) {
-                            return FilterChip(
-                              label: Text(item),
-                              selected: growthAreas.contains(item),
-                              onSelected: (selected) {
-                                setModalState(() {
-                                  if (selected) {
-                                    growthAreas.add(item);
-                                  } else {
-                                    growthAreas.remove(item);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
-                        if (student != null && student.skills.isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            'Endorsed skills',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: student.skills.map((skill) {
-                              final selected = endorsedSkills.contains(skill);
-                              final canSelect =
-                                  selected || endorsedSkills.length < 3;
-                              return FilterChip(
-                                label: Text(skill),
-                                selected: selected,
-                                onSelected: canSelect
-                                    ? (value) {
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Mentor feedback',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  student?.name ?? application.studentName,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: AppSpacing.lg),
+                                Row(
+                                  children: List.generate(5, (index) {
+                                    final star = index + 1;
+                                    return IconButton(
+                                      onPressed: () =>
+                                          setModalState(() => rating = star),
+                                      icon: Icon(
+                                        star <= rating
+                                            ? Icons.star_rounded
+                                            : Icons.star_border_rounded,
+                                        color: AppTheme.primary,
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(
+                                  'Strengths',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                Wrap(
+                                  spacing: AppSpacing.sm,
+                                  runSpacing: AppSpacing.sm,
+                                  children: strengthOptions.map((item) {
+                                    return FilterChip(
+                                      label: Text(item),
+                                      selected: strengths.contains(item),
+                                      onSelected: (selected) {
                                         setModalState(() {
-                                          if (value) {
-                                            endorsedSkills.add(skill);
+                                          if (selected) {
+                                            strengths.add(item);
                                           } else {
-                                            endorsedSkills.remove(skill);
+                                            strengths.remove(item);
                                           }
                                         });
-                                      }
-                                    : null,
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                        const SizedBox(height: AppSpacing.md),
-                        TextField(
-                          controller: feedbackController,
-                          minLines: 4,
-                          maxLines: 5,
-                          decoration: const InputDecoration(
-                            labelText: 'Feedback note',
-                            hintText: 'What went well, and what should improve next?',
-                            prefixIcon: Icon(Icons.feedback_outlined),
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                Text(
+                                  'Growth areas',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                Wrap(
+                                  spacing: AppSpacing.sm,
+                                  runSpacing: AppSpacing.sm,
+                                  children: growthOptions.map((item) {
+                                    return FilterChip(
+                                      label: Text(item),
+                                      selected: growthAreas.contains(item),
+                                      onSelected: (selected) {
+                                        setModalState(() {
+                                          if (selected) {
+                                            growthAreas.add(item);
+                                          } else {
+                                            growthAreas.remove(item);
+                                          }
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                                if (student != null &&
+                                    student.skills.isNotEmpty) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  Text(
+                                    'Endorsed skills',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Wrap(
+                                    spacing: AppSpacing.sm,
+                                    runSpacing: AppSpacing.sm,
+                                    children: student.skills.map((skill) {
+                                      final selected =
+                                          endorsedSkills.contains(skill);
+                                      final canSelect =
+                                          selected || endorsedSkills.length < 3;
+                                      return FilterChip(
+                                        label: Text(skill),
+                                        selected: selected,
+                                        onSelected: canSelect
+                                            ? (value) {
+                                                setModalState(() {
+                                                  if (value) {
+                                                    endorsedSkills.add(skill);
+                                                  } else {
+                                                    endorsedSkills.remove(skill);
+                                                  }
+                                                });
+                                              }
+                                            : null,
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                                const SizedBox(height: AppSpacing.md),
+                                TextField(
+                                  controller: feedbackController,
+                                  minLines: 4,
+                                  maxLines: 5,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Feedback note',
+                                    hintText:
+                                        'What went well, and what should improve next?',
+                                    prefixIcon:
+                                        Icon(Icons.feedback_outlined),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.xl),
+                        const SizedBox(height: AppSpacing.lg),
                         XPButton(
                           label: 'Save feedback',
                           icon: Icons.check_rounded,
@@ -255,6 +374,12 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                               ),
                             );
                           },
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        XPOutlinedButton(
+                          label: 'Go back',
+                          icon: Icons.arrow_back_rounded,
+                          onPressed: () => Navigator.of(sheetContext).pop(),
                         ),
                       ],
                     ),
@@ -463,7 +588,10 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                 onStatusChange: _changeStatus,
               )
             else
-              _TalentView(students: students),
+              _TalentView(
+                students: students,
+                onReachOut: _showReachOutSheet,
+              ),
           ],
         ),
       ),
@@ -602,9 +730,13 @@ class _ApplicantsView extends StatelessWidget {
 }
 
 class _TalentView extends StatelessWidget {
-  const _TalentView({required this.students});
+  const _TalentView({
+    required this.students,
+    required this.onReachOut,
+  });
 
   final List<StudentProfile> students;
+  final Future<void> Function(StudentProfile student) onReachOut;
 
   @override
   Widget build(BuildContext context) {
@@ -660,17 +792,25 @@ class _TalentView extends StatelessWidget {
                           .toList(),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    Row(
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
                       children: [
-                        Expanded(
-                          child: XPOutlinedButton(
-                            label: 'View profile',
-                            size: XPButtonSize.small,
-                            onPressed: () => context.pushNamed(
-                              'studentDetail',
-                              pathParameters: {'id': student.id},
-                            ),
+                        XPOutlinedButton(
+                          label: 'View profile',
+                          size: XPButtonSize.small,
+                          expand: false,
+                          onPressed: () => context.pushNamed(
+                            'studentDetail',
+                            pathParameters: {'id': student.id},
                           ),
+                        ),
+                        XPButton(
+                          label: 'Reach out',
+                          size: XPButtonSize.small,
+                          expand: false,
+                          icon: Icons.mail_outline_rounded,
+                          onPressed: () => onReachOut(student),
                         ),
                       ],
                     ),

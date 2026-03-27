@@ -115,6 +115,12 @@ class _StartupDetailScreenState extends State<StartupDetailScreen> {
                         }
                       },
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    XPOutlinedButton(
+                      label: 'Go back',
+                      icon: Icons.arrow_back_rounded,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
                   ],
                 ),
               ),
