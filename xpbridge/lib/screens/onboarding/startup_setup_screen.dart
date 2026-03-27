@@ -95,19 +95,30 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.md,
-                right: AppSpacing.md,
-                top: AppSpacing.md,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-              ),
-              child: XPSection(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            final mediaQuery = MediaQuery.of(context);
+            final stackFields = mediaQuery.size.width < 420;
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  top: AppSpacing.md,
+                  bottom: mediaQuery.viewInsets.bottom + AppSpacing.md,
+                ),
+                child: SizedBox(
+                  height: mediaQuery.size.height * 0.88,
+                  child: XPCard(
+                    elevated: true,
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                     Text('Add mission', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: AppSpacing.lg),
                     TextField(
@@ -139,20 +150,18 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
+                    if (stackFields)
+                      Column(
+                        children: [
+                          TextField(
                             controller: commitmentController,
                             decoration: const InputDecoration(
                               labelText: 'Commitment',
                               hintText: '10 hrs/week',
                             ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: TextField(
+                          const SizedBox(height: AppSpacing.md),
+                          TextField(
                             controller: hoursController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
@@ -160,9 +169,33 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                               hintText: '8',
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: commitmentController,
+                              decoration: const InputDecoration(
+                                labelText: 'Commitment',
+                                hintText: '10 hrs/week',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: TextField(
+                              controller: hoursController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Hours',
+                                hintText: '8',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: AppSpacing.md),
                     TextField(
                       controller: durationController,
@@ -213,7 +246,11 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                         }).toList(),
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.xl),
+                              ],
+                            ),
+                          ),
+                        ),
+                    const SizedBox(height: AppSpacing.lg),
                     XPButton(
                       label: 'Add mission',
                       onPressed: () {
@@ -254,6 +291,8 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
                       onPressed: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
+                    ),
+                  ),
                 ),
               ),
             );

@@ -67,13 +67,18 @@ class AppState extends ChangeNotifier {
   bool get isStudent => activeRole == UserRole.student;
   bool get isStartup => activeRole == UserRole.startup;
 
-  StudentProfile? get studentProfile =>
-      isPreviewingAsAdmin && isStudent ? _previewStudentProfile : _studentProfile;
-  StartupProfile? get startupProfile =>
-      isPreviewingAsAdmin && isStartup ? _previewStartupProfile : _startupProfile;
-  List<StudentProfile> get students => isPreviewingAsAdmin ? _previewStudents : _students;
-  List<StartupProfile> get startups => isPreviewingAsAdmin ? _previewStartups : _startups;
-  List<Mission> get missions => isPreviewingAsAdmin ? _previewMissions : _missions;
+  StudentProfile? get studentProfile => isPreviewingAsAdmin && isStudent
+      ? _previewStudentProfile
+      : _studentProfile;
+  StartupProfile? get startupProfile => isPreviewingAsAdmin && isStartup
+      ? _previewStartupProfile
+      : _startupProfile;
+  List<StudentProfile> get students =>
+      isPreviewingAsAdmin ? _previewStudents : _students;
+  List<StartupProfile> get startups =>
+      isPreviewingAsAdmin ? _previewStartups : _startups;
+  List<Mission> get missions =>
+      isPreviewingAsAdmin ? _previewMissions : _missions;
   List<Application> get applications =>
       isPreviewingAsAdmin ? _previewApplications : _applications;
   List<AiInterview> get aiInterviews =>
@@ -178,12 +183,8 @@ class AppState extends ChangeNotifier {
       _isLoggedIn = true;
       _adminPreviewRole = null;
       final roleString = profileRecord['role'] as String? ?? 'student';
-      _userRole = roleString == 'startup'
-          ? UserRole.startup
-          : UserRole.student;
-      _isAdmin =
-          (profileRecord['is_admin'] as bool? ?? false) ||
-          AppConfig.instance.isAdminEmail(user.email);
+      _userRole = roleString == 'startup' ? UserRole.startup : UserRole.student;
+      _isAdmin = profileRecord['is_admin'] as bool? ?? false;
 
       _studentProfile = _userRole == UserRole.student
           ? await SupabaseService.getStudentProfile(user.id)
@@ -237,17 +238,17 @@ class AppState extends ChangeNotifier {
 
     if (_studentProfile != null) {
       final refreshedStudent = _students.cast<StudentProfile?>().firstWhere(
-            (item) => item?.id == _studentProfile!.id,
-            orElse: () => _studentProfile,
-          );
+        (item) => item?.id == _studentProfile!.id,
+        orElse: () => _studentProfile,
+      );
       _studentProfile = refreshedStudent;
     }
 
     if (_startupProfile != null) {
       final refreshedStartup = _startups.cast<StartupProfile?>().firstWhere(
-            (item) => item?.id == _startupProfile!.id,
-            orElse: () => _startupProfile,
-          );
+        (item) => item?.id == _startupProfile!.id,
+        orElse: () => _startupProfile,
+      );
       _startupProfile = refreshedStartup?.copyWith(
         openRoles: _missions
             .where((mission) => mission.startupId == _startupProfile!.id)
@@ -440,11 +441,11 @@ class AppState extends ChangeNotifier {
       role: role,
       requiredSkills: startup.requiredSkills,
     );
-    _missions = [mission.copyWith(startupName: startup.companyName), ..._missions];
-    _startupProfile = startup.copyWith(openRoles: [
-      ...startup.openRoles,
-      role,
-    ]);
+    _missions = [
+      mission.copyWith(startupName: startup.companyName),
+      ..._missions,
+    ];
+    _startupProfile = startup.copyWith(openRoles: [...startup.openRoles, role]);
     _upsertStartup(_startupProfile!);
     notifyListeners();
     return mission;
@@ -512,17 +513,14 @@ class AppState extends ChangeNotifier {
     String? deliverableUrl,
     String? deliverableType,
   }) async {
-    await SupabaseService.updateApplicationReflection(
-      applicationId,
-      {
-        'reflection_did': did,
-        'reflection_learned': learned,
-        'skills_practiced': skillsPracticed,
-        'hours_spent': hoursSpent,
-        'deliverable_url': deliverableUrl,
-        'deliverable_type': deliverableType,
-      },
-    );
+    await SupabaseService.updateApplicationReflection(applicationId, {
+      'reflection_did': did,
+      'reflection_learned': learned,
+      'skills_practiced': skillsPracticed,
+      'hours_spent': hoursSpent,
+      'deliverable_url': deliverableUrl,
+      'deliverable_type': deliverableType,
+    });
     _applications = _applications.map((application) {
       if (application.id != applicationId) return application;
       return application.copyWith(
@@ -550,16 +548,13 @@ class AppState extends ChangeNotifier {
     List<String>? growthAreas,
     List<String>? endorsedSkills,
   }) async {
-    await SupabaseService.updateApplicationFeedback(
-      applicationId,
-      {
-        'mentor_rating': rating,
-        'mentor_feedback_text': feedback,
-        'strengths': strengths,
-        'growth_areas': growthAreas,
-        'endorsed_skills': endorsedSkills,
-      },
-    );
+    await SupabaseService.updateApplicationFeedback(applicationId, {
+      'mentor_rating': rating,
+      'mentor_feedback_text': feedback,
+      'strengths': strengths,
+      'growth_areas': growthAreas,
+      'endorsed_skills': endorsedSkills,
+    });
     _applications = _applications.map((application) {
       if (application.id != applicationId) return application;
       return application.copyWith(
@@ -594,7 +589,10 @@ class AppState extends ChangeNotifier {
     final saved = await SupabaseService.createAiInterview(interview);
     _aiInterviews = [saved, ..._aiInterviews];
     if (application.status == ApplicationStatus.pending) {
-      await updateApplicationStatus(applicationId, ApplicationStatus.interviewing);
+      await updateApplicationStatus(
+        applicationId,
+        ApplicationStatus.interviewing,
+      );
     }
     notifyListeners();
     return saved;
@@ -657,22 +655,22 @@ class AppState extends ChangeNotifier {
   Future<void> _syncStudentProgress(String studentId) async {
     final profile = getStudentById(studentId);
     if (profile == null) return;
-    final apps = await SupabaseService.getApplicationsForStudentAdmin(studentId);
+    final apps = await SupabaseService.getApplicationsForStudentAdmin(
+      studentId,
+    );
     final completed = apps
-        .where((application) => application.status == ApplicationStatus.completed)
+        .where(
+          (application) => application.status == ApplicationStatus.completed,
+        )
         .toList();
-    final reflected = completed
-        .where((application) {
-          return (application.reflectionDid?.isNotEmpty ?? false) ||
-              (application.reflectionLearned?.isNotEmpty ?? false);
-        })
-        .length;
-    final reviewed = completed
-        .where((application) {
-          return application.mentorRating != null ||
-              (application.mentorFeedbackText?.isNotEmpty ?? false);
-        })
-        .length;
+    final reflected = completed.where((application) {
+      return (application.reflectionDid?.isNotEmpty ?? false) ||
+          (application.reflectionLearned?.isNotEmpty ?? false);
+    }).length;
+    final reviewed = completed.where((application) {
+      return application.mentorRating != null ||
+          (application.mentorFeedbackText?.isNotEmpty ?? false);
+    }).length;
 
     final xp = (completed.length * 120) + (reflected * 20) + (reviewed * 30);
     final level = _levelForXp(xp);
@@ -724,17 +722,11 @@ class AppState extends ChangeNotifier {
   }
 
   void _upsertStudent(StudentProfile profile) {
-    _students = [
-      profile,
-      ..._students.where((item) => item.id != profile.id),
-    ];
+    _students = [profile, ..._students.where((item) => item.id != profile.id)];
   }
 
   void _upsertStartup(StartupProfile profile) {
-    _startups = [
-      profile,
-      ..._startups.where((item) => item.id != profile.id),
-    ];
+    _startups = [profile, ..._startups.where((item) => item.id != profile.id)];
   }
 
   void _resetSessionState() {
@@ -760,28 +752,29 @@ class AppState extends ChangeNotifier {
   List<StudentProfile> get _previewStudents => DummyData.students;
   List<StartupProfile> get _previewStartups => DummyData.startups;
   List<Mission> get _previewMissions => [
-        for (final startup in DummyData.startups)
-          for (var i = 0; i < startup.openRoles.length; i++)
-            Mission(
-              id: 'demo_${startup.id}_$i',
-              startupId: startup.id,
-              startupName: startup.companyName,
-              title: startup.openRoles[i].title,
-              description: startup.openRoles[i].description ??
-                  startup.openRoles[i].learningOutcome,
-              commitment: startup.openRoles[i].commitment,
-              estimatedHours: startup.openRoles[i].estimatedHours,
-              durationWeeks: startup.openRoles[i].durationWeeks,
-              learningOutcome: startup.openRoles[i].learningOutcome,
-              requiredSkills: startup.requiredSkills,
-              status: 'open',
-              createdAt: startup.createdAt,
-              websiteUrl: startup.websiteUrl,
-              logoUrl: startup.logoUrl,
-              industry: startup.industry,
-              teamMissionConfig: startup.openRoles[i].teamMissionConfig,
-            ),
-      ];
+    for (final startup in DummyData.startups)
+      for (var i = 0; i < startup.openRoles.length; i++)
+        Mission(
+          id: 'demo_${startup.id}_$i',
+          startupId: startup.id,
+          startupName: startup.companyName,
+          title: startup.openRoles[i].title,
+          description:
+              startup.openRoles[i].description ??
+              startup.openRoles[i].learningOutcome,
+          commitment: startup.openRoles[i].commitment,
+          estimatedHours: startup.openRoles[i].estimatedHours,
+          durationWeeks: startup.openRoles[i].durationWeeks,
+          learningOutcome: startup.openRoles[i].learningOutcome,
+          requiredSkills: startup.requiredSkills,
+          status: 'open',
+          createdAt: startup.createdAt,
+          websiteUrl: startup.websiteUrl,
+          logoUrl: startup.logoUrl,
+          industry: startup.industry,
+          teamMissionConfig: startup.openRoles[i].teamMissionConfig,
+        ),
+  ];
   List<Application> get _previewApplications => DummyData.applications;
   List<AiInterview> get _previewAiInterviews => const [];
 

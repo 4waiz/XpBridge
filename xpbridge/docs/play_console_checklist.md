@@ -12,6 +12,8 @@
 - App access instructions required: Yes
 - Data safety form required: Yes
 - Content rating questionnaire required: Yes
+- Release must be signed with the upload keystore configured through `android/key.properties`
+- Release must not use the Android debug signing key
 
 ## App access notes
 - Reviewers need a student test account and a startup test account
@@ -51,3 +53,4 @@
 - Optional admin account:
   - Same flow as above, but set `profiles.is_admin = true`
 - Never ship credentials in the repo or APK
+- Never ship service-role keys, Resend keys, Gemini server keys, or keystore passwords in the Flutter client bundle

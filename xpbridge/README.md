@@ -5,7 +5,7 @@ XPBridge is a Flutter MVP that connects students with startup missions. Students
 ## Stack
 - Flutter
 - Supabase Auth, Database, Storage, Realtime
-- Gemini API for optional AI-assisted flows
+- Optional AI features must be proxied through a secure backend before they are enabled in the mobile client
 
 ## Required environment variables
 Copy `.env.example` to `.env` and set:
@@ -13,12 +13,16 @@ Copy `.env.example` to `.env` and set:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `STORAGE_BUCKET`
-- `ADMIN_EMAILS`
-- `GEMINI_API_KEY` if AI chat is enabled
-- `SENTRY_DSN` optional
-- `ANALYTICS_KEY` optional
+- `ENABLE_AI_CHAT=false`
 
-The app fails fast on missing required keys during startup.
+Only client-safe values belong in the bundled Flutter `.env`. Never place privileged or server-only secrets in the mobile client, including:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `RESEND_API_KEY`
+- Gemini or other provider server API keys
+- Admin allowlists, reviewer credentials, or any other privileged access controls
+
+The app fails fast on missing required keys or unsupported bundled env keys during startup.
 
 ## Supabase setup
 1. Run [`supabase/schema.sql`](/c:/Users/awaiz/OneDrive/Desktop/Git/XpBridge/xpbridge/supabase/schema.sql) in your Supabase SQL editor.
@@ -60,8 +64,10 @@ flutter build appbundle
 ```
 
 Before release:
-- Replace the placeholder Android application id and signing config as needed
-- Configure a real release keystore
+- Keep the bundled `.env` limited to client-safe values only
+- Create an Android upload keystore and place it outside git tracking
+- Copy [`android/key.properties.example`](/c:/Users/awaiz/OneDrive/Desktop/Git/XpBridge/xpbridge/android/key.properties.example) to `android/key.properties` and fill in the real keystore path, alias, and passwords
+- Verify the release build is signed with the upload keystore, not the debug keystore
 - Provide Play Console assets and privacy policy
 - Validate reviewer accounts and admin access
 

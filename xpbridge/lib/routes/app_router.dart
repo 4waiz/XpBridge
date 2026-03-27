@@ -35,7 +35,11 @@ class AppRouter {
       final path = state.matchedLocation;
       final isGuestOnly =
           path == '/intro' || path == '/login' || path == '/signup';
-      final isPublic = path == '/' || isGuestOnly || path == '/privacy-policy' || path == '/delete-account';
+      final isPublic =
+          path == '/' ||
+          isGuestOnly ||
+          path == '/privacy-policy' ||
+          path == '/delete-account';
 
       if (!appState.isInitialized) {
         if (path == '/' || isPublic) {
@@ -84,9 +88,12 @@ class AppRouter {
         return appState.defaultAuthenticatedLocation;
       }
 
-      if (!appState.isAdmin &&
-          (path == '/admin' || path == '/admin/preview')) {
+      if (!appState.isAdmin && (path == '/admin' || path == '/admin/preview')) {
         return appState.defaultAuthenticatedLocation;
+      }
+
+      if (!appState.aiFeaturesEnabled && path == '/student/chat') {
+        return '/student/dashboard';
       }
 
       if (appState.isStudent &&

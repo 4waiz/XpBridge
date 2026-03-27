@@ -107,13 +107,17 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
 
   // Initialization
   static Future<void> initialize({bool forceReload = false}) async {
-    if (forceReload || _apiKey == null) {
-      _apiKey = AppConfig.instance.geminiApiKey;
+    if (!AppConfig.instance.aiFeaturesEnabled) {
+      throw Exception(
+        'AI chat is disabled for this build. Move Gemini calls behind a secure '
+        'backend before enabling it in the mobile client.',
+      );
     }
-    if (_apiKey == null || _apiKey!.isEmpty || _apiKey == 'your_api_key_here') {
-      throw Exception('GEMINI_API_KEY not found in .env file');
-    }
-    _chatHistory.clear();
+
+    throw Exception(
+      'AI chat is not wired to a secure backend yet. Keep ENABLE_AI_CHAT=false '
+      'until a backend proxy is in place.',
+    );
   }
 
   static Future<void> _ensureInitialized() async {

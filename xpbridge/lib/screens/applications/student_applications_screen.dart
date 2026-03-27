@@ -74,19 +74,30 @@ class StudentApplicationsScreen extends StatelessWidget {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.md,
-                right: AppSpacing.md,
-                top: AppSpacing.md,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-              ),
-              child: XPSection(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            final mediaQuery = MediaQuery.of(context);
+            final stackFields = mediaQuery.size.width < 420;
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  top: AppSpacing.md,
+                  bottom: mediaQuery.viewInsets.bottom + AppSpacing.md,
+                ),
+                child: SizedBox(
+                  height: mediaQuery.size.height * 0.84,
+                  child: XPCard(
+                    elevated: true,
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                     Text(
                       'Mission reflection',
                       style: Theme.of(context).textTheme.titleLarge,
@@ -106,40 +117,27 @@ class StudentApplicationsScreen extends StatelessWidget {
                       prefixIcon: Icons.lightbulb_outline_rounded,
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: XPTextField(
+                    if (stackFields)
+                      Column(
+                        children: [
+                          XPTextField(
                             controller: hoursController,
                             labelText: 'Hours spent',
                             keyboardType: TextInputType.number,
                             prefixIcon: Icons.schedule_rounded,
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
+                          const SizedBox(height: AppSpacing.md),
+                          DropdownButtonFormField<String>(
                             initialValue: deliverableType,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Deliverable type',
                             ),
                             items: const [
-                              DropdownMenuItem(
-                                value: 'design',
-                                child: Text('Design'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'code',
-                                child: Text('Code'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'doc',
-                                child: Text('Document'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'other',
-                                child: Text('Other'),
-                              ),
+                              DropdownMenuItem(value: 'design', child: Text('Design')),
+                              DropdownMenuItem(value: 'code', child: Text('Code')),
+                              DropdownMenuItem(value: 'doc', child: Text('Document')),
+                              DropdownMenuItem(value: 'other', child: Text('Other')),
                             ],
                             onChanged: (value) {
                               if (value != null) {
@@ -147,9 +145,42 @@ class StudentApplicationsScreen extends StatelessWidget {
                               }
                             },
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: XPTextField(
+                              controller: hoursController,
+                              labelText: 'Hours spent',
+                              keyboardType: TextInputType.number,
+                              prefixIcon: Icons.schedule_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: deliverableType,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Deliverable type',
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: 'design', child: Text('Design')),
+                                DropdownMenuItem(value: 'code', child: Text('Code')),
+                                DropdownMenuItem(value: 'doc', child: Text('Document')),
+                                DropdownMenuItem(value: 'other', child: Text('Other')),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setModalState(() => deliverableType = value);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: AppSpacing.md),
                     XPTextField(
                       controller: deliverableController,
@@ -185,7 +216,11 @@ class StudentApplicationsScreen extends StatelessWidget {
                         }).toList(),
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.xl),
+                              ],
+                            ),
+                          ),
+                        ),
+                    const SizedBox(height: AppSpacing.lg),
                     XPButton(
                       label: 'Save reflection',
                       icon: Icons.check_rounded,
@@ -218,6 +253,8 @@ class StudentApplicationsScreen extends StatelessWidget {
                       onPressed: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
+                    ),
+                  ),
                 ),
               ),
             );

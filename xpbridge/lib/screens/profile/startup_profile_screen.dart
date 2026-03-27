@@ -100,19 +100,30 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.md,
-                right: AppSpacing.md,
-                top: AppSpacing.md,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-              ),
-              child: XPSection(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            final mediaQuery = MediaQuery.of(context);
+            final stackFields = mediaQuery.size.width < 420;
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  top: AppSpacing.md,
+                  bottom: mediaQuery.viewInsets.bottom + AppSpacing.md,
+                ),
+                child: SizedBox(
+                  height: mediaQuery.size.height * 0.88,
+                  child: XPCard(
+                    elevated: true,
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                     Text('Add mission', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: AppSpacing.lg),
                     TextField(
@@ -141,25 +152,42 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                       decoration: const InputDecoration(labelText: 'Commitment'),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
+                    if (stackFields)
+                      Column(
+                        children: [
+                          TextField(
                             controller: hoursController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(labelText: 'Hours'),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: TextField(
+                          const SizedBox(height: AppSpacing.md),
+                          TextField(
                             controller: durationController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(labelText: 'Weeks'),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: hoursController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(labelText: 'Hours'),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: TextField(
+                              controller: durationController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(labelText: 'Weeks'),
+                            ),
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: AppSpacing.md),
                     SwitchListTile(
                       value: isTeamMission,
@@ -197,7 +225,11 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                         }).toList(),
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.xl),
+                              ],
+                            ),
+                          ),
+                        ),
+                    const SizedBox(height: AppSpacing.lg),
                     XPButton(
                       label: 'Create mission',
                       onPressed: () async {
@@ -239,6 +271,8 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                       onPressed: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
+                    ),
+                  ),
                 ),
               ),
             );

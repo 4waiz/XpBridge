@@ -49,87 +49,108 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.md,
-                right: AppSpacing.md,
-                top: AppSpacing.md,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-              ),
-              child: XPSection(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Apply to ${mission.title}',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Your uploaded CV, portfolio link, and GitHub link will be visible to the startup.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    XPTextField(
-                      controller: controller,
-                      labelText: 'Short note',
-                      hintText: 'Why are you a fit for this mission?',
-                      maxLines: 4,
-                      prefixIcon: Icons.chat_bubble_outline_rounded,
-                    ),
-                    if (errorText != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        errorText!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.error,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.xl),
-                    XPButton(
-                      label: 'Submit application',
-                      icon: Icons.send_rounded,
-                      onPressed: () async {
-                        try {
-                          final navigator = Navigator.of(sheetContext);
-                          final application = Application(
-                            id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-                            missionId: mission.id,
-                            studentId: student.id,
-                            startupId: mission.startupId,
-                            studentName: student.name,
-                            startupName: mission.startupName,
-                            roleTitle: mission.title,
-                            status: ApplicationStatus.pending,
-                            message: controller.text.trim().isEmpty
-                                ? null
-                                : controller.text.trim(),
-                            appliedAt: DateTime.now(),
-                          );
-                          await appState.addApplication(application);
-                          navigator.pop();
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Application submitted.'),
-                              backgroundColor: AppTheme.successDark,
+            final mediaQuery = MediaQuery.of(context);
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  top: AppSpacing.md,
+                  bottom: mediaQuery.viewInsets.bottom + AppSpacing.md,
+                ),
+                child: SizedBox(
+                  height: mediaQuery.size.height * 0.72,
+                  child: XPCard(
+                    elevated: true,
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Apply to ${mission.title}',
+                                  style:
+                                      Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  'Your uploaded CV, portfolio link, and GitHub link will be visible to the startup.',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: AppSpacing.lg),
+                                XPTextField(
+                                  controller: controller,
+                                  labelText: 'Short note',
+                                  hintText:
+                                      'Why are you a fit for this mission?',
+                                  maxLines: 4,
+                                  prefixIcon:
+                                      Icons.chat_bubble_outline_rounded,
+                                ),
+                                if (errorText != null) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  Text(
+                                    errorText!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: AppTheme.error),
+                                  ),
+                                ],
+                              ],
                             ),
-                          );
-                        } on XpServiceException catch (error) {
-                          setModalState(() => errorText = error.message);
-                        }
-                      },
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        XPButton(
+                          label: 'Submit application',
+                          icon: Icons.send_rounded,
+                          onPressed: () async {
+                            try {
+                              final navigator = Navigator.of(sheetContext);
+                              final application = Application(
+                                id:
+                                    'local_${DateTime.now().millisecondsSinceEpoch}',
+                                missionId: mission.id,
+                                studentId: student.id,
+                                startupId: mission.startupId,
+                                studentName: student.name,
+                                startupName: mission.startupName,
+                                roleTitle: mission.title,
+                                status: ApplicationStatus.pending,
+                                message: controller.text.trim().isEmpty
+                                    ? null
+                                    : controller.text.trim(),
+                                appliedAt: DateTime.now(),
+                              );
+                              await appState.addApplication(application);
+                              navigator.pop();
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Application submitted.'),
+                                  backgroundColor: AppTheme.successDark,
+                                ),
+                              );
+                            } on XpServiceException catch (error) {
+                              setModalState(() => errorText = error.message);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        XPOutlinedButton(
+                          label: 'Go back',
+                          icon: Icons.arrow_back_rounded,
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    XPOutlinedButton(
-                      label: 'Go back',
-                      icon: Icons.arrow_back_rounded,
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             );
@@ -258,60 +279,74 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String?>(
-                          initialValue: _industryFilter,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Industry',
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stackFilters = constraints.maxWidth < 520;
+                      final industryField = DropdownButtonFormField<String?>(
+                        initialValue: _industryFilter,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Industry',
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('All'),
                           ),
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text('All'),
-                            ),
-                            ...industries.map(
-                              (industry) => DropdownMenuItem<String?>(
-                                value: industry,
-                                child: Text(
-                                  industry,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          ...industries.map(
+                            (industry) => DropdownMenuItem<String?>(
+                              value: industry,
+                              child: Text(
+                                industry,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          ],
-                          onChanged: (value) =>
-                              setState(() => _industryFilter = value),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: DropdownButtonFormField<String?>(
-                          initialValue: _skillFilter,
-                          isExpanded: true,
-                          decoration: const InputDecoration(labelText: 'Skill'),
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text('All'),
-                            ),
-                            ...skills.map(
-                              (skill) => DropdownMenuItem<String?>(
-                                value: skill,
-                                child: Text(
-                                  skill,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          ),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _industryFilter = value),
+                      );
+                      final skillField = DropdownButtonFormField<String?>(
+                        initialValue: _skillFilter,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Skill'),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('All'),
+                          ),
+                          ...skills.map(
+                            (skill) => DropdownMenuItem<String?>(
+                              value: skill,
+                              child: Text(
+                                skill,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                          ),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _skillFilter = value),
+                      );
+
+                      if (stackFilters) {
+                        return Column(
+                          children: [
+                            industryField,
+                            const SizedBox(height: AppSpacing.md),
+                            skillField,
                           ],
-                          onChanged: (value) =>
-                              setState(() => _skillFilter = value),
-                        ),
-                      ),
-                    ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(child: industryField),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(child: skillField),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
