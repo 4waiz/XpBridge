@@ -17,6 +17,7 @@ import '../screens/onboarding/intro_screen.dart';
 import '../screens/onboarding/startup_setup_screen.dart';
 import '../screens/onboarding/student_setup_screen.dart';
 import '../screens/legal/privacy_policy_screen.dart';
+import '../screens/legal/terms_conditions_screen.dart';
 import '../screens/legal/delete_account_screen.dart';
 import '../screens/profile/startup_profile_screen.dart';
 import '../screens/profile/student_profile_screen.dart';
@@ -39,6 +40,7 @@ class AppRouter {
           path == '/' ||
           isGuestOnly ||
           path == '/privacy-policy' ||
+          path == '/terms' ||
           path == '/delete-account';
 
       if (!appState.isInitialized) {
@@ -54,6 +56,7 @@ class AppRouter {
         }
         if (path != '/signup' &&
             path != '/privacy-policy' &&
+            path != '/terms' &&
             path != '/delete-account') {
           return '/signup';
         }
@@ -135,6 +138,12 @@ class AppRouter {
         name: 'privacyPolicy',
         path: '/privacy-policy',
         pageBuilder: (context, state) => _fade(const PrivacyPolicyScreen()),
+      ),
+      GoRoute(
+        name: 'terms',
+        path: '/terms',
+        pageBuilder: (context, state) =>
+            _fade(const TermsConditionsScreen()),
       ),
       GoRoute(
         name: 'deleteAccount',

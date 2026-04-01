@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../app.dart';
+import '../../config/legal_urls.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_app_bar.dart';
@@ -301,6 +304,40 @@ class _SignupScreenState extends State<SignupScreen> {
                         child: TextButton(
                           onPressed: () => context.goNamed('login'),
                           child: const Text('Already have an account? Log in'),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Center(
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: () => launchUrl(
+                                Uri.parse(LegalUrls.privacyPolicy),
+                                mode: LaunchMode.externalApplication,
+                              ),
+                              child: Text(
+                                'Privacy Policy',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => launchUrl(
+                                Uri.parse(LegalUrls.termsConditions),
+                                mode: LaunchMode.externalApplication,
+                              ),
+                              child: Text(
+                                'Terms & Conditions',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find ./xpbridge/lib -type d -name \"screens\" -exec ls -la {} \\\\;)",
+      "Bash(find ./xpbridge/android/app/src/main/res/mipmap-* -type f)",
+      "Bash(flutter pub:*)"
+    ]
+  }
+}

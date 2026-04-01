@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../app.dart';
+import '../../config/legal_urls.dart';
 import '../../data/dummy_data.dart';
 import '../../models/startup_profile.dart';
 import '../../models/startup_role.dart';
@@ -742,7 +745,41 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                 loading: _isSaving,
                 onPressed: _isSaving ? null : _save,
               ),
-              const SizedBox(height: AppSpacing.xxxl),
+              const SizedBox(height: AppSpacing.xl),
+              Center(
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () => launchUrl(
+                        Uri.parse(LegalUrls.privacyPolicy),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      child: Text(
+                        'Privacy Policy',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => launchUrl(
+                        Uri.parse(LegalUrls.termsConditions),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      child: Text(
+                        'Terms & Conditions',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
               Center(
                 child: Opacity(
                   opacity: 0.6,
