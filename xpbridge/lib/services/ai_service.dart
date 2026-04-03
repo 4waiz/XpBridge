@@ -1,21 +1,12 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../config/app_config.dart';
+
+import '../data/dummy_data.dart';
 import '../models/student_profile.dart';
 import '../models/startup_profile.dart';
-import '../data/dummy_data.dart';
+import 'supabase_service.dart';
 
 class AiService {
-  // Constants
-  static const String _baseUrl =
-      'https://generativelanguage.googleapis.com/v1beta';
-  static const String _model = 'gemini-2.5-flash';
-  static const Map<String, String> _headers = {
-    'Content-Type': 'application/json',
-  };
-
   // State
-  static String? _apiKey;
   static final List<Map<String, dynamic>> _chatHistory = [];
   static final List<Map<String, dynamic>> _startupChatHistory = [];
   static List<StudentProfile> lastMatchedStudents = [];
@@ -73,7 +64,7 @@ CRITICAL RULES:
 4. Keep responses short (2-3 sentences max)
 
 Examples:
-User: "hi" -> "Hey there! 👋 What kind of talent are you looking for?"
+User: "hi" -> "Hey there! What kind of talent are you looking for?"
 User: "need database skills" -> "Which database? SQL (PostgreSQL, MySQL) or NoSQL (MongoDB, Redis)?" (DO NOT search)
 User: "need backend help" -> "What backend stack? Python, Node.js, Java, Go?" (DO NOT search)
 User: "looking for React developers" -> Call search_students with ["React"] (SPECIFIC - search!)
@@ -105,30 +96,7 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
     },
   ];
 
-  // Initialization
-  static Future<void> initialize({bool forceReload = false}) async {
-    if (!AppConfig.instance.aiFeaturesEnabled) {
-      throw Exception(
-        'AI chat is disabled for this build. Move Gemini calls behind a secure '
-        'backend before enabling it in the mobile client.',
-      );
-    }
-
-    throw Exception(
-      'AI chat is not wired to a secure backend yet. Keep ENABLE_AI_CHAT=false '
-      'until a backend proxy is in place.',
-    );
-  }
-
-  static Future<void> _ensureInitialized() async {
-    if (_apiKey == null) await initialize();
-  }
-
   // Helper methods
-  static Uri _buildUrl([String? suffix]) => Uri.parse(
-    '$_baseUrl/models/$_model:generateContent?key=$_apiKey${suffix ?? ''}',
-  );
-
   static Map<String, dynamic> _createMessage(String role, String text) => {
     'role': role,
     'parts': [
@@ -144,8 +112,41 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
   static String? _extractTextFromResponse(Map<String, dynamic> data) =>
       data['candidates']?[0]?['content']?['parts']?[0]?['text'];
 
-  static Future<http.Response> _post(Uri url, Map<String, dynamic> body) =>
-      http.post(url, headers: _headers, body: jsonEncode(body));
+  /// Calls the ai-chat Edge Function which proxies to Gemini server-side.
+  static Future<Map<String, dynamic>> _callEdgeFunction({
+    required List<Map<String, dynamic>> contents,
+    required Map<String, dynamic> generationConfig,
+    List<Map<String, dynamic>>? tools,
+  }) async {
+    final body = <String, dynamic>{
+      'contents': contents,
+      'generationConfig': generationConfig,
+    };
+    if (tools != null) {
+      body['tools'] = tools;
+    }
+
+    final response = await SupabaseService.client.functions.invoke(
+      'ai-chat',
+      body: body,
+    );
+
+    if (response.status != 200) {
+      final errorData = response.data;
+      final errorMessage = errorData is Map<String, dynamic>
+          ? errorData['error'] as String?
+          : null;
+      throw XpServiceException(
+        errorMessage ?? 'AI service error (${response.status}).',
+      );
+    }
+
+    final data = response.data;
+    if (data is Map<String, dynamic>) return data;
+    // response.data may already be decoded or may be a string
+    if (data is String) return jsonDecode(data) as Map<String, dynamic>;
+    throw const XpServiceException('Unexpected AI response format.');
+  }
 
   // Reset methods
   static void resetChat() => _chatHistory.clear();
@@ -153,33 +154,13 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
   static void resetStartupChat() {
     _startupChatHistory.clear();
     lastMatchedStudents = [];
-    _apiKey = null;
   }
 
   // Student chat methods
-  static Future<String> sendMessage(String message) async {
-    await _ensureInitialized();
-
-    if (message.toLowerCase() == 'list models') {
-      return await listModels();
-    }
-
-    _chatHistory.add(_createMessage('user', message));
-
-    try {
-      return await _callGeminiApi();
-    } catch (e) {
-      _chatHistory.removeLast();
-      return 'Error: $e';
-    }
-  }
-
   static Future<String> sendMessageWithContext(
     String message,
     StudentProfile? profile,
   ) async {
-    await _ensureInitialized();
-
     final fullMessage = (_chatHistory.isEmpty && profile != null)
         ? _buildStudentContext(profile, message)
         : message;
@@ -190,7 +171,7 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
       return await _callGeminiApi();
     } catch (e) {
       _chatHistory.removeLast();
-      return 'Error: $e';
+      rethrow;
     }
   }
 
@@ -206,12 +187,6 @@ Available Hours: ${profile.availabilityHours} hrs/week
 Now respond to their message: $message
 ''';
 
-  static Future<String> listModels() async {
-    await _ensureInitialized();
-    final response = await http.get(Uri.parse('$_baseUrl/models?key=$_apiKey'));
-    return response.body;
-  }
-
   static Future<String> _callGeminiApi() async {
     final contents = _chatHistory.length == 1
         ? [
@@ -222,25 +197,16 @@ Now respond to their message: $message
           ]
         : List<Map<String, dynamic>>.from(_chatHistory);
 
-    final response = await _post(_buildUrl(), {
-      'contents': contents,
-      'generationConfig': _createGenerationConfig(360, temperature: 0.5),
-    });
+    final data = await _callEdgeFunction(
+      contents: contents,
+      generationConfig: _createGenerationConfig(360, temperature: 0.5),
+    );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final text =
-          _extractTextFromResponse(data) ??
-          'Sorry, I could not generate a response.';
-      _chatHistory.add(_createMessage('model', text));
-      return text;
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(
-        error['error']?['message'] ??
-            'API request failed: ${response.statusCode}',
-      );
-    }
+    final text =
+        _extractTextFromResponse(data) ??
+        'Sorry, I could not generate a response.';
+    _chatHistory.add(_createMessage('model', text));
+    return text;
   }
 
   // Startup chat methods
@@ -248,8 +214,6 @@ Now respond to their message: $message
     String message,
     StartupProfile? profile,
   ) async {
-    await _ensureInitialized();
-
     final fullMessage = (_startupChatHistory.isEmpty && profile != null)
         ? _buildStartupContext(profile, message)
         : message;
@@ -276,8 +240,6 @@ Help this startup find suitable student talent. Respond to: $message
 ''';
 
   static Future<String> _callGeminiApiForStartup() async {
-    final url = _buildUrl();
-
     final contents = _startupChatHistory.length == 1
         ? [
             _createMessage(
@@ -287,21 +249,12 @@ Help this startup find suitable student talent. Respond to: $message
           ]
         : List<Map<String, dynamic>>.from(_startupChatHistory);
 
-    final response = await _post(url, {
-      'contents': contents,
-      'tools': _searchStudentsTool,
-      'generationConfig': _createGenerationConfig(320, temperature: 0.4),
-    });
+    final data = await _callEdgeFunction(
+      contents: contents,
+      generationConfig: _createGenerationConfig(320, temperature: 0.4),
+      tools: _searchStudentsTool,
+    );
 
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(
-        error['error']?['message'] ??
-            'API request failed: ${response.statusCode}',
-      );
-    }
-
-    final data = jsonDecode(response.body);
     final parts = data['candidates']?[0]?['content']?['parts'] as List?;
 
     if (parts == null || parts.isEmpty) {
@@ -311,7 +264,7 @@ Help this startup find suitable student talent. Respond to: $message
     final functionCall = parts[0]['functionCall'];
 
     if (functionCall != null && functionCall['name'] == 'search_students') {
-      return await _handleFunctionCall(url, functionCall);
+      return await _handleFunctionCall(functionCall);
     }
 
     final text = parts[0]['text'] ?? 'How can I help you find talent?';
@@ -321,7 +274,6 @@ Help this startup find suitable student talent. Respond to: $message
   }
 
   static Future<String> _handleFunctionCall(
-    Uri url,
     Map<String, dynamic> functionCall,
   ) async {
     final skills = List<String>.from(functionCall['args']['skills'] ?? []);
@@ -335,7 +287,7 @@ Help this startup find suitable student talent. Respond to: $message
       ],
     });
 
-    return await _getFinalResponseWithResults(url, searchResults, functionCall);
+    return await _getFinalResponseWithResults(searchResults, functionCall);
   }
 
   static List<StudentProfile> _executeSearchStudents(List<String> skills) {
@@ -356,7 +308,6 @@ Help this startup find suitable student talent. Respond to: $message
   }
 
   static Future<String> _getFinalResponseWithResults(
-    Uri url,
     List<StudentProfile> results,
     Map<String, dynamic> functionCall,
   ) async {
@@ -381,21 +332,17 @@ Help this startup find suitable student talent. Respond to: $message
       ],
     });
 
-    final response = await _post(url, {
-      'contents': _startupChatHistory,
-      'tools': _searchStudentsTool,
-      'generationConfig': _createGenerationConfig(260, temperature: 0.4),
-    });
+    final data = await _callEdgeFunction(
+      contents: _startupChatHistory,
+      generationConfig: _createGenerationConfig(260, temperature: 0.4),
+      tools: _searchStudentsTool,
+    );
 
-    if (response.statusCode == 200) {
-      final text =
-          _extractTextFromResponse(jsonDecode(response.body)) ??
-          'Found ${results.length} matching students!';
-      _startupChatHistory.add(_createMessage('model', text));
-      return text;
-    }
-
-    return 'Found ${results.length} students matching your criteria! Check them out below.';
+    final text =
+        _extractTextFromResponse(data) ??
+        'Found ${results.length} matching students!';
+    _startupChatHistory.add(_createMessage('model', text));
+    return text;
   }
 
   static List<String> extractRecommendedRoles(String response) {
