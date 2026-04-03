@@ -389,7 +389,7 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                                     processing = false;
                                   });
                                 } catch (e) {
-                                  final errorText = e.toString();
+                                  final errorText = e is XpServiceException ? e.message : e.toString();
                                   if (errorText.contains('session has expired')) {
                                     if (!dialogContext.mounted || !context.mounted) {
                                       return;

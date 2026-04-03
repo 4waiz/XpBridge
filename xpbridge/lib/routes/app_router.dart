@@ -95,10 +95,6 @@ class AppRouter {
         return appState.defaultAuthenticatedLocation;
       }
 
-      if (!appState.aiFeaturesEnabled && path == '/student/chat') {
-        return '/student/dashboard';
-      }
-
       if (appState.isStudent &&
           path.startsWith('/startup') &&
           !path.startsWith('/startup/student/')) {

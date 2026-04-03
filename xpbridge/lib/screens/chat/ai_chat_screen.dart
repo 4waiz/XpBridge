@@ -17,6 +17,8 @@ class AiChatScreen extends StatefulWidget {
 }
 
 class _AiChatScreenState extends State<AiChatScreen> {
+  bool get _aiEnabled => AppStateScope.of(context).aiFeaturesEnabled;
+
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<AiChatMessage> _messages = [];
@@ -211,6 +213,47 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_aiEnabled) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: XPAiShell(
+          child: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageWide),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 64,
+                      color: AppTheme.surface.withValues(alpha: 0.7),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'AI Chat — Coming Soon',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: AppTheme.surface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'We\'re setting up a secure AI assistant to help you discover roles and get career advice. Stay tuned!',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.surface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: XPAiShell(

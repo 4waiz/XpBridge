@@ -219,7 +219,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                     processing = false;
                                   });
                                 } catch (e) {
-                                  final errorText = e.toString();
+                                  final errorText = e is XpServiceException ? e.message : e.toString();
                                   if (errorText.contains('session has expired')) {
                                     if (!dialogContext.mounted || !context.mounted) {
                                       return;

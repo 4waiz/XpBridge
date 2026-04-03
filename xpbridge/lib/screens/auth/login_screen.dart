@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app.dart';
+import '../../config/legal_urls.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/xp_button.dart';
@@ -115,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   );
 
             return Center(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: EdgeInsets.all(sidePadding),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 460),
@@ -234,6 +236,40 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: TextButton(
                           onPressed: () => context.goNamed('signup'),
                           child: const Text('New here? Sign up'),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Center(
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: () => launchUrl(
+                                Uri.parse(LegalUrls.privacyPolicy),
+                                mode: LaunchMode.externalApplication,
+                              ),
+                              child: Text(
+                                'Privacy Policy',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => launchUrl(
+                                Uri.parse(LegalUrls.termsConditions),
+                                mode: LaunchMode.externalApplication,
+                              ),
+                              child: Text(
+                                'Terms & Conditions',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
