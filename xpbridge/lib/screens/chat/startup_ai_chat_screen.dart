@@ -84,7 +84,14 @@ class _StartupAiChatScreenState extends State<StartupAiChatScreen> {
       _addBotMessage(response);
     } catch (error) {
       setState(() => _isLoading = false);
-      _addBotMessage('Error: $error');
+      final errorText = error.toString().toLowerCase();
+      final friendlyMessage = errorText.contains('not configured') ||
+              errorText.contains('503')
+          ? 'AI is being set up and will be available soon. Browse student profiles from the dashboard in the meantime!'
+          : errorText.contains('timeout') || errorText.contains('timed out')
+              ? 'The AI took too long to respond. Please try again.'
+              : 'Something went wrong. Please try again in a moment.';
+      _addBotMessage(friendlyMessage);
     }
   }
 

@@ -148,12 +148,22 @@ class _AiChatScreenState extends State<AiChatScreen> {
         }
       }
     } catch (error) {
+      final errorText = error.toString().toLowerCase();
+      final friendlyMessage = errorText.contains('not configured') ||
+              errorText.contains('503')
+          ? 'AI is being set up and will be available soon. In the meantime, browse missions from the dashboard!'
+          : errorText.contains('timeout') || errorText.contains('timed out')
+              ? 'The AI took too long to respond. Please try again.'
+              : errorText.contains('unauthorized') ||
+                      errorText.contains('session')
+                  ? 'Your session expired. Please log in again.'
+                  : 'Something went wrong. Please try again in a moment.';
       setState(() {
         _messages.removeWhere((message) => message.id == loadingId);
         _messages.add(
           AiChatMessage(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
-            content: 'Error: $error',
+            content: friendlyMessage,
             sender: MessageSender.ai,
             timestamp: DateTime.now(),
           ),
@@ -272,7 +282,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   children: [
                     XPAiCircleActionButton(
                       icon: Icons.arrow_back_ios_new_rounded,
-                      onTap: () => context.pop(),
+                      onTap: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.goNamed('studentDashboard');
+                        }
+                      },
                     ),
                     const Spacer(),
                     XPAiCircleActionButton(

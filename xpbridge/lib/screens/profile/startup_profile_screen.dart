@@ -336,11 +336,10 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
 
   Future<void> _showDeleteDialog() async {
     final appState = AppStateScope.of(context);
-    final otpController = TextEditingController();
-    final confirmTextController = TextEditingController();
-    bool otpSent = false;
+    final passwordController = TextEditingController();
     String? dialogError;
     bool processing = false;
+    bool obscure = true;
 
     await showDialog<void>(
       context: context,
@@ -366,136 +365,92 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                       'This action is PERMANENT. Your startup profile, missions, and all linked data will be deleted.',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    if (!otpSent) ...[
-                      const Text(
-                        'To continue, we will send a 6-digit confirmation code to your registered email.',
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      XPButton(
-                        label: 'Send OTP',
-                        loading: processing,
-                        onPressed: processing
-                            ? null
-                            : () async {
-                                setDialogState(() {
-                                  processing = true;
-                                  dialogError = null;
-                                });
-                                try {
-                                  await appState.requestDeleteAccount();
-                                  setDialogState(() {
-                                    otpSent = true;
-                                    processing = false;
-                                  });
-                                } catch (e) {
-                                  final errorText = e is XpServiceException ? e.message : e.toString();
-                                  if (errorText.contains('session has expired')) {
-                                    if (!dialogContext.mounted || !context.mounted) {
-                                      return;
-                                    }
-                                    if (Navigator.of(dialogContext).canPop()) {
-                                      Navigator.pop(dialogContext);
-                                    }
-                                    context.goNamed('login');
-                                    return;
-                                  }
-                                  setDialogState(() {
-                                    processing = false;
-                                    dialogError = errorText;
-                                  });
-                                }
-                              },
-                      ),
-                    ] else ...[
-                      const Text(
-                        'Enter the 6-digit code sent to your email:',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      TextField(
-                        controller: otpController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          hintText: '000000',
-                          counterText: '',
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text(
+                      'Enter your password to confirm:',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscure,
+                      decoration: InputDecoration(
+                        hintText: 'Your password',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscure
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded),
+                          onPressed: () =>
+                              setDialogState(() => obscure = !obscure),
                         ),
-                        maxLength: 6,
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      const Text(
-                        'Type "DELETE" below to confirm final decision:',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      TextField(
-                        controller: confirmTextController,
-                        decoration: const InputDecoration(hintText: 'DELETE'),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      XPButton(
-                        label: 'Verify & Delete Forever',
-                        backgroundColor: AppTheme.error,
-                        loading: processing,
-                        onPressed: processing ? null : () async {
-                          if (confirmTextController.text.trim() != 'DELETE') {
-                            setDialogState(
-                              () => dialogError = 'Please type DELETE to confirm.',
-                            );
-                            return;
-                          }
-                          if (otpController.text.trim().length != 6) {
-                            setDialogState(
-                              () => dialogError = 'Please enter a valid OTP.',
-                            );
-                            return;
-                          }
-                          setDialogState(() {
-                            processing = true;
-                            dialogError = null;
-                          });
-                          try {
-                            await appState.confirmDeleteAccount(
-                              otpController.text.trim(),
-                            );
-                            if (!mounted || !dialogContext.mounted || !context.mounted) {
-                              return;
-                            }
-                            Navigator.pop(dialogContext); // Close dialog
-                            context.goNamed('login');
-                          } catch (e) {
-                            final errorText = e.toString();
-                            if (errorText.contains('session has expired')) {
-                              if (!dialogContext.mounted || !context.mounted) {
-                                return;
-                              }
-                              if (Navigator.of(dialogContext).canPop()) {
-                                Navigator.pop(dialogContext);
-                              }
-                              context.goNamed('login');
-                              return;
-                            }
-                            setDialogState(() {
-                              processing = false;
-                              dialogError = errorText;
-                            });
-                          }
-                        },
-                      ),
-                    ],
+                    ),
                     if (dialogError != null) ...[
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         dialogError!,
-                        style: const TextStyle(color: AppTheme.error, fontSize: 12),
+                        style: const TextStyle(
+                            color: AppTheme.error, fontSize: 12),
                       ),
                     ],
+                    const SizedBox(height: AppSpacing.lg),
+                    XPButton(
+                      label: 'Delete Forever',
+                      backgroundColor: AppTheme.error,
+                      loading: processing,
+                      onPressed: processing
+                          ? null
+                          : () async {
+                              final password =
+                                  passwordController.text.trim();
+                              if (password.isEmpty) {
+                                setDialogState(() => dialogError =
+                                    'Enter your password to continue.');
+                                return;
+                              }
+                              setDialogState(() {
+                                processing = true;
+                                dialogError = null;
+                              });
+                              try {
+                                await appState
+                                    .deleteAccountWithPassword(password);
+                                if (!dialogContext.mounted ||
+                                    !context.mounted) {
+                                  return;
+                                }
+                                Navigator.pop(dialogContext);
+                                context.goNamed('login');
+                              } catch (e) {
+                                final errorText = e is XpServiceException
+                                    ? e.message
+                                    : e.toString();
+                                if (errorText
+                                    .contains('session has expired')) {
+                                  if (!dialogContext.mounted ||
+                                      !context.mounted) {
+                                    return;
+                                  }
+                                  Navigator.pop(dialogContext);
+                                  context.goNamed('login');
+                                  return;
+                                }
+                                setDialogState(() {
+                                  processing = false;
+                                  dialogError = errorText;
+                                });
+                              }
+                            },
+                    ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: processing ? null : () => Navigator.pop(dialogContext),
+                  onPressed: processing
+                      ? null
+                      : () => Navigator.pop(dialogContext),
                   child: const Text('Cancel'),
                 ),
               ],

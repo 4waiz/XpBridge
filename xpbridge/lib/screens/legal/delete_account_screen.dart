@@ -108,7 +108,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                     const _InfoSection(
                       title: 'How to delete your account',
                       paragraphs: [
-                        'If you can still access your account, log in to XPBridge and use the in-app "Delete account" option from your profile/settings screen. This will send a 6-digit verification code to your email to confirm the request.',
+                        'If you can still access your account, log in to XPBridge and use the in-app "Delete account" option from your profile screen. You will be asked to confirm with your password.',
                         'If you cannot access your account, you can use the form below or contact us at xpbridge4u@gmail.com using the email address linked to your account.',
                       ],
                     ),

@@ -49,81 +49,40 @@ serve(async (req: Request) => {
       });
     }
 
-    const { action, otp } = await req.json();
+    const { action } = await req.json();
 
-    // ACTION: REQUEST-OTP
-    if (action === "request-otp") {
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins
-
-      // Store in DB
-      const { error: otpDbError } = await adminClient
-        .from("account_deletion_otps")
-        .upsert({ user_id: user.id, otp_code: generatedOtp, expires_at: expiresAt });
-
-      if (otpDbError) throw otpDbError;
-
-      // MOCK EMAIL LOGGING (In production, replace with actual email provider call)
-      console.log(`[DELETION OTP] Sent ${generatedOtp} to ${user.email}`);
-
-      // If you have RESEND_API_KEY set:
-      const resendKey = Deno.env.get("RESEND_API_KEY");
-      if (resendKey) {
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${resendKey}`,
-          },
-          body: JSON.stringify({
-            from: "XPBridge <noreply@xpbridge.com>",
-            to: [user.email],
-            subject: "XPBridge: Confirm Account Deletion",
-            html: `<p>Your code to confirm account deletion is: <strong>${generatedOtp}</strong></p><p>This code expires in 10 minutes. <strong>This action is permanent and cannot be undone.</strong></p>`,
-          }),
-        });
+    // ACTION: DELETE (password-verified — the client re-authenticates before calling)
+    if (action === "delete") {
+      // 1. Try to call purge_my_user_data() RPC if it exists
+      try {
+        await adminClient.rpc("purge_my_user_data", { target_user_id: user.id });
+      } catch (_) {
+        // RPC may not exist — fall back to manual deletion
       }
 
-      return new Response(JSON.stringify({ message: "OTP requested" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // ACTION: CONFIRM-DELETION
-    if (action === "confirm-deletion") {
-      if (!otp) throw new Error("OTP is required");
-
-      // Verify OTP
-      const { data: otpData, error: otpFetchError } = await adminClient
-        .from("account_deletion_otps")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("otp_code", otp)
-        .single();
-
-      if (otpFetchError || !otpData) {
-        return new Response(JSON.stringify({ error: "Invalid OTP" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      // 2. Delete user-owned storage files (best-effort)
+      try {
+        const bucket = "xpbridge-assets";
+        const { data: files } = await adminClient.storage.from(bucket).list(user.id);
+        if (files && files.length > 0) {
+          const paths = files.map((f: { name: string }) => `${user.id}/${f.name}`);
+          await adminClient.storage.from(bucket).remove(paths);
+        }
+      } catch (_) {
+        // Storage cleanup is best-effort
       }
 
-      if (new Date(otpData.expires_at) < new Date()) {
-        return new Response(JSON.stringify({ error: "OTP expired" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // SUCCESS - Start Deletion
-
-      // 1. Delete DB profile (Cascades will hit missions/applications/interviews)
+      // 3. Delete DB profile (cascade will handle related records)
       await adminClient.from("profiles").delete().eq("id", user.id);
 
-      // 2. Delete OTP record
-      await adminClient.from("account_deletion_otps").delete().eq("user_id", user.id);
+      // 4. Clean up OTP records if any exist
+      try {
+        await adminClient.from("account_deletion_otps").delete().eq("user_id", user.id);
+      } catch (_) {
+        // Table may not exist
+      }
 
-      // 3. Delete Auth User
+      // 5. Delete Auth User
       const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
       if (deleteError) throw deleteError;
 

@@ -107,7 +107,11 @@ User: "Flutter and Firebase" -> Call search_students with ["Flutter", "Firebase"
   static Map<String, dynamic> _createGenerationConfig(
     int maxTokens, {
     double temperature = 0.7,
-  }) => {'temperature': temperature, 'maxOutputTokens': maxTokens};
+  }) => {
+    'temperature': temperature,
+    'maxOutputTokens': maxTokens,
+    'thinkingConfig': {'thinkingBudget': 0},
+  };
 
   static String? _extractTextFromResponse(Map<String, dynamic> data) =>
       data['candidates']?[0]?['content']?['parts']?[0]?['text'];
@@ -199,7 +203,7 @@ Now respond to their message: $message
 
     final data = await _callEdgeFunction(
       contents: contents,
-      generationConfig: _createGenerationConfig(360, temperature: 0.5),
+      generationConfig: _createGenerationConfig(800, temperature: 0.5),
     );
 
     final text =
@@ -251,7 +255,7 @@ Help this startup find suitable student talent. Respond to: $message
 
     final data = await _callEdgeFunction(
       contents: contents,
-      generationConfig: _createGenerationConfig(320, temperature: 0.4),
+      generationConfig: _createGenerationConfig(800, temperature: 0.4),
       tools: _searchStudentsTool,
     );
 
@@ -334,7 +338,7 @@ Help this startup find suitable student talent. Respond to: $message
 
     final data = await _callEdgeFunction(
       contents: _startupChatHistory,
-      generationConfig: _createGenerationConfig(260, temperature: 0.4),
+      generationConfig: _createGenerationConfig(600, temperature: 0.4),
       tools: _searchStudentsTool,
     );
 

@@ -123,6 +123,18 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
       context.go(appState.defaultAuthenticatedLocation);
     } on XpServiceException catch (error) {
+      // If the message indicates email confirmation, show it as info not error
+      if (error.message.contains('Check your inbox')) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.message),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        context.goNamed('login');
+        return;
+      }
       setState(() => _submitError = error.message);
     } finally {
       if (mounted) {
@@ -137,6 +149,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -149,10 +162,16 @@ class _SignupScreenState extends State<SignupScreen> {
                 : Theme.of(context).textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   );
+            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
             return Center(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(sidePadding),
+                padding: EdgeInsets.fromLTRB(
+                  sidePadding,
+                  sidePadding,
+                  sidePadding,
+                  sidePadding + bottomInset,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
                   child: Column(
@@ -306,7 +325,15 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: const Text('Already have an account? Log in'),
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.md),
+                      Center(
+                        child: Text(
+                          'By creating an account you agree to our',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                      ),
                       Center(
                         child: Wrap(
                           alignment: WrapAlignment.center,
@@ -319,9 +346,16 @@ class _SignupScreenState extends State<SignupScreen> {
                               child: Text(
                                 'Privacy Policy',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.textSecondary,
+                                  color: AppTheme.primaryDark,
                                   decoration: TextDecoration.underline,
+                                  decorationColor: AppTheme.primaryDark,
                                 ),
+                              ),
+                            ),
+                            Text(
+                              'and',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppTheme.textMuted,
                               ),
                             ),
                             TextButton(
@@ -332,14 +366,16 @@ class _SignupScreenState extends State<SignupScreen> {
                               child: Text(
                                 'Terms & Conditions',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.textSecondary,
+                                  color: AppTheme.primaryDark,
                                   decoration: TextDecoration.underline,
+                                  decorationColor: AppTheme.primaryDark,
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.md),
                     ],
                   ),
                 ),

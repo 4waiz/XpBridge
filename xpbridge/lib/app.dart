@@ -280,27 +280,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> requestDeleteAccount() async {
-    await refreshSession();
-    if (!_isLoggedIn || SupabaseService.currentUser == null) {
-      throw const XpServiceException(
-        'Your session has expired. Log in again, then retry account deletion.',
-      );
-    }
-    await SupabaseService.requestDeletionOtp();
-  }
-
-  Future<void> confirmDeleteAccount(String otp) async {
+  Future<void> deleteAccountWithPassword(String password) async {
     _isBusy = true;
     notifyListeners();
     try {
-      await refreshSession();
-      if (!_isLoggedIn || SupabaseService.currentUser == null) {
-        throw const XpServiceException(
-          'Your session has expired. Log in again, then retry account deletion.',
-        );
-      }
-      await SupabaseService.confirmAccountDeletion(otp);
+      await SupabaseService.deleteAccountWithPassword(password);
       _requiresAccountCompletion = false;
       _resetSessionState();
     } finally {

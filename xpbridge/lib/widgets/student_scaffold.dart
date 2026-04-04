@@ -27,7 +27,9 @@ class StudentScaffold extends StatelessWidget {
             ),
           ],
         ),
-        child: BottomNavigationBar(
+        child: SafeArea(
+          top: false,
+          child: BottomNavigationBar(
           currentIndex: _calculateIndex(location),
           onTap: (index) => _onTap(context, index),
           backgroundColor: AppTheme.cardBackground,
@@ -58,6 +60,7 @@ class StudentScaffold extends StatelessWidget {
               label: 'Profile',
             ),
           ],
+        ),
         ),
       ),
     );

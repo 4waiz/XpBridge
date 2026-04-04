@@ -19,21 +19,24 @@ class _IntroScreenState extends State<IntroScreen> {
   final List<_OnboardingPage> _pages = const [
     _OnboardingPage(
       imagePath: 'assets/illustrations/pb.png',
-      title: 'Close the experience gap',
+      title: 'Close the\nexperience gap',
       eyebrow: 'XPBridge missions',
-      supportingLine: 'Work on real startup missions before anyone asks for experience.',
+      supportingLine:
+          'Work on real startup missions before anyone asks for experience.',
     ),
     _OnboardingPage(
       imagePath: 'assets/illustrations/pc.png',
-      title: 'Build proof while you learn',
+      title: 'Build proof\nwhile you learn',
       eyebrow: 'Proof over promises',
-      supportingLine: 'Turn small wins into visible work that actually moves your profile forward.',
+      supportingLine:
+          'Turn small wins into visible work that actually moves your profile forward.',
     ),
     _OnboardingPage(
       imagePath: 'assets/illustrations/pa.png',
-      title: 'Turn missions into growth',
+      title: 'Turn missions\ninto growth',
       eyebrow: 'Earn visible momentum',
-      supportingLine: 'Earn trust, sharpen your skills, and show startups what you can do.',
+      supportingLine:
+          'Earn trust, sharpen your skills, and show startups what you can do.',
     ),
   ];
 
@@ -77,12 +80,12 @@ class _IntroScreenState extends State<IntroScreen> {
                 children: [
                   Row(
                     children: [
+                      // Step counter pill
                       DecoratedBox(
                         decoration: BoxDecoration(
                           color: AppTheme.surface.withValues(alpha: 0.92),
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.pillRadius,
-                          ),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.pillRadius),
                           border: Border.all(
                             color: AppTheme.primary.withValues(alpha: 0.08),
                           ),
@@ -107,8 +110,10 @@ class _IntroScreenState extends State<IntroScreen> {
                               const SizedBox(width: AppSpacing.sm),
                               Text(
                                 '${_currentPage + 1}/${_pages.length}',
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(color: AppTheme.pageTitle),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(color: AppTheme.text),
                               ),
                             ],
                           ),
@@ -119,9 +124,8 @@ class _IntroScreenState extends State<IntroScreen> {
                         DecoratedBox(
                           decoration: BoxDecoration(
                             color: AppTheme.surface.withValues(alpha: 0.76),
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.pillRadius,
-                            ),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.pillRadius),
                             border: Border.all(
                               color: AppTheme.primary.withValues(alpha: 0.08),
                             ),
@@ -134,6 +138,7 @@ class _IntroScreenState extends State<IntroScreen> {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
+                  // PageView
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
@@ -144,11 +149,11 @@ class _IntroScreenState extends State<IntroScreen> {
                         final page = _pages[index];
                         return Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.xl,
-                            AppSpacing.xl,
-                            AppSpacing.xl,
+                          padding: EdgeInsets.fromLTRB(
                             AppSpacing.lg,
+                            compact ? AppSpacing.lg : AppSpacing.xl,
+                            AppSpacing.lg,
+                            AppSpacing.md,
                           ),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
@@ -170,6 +175,7 @@ class _IntroScreenState extends State<IntroScreen> {
                           ),
                           child: Stack(
                             children: [
+                              // Background glow
                               Positioned(
                                 top: 8,
                                 right: 2,
@@ -179,13 +185,15 @@ class _IntroScreenState extends State<IntroScreen> {
                                   decoration: BoxDecoration(
                                     gradient: RadialGradient(
                                       colors: [
-                                        AppTheme.primary.withValues(alpha: 0.16),
+                                        AppTheme.primary
+                                            .withValues(alpha: 0.16),
                                         Colors.transparent,
                                       ],
                                     ),
                                   ),
                                 ),
                               ),
+                              // Background card
                               Positioned(
                                 top: 14,
                                 left: 12,
@@ -197,8 +205,10 @@ class _IntroScreenState extends State<IntroScreen> {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        AppTheme.primary.withValues(alpha: 0.12),
-                                        AppTheme.surface.withValues(alpha: 0.98),
+                                        AppTheme.primary
+                                            .withValues(alpha: 0.12),
+                                        AppTheme.surface
+                                            .withValues(alpha: 0.98),
                                         const Color(0xFFFFFCF6),
                                       ],
                                     ),
@@ -206,15 +216,18 @@ class _IntroScreenState extends State<IntroScreen> {
                                   ),
                                 ),
                               ),
+                              // Content
                               Column(
                                 children: [
+                                  // Eyebrow pill
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: AppSpacing.md,
                                       vertical: AppSpacing.sm,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.primary.withValues(alpha: 0.1),
+                                      color: AppTheme.primary
+                                          .withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(
                                         AppTheme.pillRadius,
                                       ),
@@ -226,6 +239,7 @@ class _IntroScreenState extends State<IntroScreen> {
                                           .labelMedium
                                           ?.copyWith(
                                             color: AppTheme.primaryDeep,
+                                            fontWeight: FontWeight.w800,
                                           ),
                                     ),
                                   ),
@@ -234,9 +248,10 @@ class _IntroScreenState extends State<IntroScreen> {
                                         ? AppSpacing.md
                                         : AppSpacing.lg,
                                   ),
+                                  // Title — larger for impact
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.md,
+                                      horizontal: AppSpacing.sm,
                                     ),
                                     child: Text(
                                       page.title,
@@ -245,27 +260,30 @@ class _IntroScreenState extends State<IntroScreen> {
                                       textAlign: TextAlign.center,
                                       style: Theme.of(context)
                                           .textTheme
-                                          .headlineMedium
+                                          .headlineLarge
                                           ?.copyWith(
                                             fontWeight: FontWeight.w800,
                                             color: const Color(0xFF17212B),
+                                            height: 1.05,
+                                            letterSpacing: -0.5,
                                           ),
                                     ),
                                   ),
                                   SizedBox(
                                     height: compact
-                                        ? AppSpacing.xs
+                                        ? AppSpacing.sm
                                         : AppSpacing.md,
                                   ),
+                                  // Supporting line
                                   Padding(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: compact
-                                          ? AppSpacing.lg
+                                          ? AppSpacing.md
                                           : AppSpacing.xl,
                                     ),
                                     child: Text(
                                       page.supportingLine,
-                                      maxLines: 2,
+                                      maxLines: 3,
                                       overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.center,
                                       style: Theme.of(context)
@@ -273,7 +291,7 @@ class _IntroScreenState extends State<IntroScreen> {
                                           .bodyMedium
                                           ?.copyWith(
                                             color: const Color(0xFF394B5D),
-                                            height: 1.4,
+                                            height: 1.45,
                                           ),
                                     ),
                                   ),
@@ -282,6 +300,7 @@ class _IntroScreenState extends State<IntroScreen> {
                                         ? AppSpacing.md
                                         : AppSpacing.lg,
                                   ),
+                                  // Illustration
                                   Expanded(
                                     child: Stack(
                                       alignment: Alignment.center,
@@ -290,7 +309,8 @@ class _IntroScreenState extends State<IntroScreen> {
                                           child: DecoratedBox(
                                             decoration: BoxDecoration(
                                               gradient: RadialGradient(
-                                                center: const Alignment(0, 0.42),
+                                                center:
+                                                    const Alignment(0, 0.42),
                                                 radius: 0.82,
                                                 colors: [
                                                   AppTheme.primary.withValues(
@@ -321,6 +341,7 @@ class _IntroScreenState extends State<IntroScreen> {
                                       ],
                                     ),
                                   ),
+                                  // Indicators + CTA
                                   Padding(
                                     padding: EdgeInsets.fromLTRB(
                                       compact ? AppSpacing.sm : AppSpacing.md,
@@ -330,26 +351,27 @@ class _IntroScreenState extends State<IntroScreen> {
                                     ),
                                     child: Column(
                                       children: [
+                                        // Progress bar indicators
                                         Row(
                                           children: List.generate(
                                             _pages.length,
-                                            (indicatorIndex) => Expanded(
+                                            (i) => Expanded(
                                               child: AnimatedContainer(
                                                 duration: const Duration(
                                                   milliseconds: 220,
                                                 ),
                                                 margin: EdgeInsets.only(
-                                                  right: indicatorIndex ==
-                                                          _pages.length - 1
-                                                      ? 0
-                                                      : AppSpacing.sm,
+                                                  right:
+                                                      i == _pages.length - 1
+                                                          ? 0
+                                                          : AppSpacing.sm,
                                                 ),
                                                 height: 6,
                                                 decoration: BoxDecoration(
-                                                  color: _currentPage ==
-                                                          indicatorIndex
+                                                  color: _currentPage == i
                                                       ? AppTheme.primary
-                                                      : const Color(0xFFBFD8D3),
+                                                      : const Color(
+                                                          0xFFBFD8D3),
                                                   borderRadius:
                                                       BorderRadius.circular(
                                                     AppTheme.pillRadius,
@@ -359,13 +381,20 @@ class _IntroScreenState extends State<IntroScreen> {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(height: AppSpacing.lg),
+                                        const SizedBox(
+                                            height: AppSpacing.lg),
+                                        // CTA — more prominent on last page
                                         XPButton(
                                           label: isLastPage
-                                              ? 'Start now'
+                                              ? 'Get started'
                                               : 'Continue',
-                                          icon: Icons.arrow_forward_rounded,
+                                          icon: isLastPage
+                                              ? Icons.rocket_launch_rounded
+                                              : Icons.arrow_forward_rounded,
                                           onPressed: _nextPage,
+                                          size: isLastPage
+                                              ? XPButtonSize.large
+                                              : XPButtonSize.medium,
                                         ),
                                       ],
                                     ),

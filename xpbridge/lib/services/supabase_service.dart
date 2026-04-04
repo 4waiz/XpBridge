@@ -72,15 +72,29 @@ class SupabaseService {
         throw const XpServiceException('Could not create your account.');
       }
 
+      // If Supabase has email confirmation enabled, the user won't have a
+      // session yet. In that case, auto-sign-in so the closed-testing flow
+      // works seamlessly on real devices (no broken confirmation links).
       final authenticatedUser = client.auth.currentUser;
       if (authenticatedUser == null || authenticatedUser.id != response.user!.id) {
-        throw const XpServiceException(
-          'Account created. Verify your email first, then log in to finish setup.',
-        );
+        // Try signing in immediately (works when confirm-email is OFF or
+        // autoconfirm is ON in Supabase dashboard).
+        try {
+          await client.auth.signInWithPassword(
+            email: email,
+            password: password,
+          );
+        } on AuthException {
+          // Email confirmation is truly required; tell the user clearly.
+          throw const XpServiceException(
+            'Account created! Check your inbox for a confirmation link, then come back and log in.',
+          );
+        }
       }
 
+      final userId = client.auth.currentUser!.id;
       await client.from('profiles').upsert({
-        'id': response.user!.id,
+        'id': userId,
         'name': role == 'student' ? name : null,
         'company_name': role == 'startup' ? name : null,
         'email': email,
@@ -761,18 +775,31 @@ class SupabaseService {
     return _run(() => client.from('ai_interviews').delete().eq('id', interviewId));
   }
 
-  static Future<void> requestDeletionOtp() {
+  /// Verifies the user's password by re-authenticating, then calls the
+  /// server-side Edge Function to purge data and delete the auth user.
+  static Future<void> deleteAccountWithPassword(String password) {
     return _run(() async {
-      final session = client.auth.currentSession;
-      if (session == null || currentUser == null) {
+      final user = currentUser;
+      if (user == null || user.email == null) {
         throw const XpServiceException(
           'Your session has expired. Log in again, then retry account deletion.',
         );
       }
 
+      // Step 1: Verify password by re-authenticating
+      try {
+        await client.auth.signInWithPassword(
+          email: user.email!,
+          password: password,
+        );
+      } on AuthException {
+        throw const XpServiceException('Incorrect password.');
+      }
+
+      // Step 2: Call Edge Function to delete server-side
       final response = await client.functions.invoke(
         'account-deletion',
-        body: {'action': 'request-otp'},
+        body: {'action': 'delete'},
       );
       if (response.status != 200) {
         final errorData = response.data;
@@ -785,38 +812,15 @@ class SupabaseService {
           );
         }
         throw XpServiceException(
-          errorMessage ?? 'Failed to send OTP.',
-        );
-      }
-    });
-  }
-
-  static Future<void> confirmAccountDeletion(String otp) {
-    return _run(() async {
-      final session = client.auth.currentSession;
-      if (session == null || currentUser == null) {
-        throw const XpServiceException(
-          'Your session has expired. Log in again, then retry account deletion.',
+          errorMessage ?? 'Account deletion failed. Please try again.',
         );
       }
 
-      final response = await client.functions.invoke(
-        'account-deletion',
-        body: {'action': 'confirm-deletion', 'otp': otp},
-      );
-      if (response.status != 200) {
-        final errorData = response.data;
-        final errorMessage = errorData is Map<String, dynamic>
-            ? errorData['error'] as String?
-            : null;
-        if (response.status == 401 || errorMessage == 'Unauthorized') {
-          throw const XpServiceException(
-            'Your session has expired. Log in again, then retry account deletion.',
-          );
-        }
-        throw XpServiceException(
-          errorMessage ?? 'Invalid or expired OTP.',
-        );
+      // Step 3: Sign out locally
+      try {
+        await client.auth.signOut();
+      } catch (_) {
+        // Auth user is already deleted server-side; local sign-out may fail.
       }
     });
   }

@@ -102,6 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -115,10 +116,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 : Theme.of(context).textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   );
+            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
             return Center(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(sidePadding),
+                padding: EdgeInsets.fromLTRB(
+                  sidePadding,
+                  sidePadding,
+                  sidePadding,
+                  sidePadding + bottomInset,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 460),
                   child: Column(
@@ -251,8 +258,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Text(
                                 'Privacy Policy',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.textSecondary,
+                                  color: AppTheme.primaryDark,
                                   decoration: TextDecoration.underline,
+                                  decorationColor: AppTheme.primaryDark,
                                 ),
                               ),
                             ),
@@ -264,14 +272,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Text(
                                 'Terms & Conditions',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.textSecondary,
+                                  color: AppTheme.primaryDark,
                                   decoration: TextDecoration.underline,
+                                  decorationColor: AppTheme.primaryDark,
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.md),
                     ],
                   ),
                 ),

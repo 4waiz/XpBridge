@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../app.dart';
 import '../screens/admin/admin_preview_screen.dart';
 import '../screens/admin/admin_screen.dart';
-import '../screens/ai/ai_chat_screen.dart';
+import '../screens/chat/ai_chat_screen.dart';
 import '../screens/applications/student_applications_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
