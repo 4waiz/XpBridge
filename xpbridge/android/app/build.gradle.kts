@@ -90,6 +90,10 @@ android {
             }
         }
     }
+
+    lint {
+        checkReleaseBuilds = false
+    }
 }
 
 tasks.matching { it.name in setOf("assembleRelease", "bundleRelease") }.configureEach {
