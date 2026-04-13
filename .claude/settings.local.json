@@ -3,7 +3,12 @@
     "allow": [
       "Bash(find ./xpbridge/lib -type d -name \"screens\" -exec ls -la {} \\\\;)",
       "Bash(find ./xpbridge/android/app/src/main/res/mipmap-* -type f)",
-      "Bash(flutter pub:*)"
+      "Bash(flutter pub:*)",
+      "Bash(curl -s 'https://lhcsedsqtgeuundlyfwm.supabase.co/rest/v1/profiles?select=*&limit=5' -H 'apikey: sb_publishable_qEFeWPuTiAC150kuDAqn4w_4w8AHgf-' -H 'Authorization: Bearer sb_publishable_qEFeWPuTiAC150kuDAqn4w_4w8AHgf-')",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s \"https://lhcsedsqtgeuundlyfwm.supabase.co/rest/v1/profiles?select=*&limit=5\" -H \"apikey: sb_publishable_qEFeWPuTiAC150kuDAqn4w_4w8AHgf-\" -H \"Authorization: Bearer sb_publishable_qEFeWPuTiAC150kuDAqn4w_4w8AHgf-\")",
+      "Bash(echo \"Raw response: $\\(curl -s \"https://lhcsedsqtgeuundlyfwm.supabase.co/rest/v1/profiles?select=*&limit=5\" -H \"apikey: sb_publishable_qEFeWPuTiAC150kuDAqn4w_4w8AHgf-\" -H \"Authorization: Bearer sb_publishable_qEFeWPuTiAC150kuDAqn4w_4w8AHgf-\"\\)\")",
+      "Bash(curl -s 'https://lhcsedsqtgeuundlyfwm.supabase.co/rest/v1/profiles?select=id,role,name,email,is_admin' -H 'apikey: sb_publishable_qEFeWPuTiAC150kuDAqn4w_4w8AHgf-' -H 'Authorization: Bearer sb_publishable_qEFeWPuTiAC150kuDAqn4w_4w8AHgf-')"
     ]
   }
 }

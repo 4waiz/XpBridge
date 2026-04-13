@@ -13,6 +13,7 @@ class StartupProfile {
   final String? logoUrl;
   final String? logoBase64;
   final String? projectDetails;
+  final String? profileImageUrl;
   final DateTime createdAt;
 
   const StartupProfile({
@@ -28,6 +29,7 @@ class StartupProfile {
     this.logoUrl,
     this.logoBase64,
     this.projectDetails,
+    this.profileImageUrl,
     required this.createdAt,
   });
 
@@ -44,6 +46,7 @@ class StartupProfile {
     String? logoUrl,
     String? logoBase64,
     String? projectDetails,
+    String? profileImageUrl,
     DateTime? createdAt,
   }) {
     return StartupProfile(
@@ -59,6 +62,7 @@ class StartupProfile {
       logoUrl: logoUrl ?? this.logoUrl,
       logoBase64: logoBase64 ?? this.logoBase64,
       projectDetails: projectDetails ?? this.projectDetails,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -77,6 +81,7 @@ class StartupProfile {
       'logo_url': logoUrl,
       'logo_base64': logoBase64,
       'project_details': projectDetails,
+      'profile_image_url': profileImageUrl,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -97,6 +102,7 @@ class StartupProfile {
       logoUrl: map['logo_url'],
       logoBase64: map['logo_base64'],
       projectDetails: map['project_details'],
+      profileImageUrl: map['profile_image_url'],
       createdAt: DateTime.parse(
           map['created_at'] ?? DateTime.now().toIso8601String()),
     );

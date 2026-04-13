@@ -353,6 +353,7 @@ class SupabaseService {
         'required_skills': profile.requiredSkills,
         'website_url': profile.websiteUrl,
         'logo_url': profile.logoUrl,
+        'profile_image_url': profile.profileImageUrl,
         'project_details': profile.projectDetails,
         'created_at': profile.createdAt.toIso8601String(),
       });

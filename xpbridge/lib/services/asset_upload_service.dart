@@ -79,6 +79,10 @@ class AssetUploadService {
     );
   }
 
+  static Future<PickedAsset?> pickProfileImage() async {
+    return pickLogo(); // Reuse logo picking logic for profile images
+  }
+
   static Future<String> uploadResume(
     String userId,
     PickedAsset asset,
@@ -99,6 +103,18 @@ class AssetUploadService {
       bytes: asset.bytes,
       folder: 'logos/$userId',
       fileName: asset.fileName,
+      contentType: asset.mimeType,
+    );
+  }
+
+  static Future<String> uploadProfileImage(
+    String userId,
+    PickedAsset asset,
+  ) {
+    return SupabaseService.uploadBinaryFile(
+      bytes: asset.bytes,
+      folder: 'profiles/$userId',
+      fileName: 'profile_${DateTime.now().millisecondsSinceEpoch}.${asset.fileName.split('.').last}',
       contentType: asset.mimeType,
     );
   }

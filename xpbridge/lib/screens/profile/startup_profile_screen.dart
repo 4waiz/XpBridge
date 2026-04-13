@@ -36,6 +36,7 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
   String? _industry;
   List<String> _requiredSkills = [];
   String? _logoUrl;
+  String? _profileImageUrl;
   bool _isSaving = false;
   String? _submitError;
   bool _loaded = false;
@@ -59,6 +60,7 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
     _industry = profile.industry;
     _requiredSkills = List<String>.from(profile.requiredSkills);
     _logoUrl = profile.logoUrl;
+    _profileImageUrl = profile.profileImageUrl;
   }
 
   @override
@@ -79,6 +81,24 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
       if (picked == null) return;
       final url = await AssetUploadService.uploadLogo(user.id, picked);
       setState(() => _logoUrl = url);
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _pickProfileImage() async {
+    final user = SupabaseService.currentUser;
+    if (user == null) return;
+    try {
+      setState(() => _isSaving = true);
+      final picked = await AssetUploadService.pickProfileImage();
+      if (picked == null) return;
+      final url = await AssetUploadService.uploadProfileImage(user.id, picked);
+      setState(() {
+        _profileImageUrl = url;
+      });
     } on XpServiceException catch (error) {
       setState(() => _submitError = error.message);
     } finally {
@@ -309,6 +329,7 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
       industry: _industry,
       requiredSkills: _requiredSkills,
       logoUrl: _logoUrl,
+      profileImageUrl: _profileImageUrl,
     );
 
     try {
@@ -511,6 +532,56 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
               XPSection(
                 child: Column(
                   children: [
+                    Center(
+                      child: Stack(
+                        children: [
+                          GestureDetector(
+                            onTap: _isSaving ? null : _pickProfileImage,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppTheme.primary,
+                                  width: 2,
+                                ),
+                              ),
+                              child: CircleAvatar(
+                                radius: 50,
+                                backgroundColor: AppTheme.primarySoft,
+                                backgroundImage:
+                                    (_profileImageUrl ?? '').isNotEmpty
+                                        ? NetworkImage(_profileImageUrl!)
+                                        : null,
+                                child: (_profileImageUrl ?? '').isEmpty
+                                    ? const Icon(
+                                        Icons.business_rounded,
+                                        size: 50,
+                                        color: AppTheme.primary,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: AppTheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt_rounded,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
                     TextFormField(
                       controller: _companyNameController,
                       validator: (value) => (value?.trim().isEmpty ?? true)
