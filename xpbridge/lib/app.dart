@@ -102,9 +102,6 @@ class AppState extends ChangeNotifier {
     if (isPreviewingAsAdmin) {
       return isStudent ? '/student/dashboard' : '/startup/dashboard';
     }
-    if (_isAdmin) {
-      return '/admin';
-    }
     if (needsProfileSetup) {
       return isStudent ? '/student/setup' : '/startup/setup';
     }
@@ -175,7 +172,8 @@ class AppState extends ChangeNotifier {
         _errorMessage =
             'Finish account setup for this Google account by choosing Student or Startup.';
         _requiresAccountCompletion = true;
-        _resetSessionState();
+        _isLoggedIn = true; // Still logged in via Supabase Auth
+        _resetSessionState(keepAuth: true);
         return;
       }
 
@@ -713,11 +711,13 @@ class AppState extends ChangeNotifier {
     _startups = [profile, ..._startups.where((item) => item.id != profile.id)];
   }
 
-  void _resetSessionState() {
-    _isLoggedIn = false;
+  void _resetSessionState({bool keepAuth = false}) {
+    if (!keepAuth) {
+      _isLoggedIn = false;
+      _userRole = null;
+    }
     _isAdmin = false;
     _adminPreviewRole = null;
-    _userRole = null;
     _studentProfile = null;
     _startupProfile = null;
     _students = [];
@@ -834,9 +834,16 @@ class _XPBridgeAppState extends State<XPBridgeApp> {
     _state.initialize();
     _router = AppRouter(appState: _state).router;
     _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen((
-      _,
+      data,
     ) {
-      _state.refreshSession();
+      // Only refresh on meaningful state changes to avoid race conditions
+      // during OAuth callback processing.
+      final event = data.event;
+      if (event == AuthChangeEvent.signedIn ||
+          event == AuthChangeEvent.signedOut ||
+          event == AuthChangeEvent.tokenRefreshed) {
+        _state.refreshSession();
+      }
     });
   }
 

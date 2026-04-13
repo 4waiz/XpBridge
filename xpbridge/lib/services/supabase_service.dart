@@ -116,8 +116,8 @@ class SupabaseService {
   }
 
   static Future<void> signInWithGoogle({String? role}) {
-    final redirectTo = kIsWeb
-        ? '${Uri.base.origin}/login'
+    final String redirectTo = kIsWeb
+        ? Uri.base.origin
         : 'io.supabase.xpbridge://login-callback';
 
     return _run(() async {

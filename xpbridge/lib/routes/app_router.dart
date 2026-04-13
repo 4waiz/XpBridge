@@ -43,6 +43,13 @@ class AppRouter {
           path == '/terms' ||
           path == '/delete-account';
 
+      // NEW: If we are in the middle of a Google OAuth callback, 
+      // do NOT redirect. Let Supabase finish exchanging the code for a session.
+      if (state.uri.queryParameters.containsKey('code') || 
+          state.uri.fragment.contains('access_token')) {
+        return null;
+      }
+
       if (!appState.isInitialized) {
         if (path == '/' || isPublic) {
           return null;
