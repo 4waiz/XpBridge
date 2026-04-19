@@ -162,15 +162,21 @@ class AppState extends ChangeNotifier {
     try {
       final user = SupabaseService.currentUser;
       if (user == null) {
+        debugPrint('[bootstrap] no Supabase session');
         _requiresAccountCompletion = false;
         _resetSessionState();
         return;
       }
 
+      debugPrint('[bootstrap] session present (user=${user.id})');
+
       final profileRecord = await SupabaseService.ensureProfileForCurrentUser();
       if (profileRecord == null) {
+        debugPrint(
+          '[bootstrap] no profile row + no pending role -> requires account completion',
+        );
         _errorMessage =
-            'Finish account setup for this Google account by choosing Student or Startup.';
+            'Pick Student or Startup to finish setting up your account.';
         _requiresAccountCompletion = true;
         _isLoggedIn = true; // Still logged in via Supabase Auth
         _resetSessionState(keepAuth: true);
@@ -183,6 +189,7 @@ class AppState extends ChangeNotifier {
       final roleString = profileRecord['role'] as String? ?? 'student';
       _userRole = roleString == 'startup' ? UserRole.startup : UserRole.student;
       _isAdmin = profileRecord['is_admin'] as bool? ?? false;
+      debugPrint('[bootstrap] role=$_userRole, isAdmin=$_isAdmin');
 
       _studentProfile = _userRole == UserRole.student
           ? await SupabaseService.getStudentProfile(user.id)
@@ -192,8 +199,25 @@ class AppState extends ChangeNotifier {
           : null;
 
       await _refreshCollections();
+      debugPrint('[bootstrap] complete: isLoggedIn=true');
     } on XpServiceException catch (error) {
+      debugPrint('[bootstrap] XpServiceException: ${error.message}');
       _errorMessage = error.message;
+      // If the session exists but profile fetch genuinely fails, don't pin
+      // the user to the splash — let the router send them to /signup so
+      // they can try again or pick a role.
+      if (SupabaseService.currentUser != null) {
+        _requiresAccountCompletion = true;
+        _isLoggedIn = true;
+      }
+    } catch (error, stack) {
+      // Belt & braces: never leak an uncaught error out of bootstrap.
+      debugPrint('[bootstrap] unexpected error: $error\n$stack');
+      _errorMessage = 'Something went wrong while loading your account.';
+      if (SupabaseService.currentUser != null) {
+        _requiresAccountCompletion = true;
+        _isLoggedIn = true;
+      }
     } finally {
       _isBusy = false;
       if (markInitialized) {

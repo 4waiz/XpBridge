@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_config.dart';
+import 'web_url.dart';
 import '../models/ai_interview.dart';
 import '../models/application.dart';
 import '../models/mission.dart';
@@ -162,40 +163,80 @@ class SupabaseService {
     try {
       final uri = Uri.base;
       final query = uri.queryParameters;
-      if (query.containsKey('code') ||
+      final hasQuery = query.containsKey('code') ||
           query.containsKey('error') ||
-          query.containsKey('error_description')) {
-        return uri;
-      }
+          query.containsKey('error_description');
       final fragment = uri.fragment;
-      if (fragment.contains('access_token=') ||
+      final hasFragment = fragment.contains('access_token=') ||
           fragment.contains('code=') ||
           fragment.contains('error=') ||
-          fragment.contains('error_description=')) {
+          fragment.contains('error_description=');
+      if (hasQuery || hasFragment) {
+        debugPrint('[oauth] callback detected @ $uri');
         return uri;
       }
-    } catch (_) {
-      // fall through
+    } catch (error, stack) {
+      debugPrint('[oauth] capture failed: $error\n$stack');
     }
     return null;
   }
 
-  /// Finishes a web OAuth callback, exchanging the authorization code for a
-  /// Supabase session using the URL captured at cold start. Safe to call at
-  /// boot — returns quickly if the captured URL is null, if we're not on web,
-  /// or if supabase_flutter's built-in auto-detect already restored a session.
-  /// Swallows failures so boot never hangs; the user will be routed to
-  /// `/login` with the standard error surface if exchange truly fails.
+  /// Finishes a web OAuth callback. Exchanges the code for a Supabase session
+  /// using the URL captured at cold start. The browser URL is always cleaned
+  /// afterwards (success or failure) so GoRouter never sees a stale `?code=`
+  /// and pins the user to the splash.
+  ///
+  /// Safe to call at boot — returns quickly if the captured URL is null, if
+  /// we're not on web, or if supabase_flutter's built-in auto-detect already
+  /// restored a session. Swallows failures so boot never hangs; the app will
+  /// fall through to `/login` if the exchange genuinely failed.
   static Future<void> ensureSessionFromPendingCallback(Uri? callbackUri) async {
     if (!kIsWeb || callbackUri == null) return;
-    if (client.auth.currentSession != null) return;
+
     try {
+      if (client.auth.currentSession != null) {
+        debugPrint('[oauth] session already present — skipping manual exchange');
+        return;
+      }
+
+      debugPrint('[oauth] code exchange started');
       // getSessionFromUrl handles both PKCE (?code=) and implicit
-      // (#access_token=) flows, persists the session, notifies listeners,
-      // and cleans the browser URL via history.replaceState.
-      await client.auth.getSessionFromUrl(callbackUri);
+      // (#access_token=) flows, persists the session, and notifies listeners.
+      final response = await client.auth
+          .getSessionFromUrl(callbackUri)
+          .timeout(const Duration(seconds: 15));
+      debugPrint(
+        '[oauth] code exchange success (user=${response.session.user.id})',
+      );
     } catch (error, stack) {
-      debugPrint('Manual OAuth exchange failed: $error\n$stack');
+      debugPrint('[oauth] code exchange failure: $error\n$stack');
+    } finally {
+      // Always strip any ?code=/#access_token= from the URL so GoRouter's
+      // redirect logic — and any user who reloads — sees a clean state.
+      // We keep the GitHub Pages base path and land on /#/login which the
+      // router will then resolve to the real post-auth destination based
+      // on the current session.
+      _cleanCallbackUrl();
+    }
+  }
+
+  static void _cleanCallbackUrl() {
+    if (!kIsWeb) return;
+    try {
+      final base = Uri.base;
+      var path = base.path;
+      if (path.isEmpty) path = '/';
+      if (!path.endsWith('/')) path = '$path/';
+      // Force the GitHub Pages project sub-path if we're on that host so we
+      // never end up with a bare-domain URL after cleanup.
+      if (base.host == _githubPagesHost && !path.startsWith(_githubPagesBasePath)) {
+        path = _githubPagesBasePath;
+      }
+      final cleaned = '${base.origin}$path#/login';
+      replaceBrowserUrl(cleaned);
+      debugPrint('[oauth] url cleaned -> $cleaned');
+    } catch (error, stack) {
+      debugPrint('[oauth] url clean failed: $error\n$stack');
     }
   }
 
@@ -256,17 +297,37 @@ class SupabaseService {
 
   static Future<Map<String, dynamic>?> ensureProfileForCurrentUser() async {
     final user = currentUser;
-    if (user == null) return null;
-
-    final existingProfile = await getCurrentProfileRecord();
-    if (existingProfile != null) {
-      await _clearPendingOAuthRole();
-      return existingProfile;
+    if (user == null) {
+      debugPrint('[oauth] ensureProfile: no current user');
+      return null;
     }
 
+    debugPrint('[oauth] profile fetch started (user=${user.id})');
+    try {
+      final existingProfile = await getCurrentProfileRecord();
+      if (existingProfile != null) {
+        debugPrint(
+          '[oauth] profile fetch success: existing row (role=${existingProfile['role']})',
+        );
+        await _clearPendingOAuthRole();
+        return existingProfile;
+      }
+    } catch (error, stack) {
+      // Never hang the splash on a profile read failure — bubble it up as a
+      // typed service error so `refreshSession` can surface it and release
+      // the bootstrap gate.
+      debugPrint('[oauth] profile fetch failure: $error\n$stack');
+      if (error is XpServiceException) rethrow;
+      throw XpServiceException('Could not load your profile ($error).');
+    }
+
+    debugPrint('[oauth] profile fetch success: no existing row');
     final prefs = await SharedPreferences.getInstance();
     final pendingRole = prefs.getString(_pendingOAuthRoleKey);
     if (pendingRole != 'student' && pendingRole != 'startup') {
+      debugPrint(
+        '[oauth] no pending role — routing user to /signup for role picker',
+      );
       return null;
     }
 
@@ -289,12 +350,23 @@ class SupabaseService {
       'id': user.id,
       'email': email,
       'role': pendingRole,
-      'name': pendingRole == 'startup' ? displayName : displayName,
+      'name': displayName,
       'company_name': pendingRole == 'startup' ? displayName : null,
       'created_at': DateTime.now().toIso8601String(),
     };
 
-    await client.from('profiles').upsert(profile);
+    debugPrint(
+      '[oauth] creating profile row for Google user (role=$pendingRole)',
+    );
+    try {
+      await client.from('profiles').upsert(profile);
+    } on PostgrestException catch (error) {
+      throw XpServiceException(
+        'Could not create your profile (${error.message}).',
+      );
+    } catch (error) {
+      throw XpServiceException('Could not create your profile ($error).');
+    }
     await _clearPendingOAuthRole();
     return profile;
   }

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -44,30 +43,26 @@ class AppRouter {
           path == '/terms' ||
           path == '/delete-account';
 
-      // Defensive: if somehow the browser URL still carries OAuth callback
-      // params at this point (e.g. the user hit reload with ?code=... in the
-      // bar), freeze routing here so GoRouter doesn't bounce them to /login
-      // while the exchange is still resolving. On web with hash routing, the
-      // query lives on `Uri.base`, not `state.uri`.
-      final callbackUri = kIsWeb ? Uri.base : state.uri;
-      final browserQuery = callbackUri.queryParameters;
-      final browserFragment = callbackUri.fragment;
-      if (browserQuery.containsKey('code') ||
-          browserQuery.containsKey('error_description') ||
-          browserFragment.contains('access_token=') ||
-          browserFragment.contains('code=') ||
-          state.uri.queryParameters.containsKey('code') ||
-          state.uri.fragment.contains('access_token')) {
-        return null;
-      }
-
       // Bootstrap gate: until AppState has finished hydrating, pin everyone
       // to the splash route. Without this, public routes like `/login`
       // render for a frame before we know the real auth state — which is
       // exactly the flash the user was seeing after a Google callback.
+      //
+      // NOTE: we deliberately do NOT also block on `Uri.base` still having
+      // `?code=...`. `main()` has already exchanged the code (or failed
+      // to) and cleaned the URL by the time we get here. Blocking on the
+      // query would pin the user to the splash forever if the URL ever
+      // failed to clean — the exact infinite-loading bug we hit before.
       if (!appState.isInitialized) {
+        debugPrint('[router] bootstrap in progress -> splash');
         return path == '/' ? null : '/';
       }
+
+      debugPrint(
+        '[router] route chosen: path=$path, isLoggedIn=${appState.isLoggedIn}, '
+        'requiresAccountCompletion=${appState.requiresAccountCompletion}, '
+        'needsProfileSetup=${appState.needsProfileSetup}',
+      );
 
       if (appState.requiresAccountCompletion) {
         if (path == '/' || path == '/login') {
