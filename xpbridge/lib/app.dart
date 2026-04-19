@@ -581,12 +581,17 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> startAiInterview(String interviewId) async {
-    _aiInterviews = _aiInterviews.map((interview) {
-      if (interview.id != interviewId) return interview;
-      final updated = interview.copyWith(status: AiInterviewStatus.inProgress);
-      SupabaseService.updateAiInterview(updated);
-      return updated;
-    }).toList();
+    final updatedList = <AiInterview>[];
+    for (final interview in _aiInterviews) {
+      if (interview.id != interviewId) {
+        updatedList.add(interview);
+      } else {
+        final updated = interview.copyWith(status: AiInterviewStatus.inProgress);
+        await SupabaseService.updateAiInterview(updated);
+        updatedList.add(updated);
+      }
+    }
+    _aiInterviews = updatedList;
     notifyListeners();
   }
 

@@ -128,10 +128,24 @@ class SupabaseService {
         await prefs.setString(_pendingOAuthRoleKey, role);
       }
 
-      await client.auth.signInWithOAuth(
+      // Force the system browser (Chrome Custom Tabs on Android) so the
+      // PKCE callback deep-links back into the app reliably. Google blocks
+      // OAuth inside embedded WebViews, so relying on platformDefault has
+      // been known to silently fail on some devices.
+      final launched = await client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: redirectTo,
+        authScreenLaunchMode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
       );
+
+      if (!launched) {
+        throw const XpServiceException(
+          'Could not open Google sign-in. Make sure you have a browser '
+          'installed and try again.',
+        );
+      }
     });
   }
 
@@ -679,8 +693,9 @@ class SupabaseService {
     return _run(() async {
       final config = AppConfig.instance;
       final bucket = config.storageBucket;
+      final safeName = _sanitizeFileName(fileName);
       final objectPath =
-          '$folder/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+          '$folder/${DateTime.now().millisecondsSinceEpoch}_$safeName';
 
       if (kIsWeb) {
         final session = client.auth.currentSession;
@@ -711,23 +726,9 @@ class SupabaseService {
         );
 
         if (response.statusCode < 200 || response.statusCode >= 300) {
-          final body = response.body.trim();
-          String message = 'Upload failed (${response.statusCode}).';
-          if (body.isNotEmpty) {
-            try {
-              final parsed = jsonDecode(body);
-              if (parsed is Map<String, dynamic>) {
-                message = parsed['message']?.toString() ??
-                    parsed['error']?.toString() ??
-                    message;
-              } else {
-                message = body;
-              }
-            } catch (_) {
-              message = body;
-            }
-          }
-          throw XpServiceException(message);
+          throw XpServiceException(
+            _storageErrorMessage(response.statusCode, response.body),
+          );
         }
       } else {
         await client.storage.from(bucket).uploadBinary(
@@ -744,6 +745,69 @@ class SupabaseService {
           objectPath.split('/').map(Uri.encodeComponent).join('/');
       return '${config.supabaseUrl}/storage/v1/object/public/$bucket/$encodedPublicPath';
     });
+  }
+
+  /// Removes a file previously uploaded via [uploadBinaryFile]. Accepts either
+  /// a storage object path (e.g. `resumes/<uid>/<file>`) or the full public URL
+  /// returned by the upload. Swallows failures so callers can replace stale
+  /// files opportunistically without breaking the main flow.
+  static Future<void> tryDeleteStorageObject(String? pathOrUrl) async {
+    if (pathOrUrl == null || pathOrUrl.trim().isEmpty) return;
+    final config = AppConfig.instance;
+    final bucket = config.storageBucket;
+    final marker = '/object/public/$bucket/';
+    String objectPath = pathOrUrl.trim();
+    final idx = objectPath.indexOf(marker);
+    if (idx >= 0) {
+      objectPath = objectPath.substring(idx + marker.length);
+    }
+    try {
+      objectPath = Uri.decodeFull(objectPath);
+    } catch (_) {}
+    if (objectPath.isEmpty || objectPath.contains('://')) return;
+    try {
+      await client.storage.from(bucket).remove([objectPath]);
+    } catch (_) {
+      // Non-fatal: orphan cleanup shouldn't fail the primary replace flow.
+    }
+  }
+
+  static String _sanitizeFileName(String name) {
+    final trimmed = name.trim().isEmpty ? 'upload' : name.trim();
+    // Keep letters, digits, dots, dashes, underscores; replace the rest.
+    return trimmed.replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_');
+  }
+
+  static String _storageErrorMessage(int statusCode, String body) {
+    final trimmed = body.trim();
+    String detail = '';
+    if (trimmed.isNotEmpty) {
+      try {
+        final parsed = jsonDecode(trimmed);
+        if (parsed is Map<String, dynamic>) {
+          detail = parsed['message']?.toString() ??
+              parsed['error']?.toString() ??
+              trimmed;
+        } else {
+          detail = trimmed;
+        }
+      } catch (_) {
+        detail = trimmed;
+      }
+    }
+    final lower = detail.toLowerCase();
+    if (statusCode == 401 || statusCode == 403 ||
+        lower.contains('row-level security') ||
+        lower.contains('permission denied') ||
+        lower.contains('violates row') ||
+        lower.contains('not authorized')) {
+      return 'Upload blocked by storage permissions. Please log out, log in '
+          'again, and retry. If the issue persists, contact support.';
+    }
+    if (detail.isEmpty) {
+      return 'Upload failed (status $statusCode). Please try again.';
+    }
+    return 'Upload failed: $detail';
   }
 
   static Future<void> deleteProfile(String profileId) {

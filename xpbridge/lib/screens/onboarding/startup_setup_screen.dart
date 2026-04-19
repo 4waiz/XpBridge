@@ -60,15 +60,37 @@ class _StartupSetupScreenState extends State<StartupSetupScreen> {
       return;
     }
 
+    PickedAsset? picked;
     try {
-      setState(() => _isSaving = true);
-      final picked = await AssetUploadService.pickLogo();
-      if (picked == null) return;
+      picked = await AssetUploadService.pickLogo();
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+      return;
+    }
+    if (picked == null) return;
+
+    final previousUrl = _logoUrl;
+    setState(() {
+      _isSaving = true;
+      _submitError = null;
+    });
+    try {
       final url = await AssetUploadService.uploadLogo(user.id, picked);
+      await SupabaseService.updateProfile(
+        id: user.id,
+        data: {'logo_url': url},
+      );
+      if (previousUrl != null && previousUrl != url) {
+        await SupabaseService.tryDeleteStorageObject(previousUrl);
+      }
+      if (!mounted) return;
       setState(() {
         _logoUrl = url;
-        _logoName = picked.fileName;
+        _logoName = picked!.fileName;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logo uploaded.')),
+      );
     } on XpServiceException catch (error) {
       setState(() => _submitError = error.message);
     } finally {

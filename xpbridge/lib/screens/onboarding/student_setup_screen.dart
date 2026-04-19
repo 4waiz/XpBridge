@@ -67,21 +67,48 @@ class _StudentSetupScreenState extends State<StudentSetupScreen> {
   }
 
   Future<void> _pickResume() async {
+    final user = SupabaseService.currentUser;
+    if (user == null) {
+      setState(() => _submitError = 'Please log in again.');
+      return;
+    }
+
+    PickedAsset? picked;
     try {
-      final user = SupabaseService.currentUser;
-      if (user == null) {
-        throw const XpServiceException('Please log in again.');
-      }
-      final picked = await AssetUploadService.pickResume();
-      if (picked == null) return;
-      setState(() => _isSaving = true);
+      picked = await AssetUploadService.pickResume();
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+      return;
+    }
+    if (picked == null) return;
+
+    final previousUrl = _resumeUrl;
+    setState(() {
+      _isSaving = true;
+      _submitError = null;
+    });
+    try {
       final url = await AssetUploadService.uploadResume(user.id, picked);
+      await SupabaseService.updateProfile(
+        id: user.id,
+        data: {
+          'resume_url': url,
+          'resume_file_name': picked.fileName,
+          'resume_mime_type': picked.mimeType,
+        },
+      );
+      if (previousUrl != null && previousUrl != url) {
+        await SupabaseService.tryDeleteStorageObject(previousUrl);
+      }
+      if (!mounted) return;
       setState(() {
         _resumeUrl = url;
-        _resumeFileName = picked.fileName;
+        _resumeFileName = picked!.fileName;
         _resumeMimeType = picked.mimeType;
-        _submitError = null;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('CV uploaded.')),
+      );
     } on XpServiceException catch (error) {
       setState(() => _submitError = error.message);
     } finally {

@@ -80,16 +80,45 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   Future<void> _pickResume() async {
     final user = SupabaseService.currentUser;
     if (user == null) return;
+
+    PickedAsset? picked;
     try {
-      setState(() => _isSaving = true);
-      final picked = await AssetUploadService.pickResume();
-      if (picked == null) return;
+      picked = await AssetUploadService.pickResume();
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+      return;
+    }
+    if (picked == null) return;
+
+    final previousUrl = _resumeUrl;
+    setState(() {
+      _isSaving = true;
+      _submitError = null;
+    });
+    try {
       final url = await AssetUploadService.uploadResume(user.id, picked);
+      await SupabaseService.updateProfile(
+        id: user.id,
+        data: {
+          'resume_url': url,
+          'resume_file_name': picked.fileName,
+          'resume_mime_type': picked.mimeType,
+        },
+      );
+      if (previousUrl != null && previousUrl != url) {
+        await SupabaseService.tryDeleteStorageObject(previousUrl);
+      }
+      if (!mounted) return;
       setState(() {
         _resumeUrl = url;
-        _resumeFileName = picked.fileName;
+        _resumeFileName = picked!.fileName;
         _resumeMimeType = picked.mimeType;
       });
+      await AppStateScope.of(context).refreshSession();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('CV uploaded.')),
+      );
     } on XpServiceException catch (error) {
       setState(() => _submitError = error.message);
     } finally {
@@ -100,14 +129,37 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   Future<void> _pickProfileImage() async {
     final user = SupabaseService.currentUser;
     if (user == null) return;
+
+    PickedAsset? picked;
     try {
-      setState(() => _isSaving = true);
-      final picked = await AssetUploadService.pickProfileImage();
-      if (picked == null) return;
+      picked = await AssetUploadService.pickProfileImage();
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+      return;
+    }
+    if (picked == null) return;
+
+    final previousUrl = _profileImageUrl;
+    setState(() {
+      _isSaving = true;
+      _submitError = null;
+    });
+    try {
       final url = await AssetUploadService.uploadProfileImage(user.id, picked);
-      setState(() {
-        _profileImageUrl = url;
-      });
+      await SupabaseService.updateProfile(
+        id: user.id,
+        data: {'profile_image_url': url},
+      );
+      if (previousUrl != null && previousUrl != url) {
+        await SupabaseService.tryDeleteStorageObject(previousUrl);
+      }
+      if (!mounted) return;
+      setState(() => _profileImageUrl = url);
+      await AppStateScope.of(context).refreshSession();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile picture updated.')),
+      );
     } on XpServiceException catch (error) {
       setState(() => _submitError = error.message);
     } finally {
@@ -121,10 +173,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     final user = SupabaseService.currentUser;
     if (current == null || user == null) return;
     if (!_formKey.currentState!.validate()) return;
-    if (_skills.length < 2 || (_resumeUrl ?? '').isEmpty) {
-      setState(
-        () => _submitError = 'Keep 2-4 skills selected and make sure a CV is uploaded.',
-      );
+    if (_skills.length < 2 || _skills.length > 4) {
+      setState(() => _submitError = 'Keep 2-4 skills selected.');
       return;
     }
 

@@ -75,12 +75,37 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
   Future<void> _pickLogo() async {
     final user = SupabaseService.currentUser;
     if (user == null) return;
+
+    PickedAsset? picked;
     try {
-      setState(() => _isSaving = true);
-      final picked = await AssetUploadService.pickLogo();
-      if (picked == null) return;
+      picked = await AssetUploadService.pickLogo();
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+      return;
+    }
+    if (picked == null) return;
+
+    final previousUrl = _logoUrl;
+    setState(() {
+      _isSaving = true;
+      _submitError = null;
+    });
+    try {
       final url = await AssetUploadService.uploadLogo(user.id, picked);
+      await SupabaseService.updateProfile(
+        id: user.id,
+        data: {'logo_url': url},
+      );
+      if (previousUrl != null && previousUrl != url) {
+        await SupabaseService.tryDeleteStorageObject(previousUrl);
+      }
+      if (!mounted) return;
       setState(() => _logoUrl = url);
+      await AppStateScope.of(context).refreshSession();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logo updated.')),
+      );
     } on XpServiceException catch (error) {
       setState(() => _submitError = error.message);
     } finally {
@@ -91,14 +116,37 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
   Future<void> _pickProfileImage() async {
     final user = SupabaseService.currentUser;
     if (user == null) return;
+
+    PickedAsset? picked;
     try {
-      setState(() => _isSaving = true);
-      final picked = await AssetUploadService.pickProfileImage();
-      if (picked == null) return;
+      picked = await AssetUploadService.pickProfileImage();
+    } on XpServiceException catch (error) {
+      setState(() => _submitError = error.message);
+      return;
+    }
+    if (picked == null) return;
+
+    final previousUrl = _profileImageUrl;
+    setState(() {
+      _isSaving = true;
+      _submitError = null;
+    });
+    try {
       final url = await AssetUploadService.uploadProfileImage(user.id, picked);
-      setState(() {
-        _profileImageUrl = url;
-      });
+      await SupabaseService.updateProfile(
+        id: user.id,
+        data: {'profile_image_url': url},
+      );
+      if (previousUrl != null && previousUrl != url) {
+        await SupabaseService.tryDeleteStorageObject(previousUrl);
+      }
+      if (!mounted) return;
+      setState(() => _profileImageUrl = url);
+      await AppStateScope.of(context).refreshSession();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile picture updated.')),
+      );
     } on XpServiceException catch (error) {
       setState(() => _submitError = error.message);
     } finally {
