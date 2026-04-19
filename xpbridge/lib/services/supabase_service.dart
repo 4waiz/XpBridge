@@ -115,33 +115,40 @@ class SupabaseService {
     );
   }
 
+  /// The GitHub Pages project-site host and its repo sub-path. Hard-coded
+  /// here because it's a deploy-time constant: Supabase needs this exact
+  /// URL to be whitelisted in the dashboard Redirect URLs list, and this
+  /// file is the single source of truth for what we send as `redirectTo`.
+  static const String _githubPagesHost = '4waiz.github.io';
+  static const String _githubPagesBasePath = '/XpBridge/';
+
   /// Returns the exact URL Google OAuth should bounce back to on web.
   ///
-  /// GitHub Pages serves this app from `https://4waiz.github.io/XpBridge/`,
-  /// so the redirect MUST include the `/XpBridge/` repo path. Using
-  /// `Uri.base.origin` alone landed users on `https://4waiz.github.io/?code=...`
-  /// which 404s before Supabase can exchange the code.
+  /// Built from the live browser URL using the canonical formula
+  /// `${Uri.base.origin}${Uri.base.path}` — whatever host + repo subpath
+  /// Flutter was deployed at is preserved, so this works for
+  /// `https://4waiz.github.io/XpBridge/` in prod and
+  /// `http://localhost:<port>/` locally without any config.
   ///
-  /// We also strip any query string / hash fragment that was present when the
-  /// user clicked the button (e.g. `#/login`) because only the bare origin+path
-  /// is whitelist-able in Supabase → Authentication → URL Configuration.
+  /// We additionally FORCE `/XpBridge/` on the GitHub Pages host so that
+  /// even if `Uri.base.path` is ever empty or `/` (e.g. a build served
+  /// without `--base-href`, a stale service worker, or a redirect that
+  /// landed us on the apex before the `<base>` was parsed), we still send
+  /// Supabase the real app URL instead of the domain root.
   static String webOAuthRedirectUrl() {
-    const fallback = 'https://4waiz.github.io/XpBridge/';
-    try {
-      final base = Uri.base;
-      if (base.host.isEmpty) return fallback;
-      final path = base.path.isEmpty
-          ? '/'
-          : (base.path.endsWith('/') ? base.path : '${base.path}/');
-      return Uri(
-        scheme: base.scheme,
-        host: base.host,
-        port: base.hasPort ? base.port : null,
-        path: path,
-      ).toString();
-    } catch (_) {
-      return fallback;
+    final base = Uri.base;
+    final origin = base.origin;
+    var path = base.path;
+    if (path.isEmpty) path = '/';
+    if (!path.endsWith('/')) path = '$path/';
+
+    // GitHub Pages safety net.
+    if (base.host == _githubPagesHost &&
+        !path.startsWith(_githubPagesBasePath)) {
+      path = _githubPagesBasePath;
     }
+
+    return '$origin$path';
   }
 
   /// Inspects the browser URL at cold start and returns it if it carries an
