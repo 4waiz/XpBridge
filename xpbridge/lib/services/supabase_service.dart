@@ -115,9 +115,86 @@ class SupabaseService {
     );
   }
 
+  /// Returns the exact URL Google OAuth should bounce back to on web.
+  ///
+  /// GitHub Pages serves this app from `https://4waiz.github.io/XpBridge/`,
+  /// so the redirect MUST include the `/XpBridge/` repo path. Using
+  /// `Uri.base.origin` alone landed users on `https://4waiz.github.io/?code=...`
+  /// which 404s before Supabase can exchange the code.
+  ///
+  /// We also strip any query string / hash fragment that was present when the
+  /// user clicked the button (e.g. `#/login`) because only the bare origin+path
+  /// is whitelist-able in Supabase → Authentication → URL Configuration.
+  static String webOAuthRedirectUrl() {
+    const fallback = 'https://4waiz.github.io/XpBridge/';
+    try {
+      final base = Uri.base;
+      if (base.host.isEmpty) return fallback;
+      final path = base.path.isEmpty
+          ? '/'
+          : (base.path.endsWith('/') ? base.path : '${base.path}/');
+      return Uri(
+        scheme: base.scheme,
+        host: base.host,
+        port: base.hasPort ? base.port : null,
+        path: path,
+      ).toString();
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  /// Inspects the browser URL at cold start and returns it if it carries an
+  /// OAuth callback (`?code=`, `#access_token=`, or an `error_description=`).
+  /// Call this BEFORE `Supabase.initialize()` — supabase_flutter's built-in
+  /// `detectSessionInUri` listener can strip query params from `Uri.base`
+  /// during initialization (via `window.history.replaceState`), so by the
+  /// time initialize's future resolves there may be nothing left to exchange.
+  static Uri? capturePendingOAuthCallback() {
+    if (!kIsWeb) return null;
+    try {
+      final uri = Uri.base;
+      final query = uri.queryParameters;
+      if (query.containsKey('code') ||
+          query.containsKey('error') ||
+          query.containsKey('error_description')) {
+        return uri;
+      }
+      final fragment = uri.fragment;
+      if (fragment.contains('access_token=') ||
+          fragment.contains('code=') ||
+          fragment.contains('error=') ||
+          fragment.contains('error_description=')) {
+        return uri;
+      }
+    } catch (_) {
+      // fall through
+    }
+    return null;
+  }
+
+  /// Finishes a web OAuth callback, exchanging the authorization code for a
+  /// Supabase session using the URL captured at cold start. Safe to call at
+  /// boot — returns quickly if the captured URL is null, if we're not on web,
+  /// or if supabase_flutter's built-in auto-detect already restored a session.
+  /// Swallows failures so boot never hangs; the user will be routed to
+  /// `/login` with the standard error surface if exchange truly fails.
+  static Future<void> ensureSessionFromPendingCallback(Uri? callbackUri) async {
+    if (!kIsWeb || callbackUri == null) return;
+    if (client.auth.currentSession != null) return;
+    try {
+      // getSessionFromUrl handles both PKCE (?code=) and implicit
+      // (#access_token=) flows, persists the session, notifies listeners,
+      // and cleans the browser URL via history.replaceState.
+      await client.auth.getSessionFromUrl(callbackUri);
+    } catch (error, stack) {
+      debugPrint('Manual OAuth exchange failed: $error\n$stack');
+    }
+  }
+
   static Future<void> signInWithGoogle({String? role}) {
     final String redirectTo = kIsWeb
-        ? Uri.base.origin
+        ? webOAuthRedirectUrl()
         : 'io.supabase.xpbridge://login-callback';
 
     return _run(() async {

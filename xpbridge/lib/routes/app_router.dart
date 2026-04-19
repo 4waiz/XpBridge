@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -43,18 +44,29 @@ class AppRouter {
           path == '/terms' ||
           path == '/delete-account';
 
-      // NEW: If we are in the middle of a Google OAuth callback, 
-      // do NOT redirect. Let Supabase finish exchanging the code for a session.
-      if (state.uri.queryParameters.containsKey('code') || 
+      // Defensive: if somehow the browser URL still carries OAuth callback
+      // params at this point (e.g. the user hit reload with ?code=... in the
+      // bar), freeze routing here so GoRouter doesn't bounce them to /login
+      // while the exchange is still resolving. On web with hash routing, the
+      // query lives on `Uri.base`, not `state.uri`.
+      final callbackUri = kIsWeb ? Uri.base : state.uri;
+      final browserQuery = callbackUri.queryParameters;
+      final browserFragment = callbackUri.fragment;
+      if (browserQuery.containsKey('code') ||
+          browserQuery.containsKey('error_description') ||
+          browserFragment.contains('access_token=') ||
+          browserFragment.contains('code=') ||
+          state.uri.queryParameters.containsKey('code') ||
           state.uri.fragment.contains('access_token')) {
         return null;
       }
 
+      // Bootstrap gate: until AppState has finished hydrating, pin everyone
+      // to the splash route. Without this, public routes like `/login`
+      // render for a frame before we know the real auth state — which is
+      // exactly the flash the user was seeing after a Google callback.
       if (!appState.isInitialized) {
-        if (path == '/' || isPublic) {
-          return null;
-        }
-        return '/';
+        return path == '/' ? null : '/';
       }
 
       if (appState.requiresAccountCompletion) {

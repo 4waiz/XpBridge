@@ -821,23 +821,25 @@ class AppStateScope extends InheritedNotifier<AppState> {
 }
 
 class XPBridgeApp extends StatefulWidget {
-  const XPBridgeApp({super.key});
+  const XPBridgeApp({super.key, required this.appState});
+
+  /// Pre-hydrated state built in `main()` so the first frame already
+  /// reflects the real auth/session state (no `/login` flicker while an
+  /// OAuth callback is being exchanged).
+  final AppState appState;
 
   @override
   State<XPBridgeApp> createState() => _XPBridgeAppState();
 }
 
 class _XPBridgeAppState extends State<XPBridgeApp> {
-  late final AppState _state;
   late final GoRouter _router;
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
-    _state = AppState();
-    _state.initialize();
-    _router = AppRouter(appState: _state).router;
+    _router = AppRouter(appState: widget.appState).router;
     _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen((
       data,
     ) {
@@ -847,7 +849,7 @@ class _XPBridgeAppState extends State<XPBridgeApp> {
       if (event == AuthChangeEvent.signedIn ||
           event == AuthChangeEvent.signedOut ||
           event == AuthChangeEvent.tokenRefreshed) {
-        _state.refreshSession();
+        widget.appState.refreshSession();
       }
     });
   }
@@ -861,7 +863,7 @@ class _XPBridgeAppState extends State<XPBridgeApp> {
   @override
   Widget build(BuildContext context) {
     return AppStateScope(
-      notifier: _state,
+      notifier: widget.appState,
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         title: 'XPBridge',
