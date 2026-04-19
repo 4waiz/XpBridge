@@ -12,6 +12,7 @@ import '../../models/team_mission_config.dart';
 import '../../services/asset_upload_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/delete_account_dialog.dart';
 import '../../widgets/team_mission_widgets.dart';
 import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
@@ -403,132 +404,7 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
     context.goNamed('login');
   }
 
-  Future<void> _showDeleteDialog() async {
-    final appState = AppStateScope.of(context);
-    final passwordController = TextEditingController();
-    String? dialogError;
-    bool processing = false;
-    bool obscure = true;
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: AppTheme.sheetBackground,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.md),
-              ),
-              title: const Text(
-                'Delete Account',
-                style: TextStyle(color: AppTheme.error),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'This action is PERMANENT. Your startup profile, missions, and all linked data will be deleted.',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    const Text(
-                      'Enter your password to confirm:',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    TextField(
-                      controller: passwordController,
-                      obscureText: obscure,
-                      decoration: InputDecoration(
-                        hintText: 'Your password',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: IconButton(
-                          icon: Icon(obscure
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded),
-                          onPressed: () =>
-                              setDialogState(() => obscure = !obscure),
-                        ),
-                      ),
-                    ),
-                    if (dialogError != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        dialogError!,
-                        style: const TextStyle(
-                            color: AppTheme.error, fontSize: 12),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.lg),
-                    XPButton(
-                      label: 'Delete Forever',
-                      backgroundColor: AppTheme.error,
-                      loading: processing,
-                      onPressed: processing
-                          ? null
-                          : () async {
-                              final password =
-                                  passwordController.text.trim();
-                              if (password.isEmpty) {
-                                setDialogState(() => dialogError =
-                                    'Enter your password to continue.');
-                                return;
-                              }
-                              setDialogState(() {
-                                processing = true;
-                                dialogError = null;
-                              });
-                              try {
-                                await appState
-                                    .deleteAccountWithPassword(password);
-                                if (!dialogContext.mounted ||
-                                    !context.mounted) {
-                                  return;
-                                }
-                                Navigator.pop(dialogContext);
-                                context.goNamed('login');
-                              } catch (e) {
-                                final errorText = e is XpServiceException
-                                    ? e.message
-                                    : e.toString();
-                                if (errorText
-                                    .contains('session has expired')) {
-                                  if (!dialogContext.mounted ||
-                                      !context.mounted) {
-                                    return;
-                                  }
-                                  Navigator.pop(dialogContext);
-                                  context.goNamed('login');
-                                  return;
-                                }
-                                setDialogState(() {
-                                  processing = false;
-                                  dialogError = errorText;
-                                });
-                              }
-                            },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: processing
-                      ? null
-                      : () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+  Future<void> _showDeleteDialog() => showDeleteAccountDialog(context);
 
   @override
   Widget build(BuildContext context) {

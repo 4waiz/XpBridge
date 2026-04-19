@@ -31,6 +31,17 @@ Future<void> main() async {
     debugPrint('[bootstrap] ensureSession threw: $error\n$stack');
   }
 
+  // If the user previously kicked off a Google-reauth account deletion and
+  // has just returned with a fresh session, finish the job BEFORE the
+  // router can paint any authenticated screen. On success, `currentUser`
+  // becomes null and appState.initialize() naturally routes to /login,
+  // where a one-shot success message is picked up and shown.
+  try {
+    await SupabaseService.executePendingAccountDeletion();
+  } catch (error, stack) {
+    debugPrint('[bootstrap] pending deletion threw: $error\n$stack');
+  }
+
   // Fully hydrate AppState BEFORE runApp so the router never paints
   // /login while the callback is still mid-flight. By the first frame,
   // isInitialized and isLoggedIn already reflect the real auth state,

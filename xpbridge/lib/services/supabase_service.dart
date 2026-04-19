@@ -22,9 +22,30 @@ class XpServiceException implements Exception {
   String toString() => message;
 }
 
+/// Which auth provider the current user signed up with. Determined from
+/// `User.identities` + `User.appMetadata['providers']` (Supabase's own
+/// authoritative source of truth) — no guessing.
+enum AuthProviderKind {
+  /// Classic email + password account.
+  emailPassword,
+
+  /// Signed in via Google OAuth only.
+  google,
+
+  /// Has both password and Google linked on the same user record.
+  linked,
+
+  /// Logged-in user, but we couldn't determine a provider (shouldn't happen
+  /// in practice). We treat this like `emailPassword` in the delete UI so
+  /// the user at least has a path forward.
+  unknown,
+}
+
 class SupabaseService {
   static final client = Supabase.instance.client;
   static const _pendingOAuthRoleKey = 'pending_oauth_role';
+  static const _pendingDeleteKey = 'pending_account_delete';
+  static const _deletionSuccessKey = 'account_deletion_success_message';
 
   static User? get currentUser => client.auth.currentUser;
   static bool get isAuthenticated => currentUser != null;
@@ -996,8 +1017,45 @@ class SupabaseService {
     return _run(() => client.from('ai_interviews').delete().eq('id', interviewId));
   }
 
-  /// Verifies the user's password by re-authenticating, then calls the
-  /// server-side Edge Function to purge data and delete the auth user.
+  // ---------------------------------------------------------------------------
+  // Account deletion
+  // ---------------------------------------------------------------------------
+
+  /// Returns the auth provider the current user signed in with. Derived from
+  /// `User.identities` (authoritative) with a fallback to
+  /// `appMetadata['providers']` / `appMetadata['provider']`.
+  static AuthProviderKind currentAuthProvider() {
+    final user = currentUser;
+    if (user == null) return AuthProviderKind.unknown;
+
+    final providers = <String>{};
+
+    for (final identity in user.identities ?? const <UserIdentity>[]) {
+      providers.add(identity.provider.toLowerCase());
+    }
+
+    final metaList = user.appMetadata['providers'];
+    if (metaList is List) {
+      for (final entry in metaList) {
+        providers.add(entry.toString().toLowerCase());
+      }
+    }
+    final metaSingle = user.appMetadata['provider'];
+    if (metaSingle is String && metaSingle.isNotEmpty) {
+      providers.add(metaSingle.toLowerCase());
+    }
+
+    final hasGoogle = providers.contains('google');
+    final hasEmail = providers.contains('email');
+
+    if (hasGoogle && hasEmail) return AuthProviderKind.linked;
+    if (hasGoogle) return AuthProviderKind.google;
+    if (hasEmail) return AuthProviderKind.emailPassword;
+    return AuthProviderKind.unknown;
+  }
+
+  /// Email/password deletion path: verify the password locally by
+  /// re-authenticating, then call the server to purge data + auth user.
   static Future<void> deleteAccountWithPassword(String password) {
     return _run(() async {
       final user = currentUser;
@@ -1007,7 +1065,6 @@ class SupabaseService {
         );
       }
 
-      // Step 1: Verify password by re-authenticating
       try {
         await client.auth.signInWithPassword(
           email: user.email!,
@@ -1017,32 +1074,137 @@ class SupabaseService {
         throw const XpServiceException('Incorrect password.');
       }
 
-      // Step 2: Call Edge Function to delete server-side
-      final response = await client.functions.invoke(
-        'account-deletion',
-        body: {'action': 'delete'},
+      await _invokeAccountDeletionEdgeFunction();
+      await _signOutQuietly();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _deletionSuccessKey,
+        'Your account has been deleted.',
       );
-      if (response.status != 200) {
-        final errorData = response.data;
-        final errorMessage = errorData is Map<String, dynamic>
-            ? errorData['error'] as String?
-            : null;
-        if (response.status == 401 || errorMessage == 'Unauthorized') {
-          throw const XpServiceException(
-            'Your session has expired. Log in again, then retry account deletion.',
-          );
-        }
-        throw XpServiceException(
-          errorMessage ?? 'Account deletion failed. Please try again.',
-        );
-      }
-
-      // Step 3: Sign out locally
-      try {
-        await client.auth.signOut();
-      } catch (_) {
-        // Auth user is already deleted server-side; local sign-out may fail.
-      }
     });
+  }
+
+  /// Google-reauth deletion path (phase 1 — kicks off). Stores a "pending
+  /// delete" flag in local storage and launches the normal Google OAuth
+  /// flow. When the browser / Chrome Custom Tab returns to the app,
+  /// `executePendingAccountDeletion()` (called from main.dart during
+  /// bootstrap) picks up the flag and actually deletes the account while
+  /// the JWT is freshly-minted.
+  ///
+  /// Throws `XpServiceException` if we can't even launch the OAuth flow;
+  /// otherwise control transfers to the browser and the future completes
+  /// once the browser tab has been opened.
+  static Future<void> beginGoogleReauthForAccountDeletion() async {
+    if (currentUser == null) {
+      throw const XpServiceException(
+        'Your session has expired. Log in again, then retry account deletion.',
+      );
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_pendingDeleteKey, true);
+    await prefs.remove(_deletionSuccessKey);
+
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      // Failed to even open the browser — don't leave a sticky flag behind.
+      await prefs.remove(_pendingDeleteKey);
+      rethrow;
+    }
+  }
+
+  /// Called at app bootstrap (from `main.dart`) AFTER the session has been
+  /// restored. If the user previously triggered a Google-reauth delete and
+  /// came back signed in, we finish the job here: call the edge function,
+  /// sign out, and drop a success message the login screen can pick up.
+  ///
+  /// Returns `true` if a deletion was executed (in which case the caller
+  /// should expect `currentUser` to be null). Returns `false` if there was
+  /// nothing pending or if we no longer have a valid session to act on.
+  static Future<bool> executePendingAccountDeletion() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pending = prefs.getBool(_pendingDeleteKey) ?? false;
+    if (!pending) return false;
+
+    // No session → the reauth never completed. Clear the flag so we don't
+    // loop the next time the user opens the app.
+    if (currentUser == null) {
+      await prefs.remove(_pendingDeleteKey);
+      debugPrint('[delete] pending flag present but no session — clearing');
+      return false;
+    }
+
+    debugPrint('[delete] executing pending Google-reauth deletion');
+    try {
+      await _invokeAccountDeletionEdgeFunction();
+      await _signOutQuietly();
+      await prefs.setString(
+        _deletionSuccessKey,
+        'Your account has been deleted.',
+      );
+      debugPrint('[delete] pending deletion complete');
+      return true;
+    } on XpServiceException catch (error) {
+      debugPrint('[delete] pending deletion failed: ${error.message}');
+      await prefs.setString(
+        _deletionSuccessKey,
+        'Account deletion failed: ${error.message}',
+      );
+      return false;
+    } catch (error, stack) {
+      debugPrint('[delete] pending deletion threw: $error\n$stack');
+      await prefs.setString(
+        _deletionSuccessKey,
+        'Account deletion failed. Please try again.',
+      );
+      return false;
+    } finally {
+      // Clear the trigger either way — the user can retry from the UI.
+      await prefs.remove(_pendingDeleteKey);
+    }
+  }
+
+  /// Reads (and clears) any one-shot message left behind by a completed
+  /// deletion. The login screen calls this on mount and surfaces the text
+  /// as a snackbar.
+  static Future<String?> consumeDeletionStatusMessage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final message = prefs.getString(_deletionSuccessKey);
+    if (message != null) {
+      await prefs.remove(_deletionSuccessKey);
+    }
+    return message;
+  }
+
+  static Future<void> _invokeAccountDeletionEdgeFunction() async {
+    final response = await client.functions.invoke(
+      'account-deletion',
+      body: {'action': 'delete'},
+    );
+
+    if (response.status == 200) return;
+
+    final errorData = response.data;
+    final errorMessage = errorData is Map<String, dynamic>
+        ? errorData['error'] as String?
+        : null;
+    if (response.status == 401 || errorMessage == 'Unauthorized') {
+      throw const XpServiceException(
+        'Your session has expired. Log in again, then retry account deletion.',
+      );
+    }
+    throw XpServiceException(
+      errorMessage ?? 'Account deletion failed. Please try again.',
+    );
+  }
+
+  static Future<void> _signOutQuietly() async {
+    try {
+      await client.auth.signOut();
+    } catch (_) {
+      // The auth user is already deleted server-side; local sign-out is
+      // best-effort and can fail with "user not found".
+    }
   }
 }

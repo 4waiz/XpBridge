@@ -60,13 +60,34 @@ serve(async (req: Request) => {
         // RPC may not exist — fall back to manual deletion
       }
 
-      // 2. Delete user-owned storage files (best-effort)
+      // 2. Delete user-owned storage files (best-effort). Covers the three
+      //    folder-prefixes the Flutter client actually writes into:
+      //    - resumes/<uid>/...
+      //    - profiles/<uid>/...
+      //    - logos/<uid>/...
+      //    We still sweep the legacy `<uid>/...` prefix too, in case any
+      //    older build created objects there.
       try {
         const bucket = "xpbridge-assets";
-        const { data: files } = await adminClient.storage.from(bucket).list(user.id);
-        if (files && files.length > 0) {
-          const paths = files.map((f: { name: string }) => `${user.id}/${f.name}`);
-          await adminClient.storage.from(bucket).remove(paths);
+        const prefixes = [
+          `resumes/${user.id}`,
+          `profiles/${user.id}`,
+          `logos/${user.id}`,
+          user.id,
+        ];
+        const pathsToDelete: string[] = [];
+        for (const prefix of prefixes) {
+          const { data: files } = await adminClient.storage
+            .from(bucket)
+            .list(prefix);
+          if (files && files.length > 0) {
+            for (const f of files as { name: string }[]) {
+              pathsToDelete.push(`${prefix}/${f.name}`);
+            }
+          }
+        }
+        if (pathsToDelete.length > 0) {
+          await adminClient.storage.from(bucket).remove(pathsToDelete);
         }
       } catch (_) {
         // Storage cleanup is best-effort

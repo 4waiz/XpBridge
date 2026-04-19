@@ -26,6 +26,26 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _submitError;
 
   @override
+  void initState() {
+    super.initState();
+    // Pick up the one-shot message left behind by a completed account
+    // deletion (either the password path or the post-reauth Google path)
+    // and show it as a snackbar so the user knows the delete actually went
+    // through before they land on the login form.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final message = await SupabaseService.consumeDeletionStatusMessage();
+      if (message == null || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppTheme.primaryDark,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    });
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
