@@ -15,6 +15,11 @@ val allowedClientEnvKeys = setOf(
     "SUPABASE_ANON_KEY",
     "STORAGE_BUCKET",
     "ENABLE_AI_CHAT",
+    // Public Google OAuth client identifiers. Not secret — Google classifies
+    // these as public. Required by native Google Sign-In so Supabase accepts
+    // the resulting id_token.
+    "GOOGLE_WEB_CLIENT_ID",
+    "GOOGLE_IOS_CLIENT_ID",
 )
 
 fun parseEnvKeys(file: File): Set<String> =

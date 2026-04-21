@@ -68,6 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signInByGoogle() async {
+    if (_isLoading) return; // prevent double taps
     setState(() {
       _isLoading = true;
       _submitError = null;
@@ -75,10 +76,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await SupabaseService.signInWithGoogle();
-      // Supabase OAuth usually handles redirection. 
-      // The session refresh will happen after callback.
+      // On web, Supabase redirects and this future never returns "normally"
+      // before the page unloads, so the code below only runs on native. On
+      // Android, `signInWithIdToken` has already established a Supabase
+      // session — drive the app into the authenticated state immediately
+      // (the auth listener will also fire, but this removes the chance of a
+      // UI flicker on the login screen).
+      if (!mounted) return;
+      final appState = AppStateScope.of(context);
+      await appState.refreshSession();
+      if (!mounted) return;
+      context.go(appState.defaultAuthenticatedLocation);
     } on XpServiceException catch (error) {
-      setState(() => _submitError = error.message);
+      if (!mounted) return;
+      if (identical(error, SupabaseService.googleSignInCancelled)) {
+        // User closed the Google sheet — no need to surface an error.
+        setState(() => _submitError = null);
+      } else {
+        setState(() => _submitError = error.message);
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

@@ -4,6 +4,8 @@ class AppConfig {
     required this.supabaseAnonKey,
     required this.storageBucket,
     required this.enableAiChat,
+    required this.googleWebClientId,
+    required this.googleIosClientId,
   });
 
   static late final AppConfig instance;
@@ -12,12 +14,25 @@ class AppConfig {
     'SUPABASE_ANON_KEY',
     'STORAGE_BUCKET',
     'ENABLE_AI_CHAT',
+    'GOOGLE_WEB_CLIENT_ID',
+    'GOOGLE_IOS_CLIENT_ID',
   };
 
   final String supabaseUrl;
   final String supabaseAnonKey;
   final String storageBucket;
   final bool enableAiChat;
+
+  /// Google Cloud **Web** OAuth client ID. Required by native Google Sign-In
+  /// on Android: passed as `serverClientId` so Google returns an ID token
+  /// whose `aud` matches the web client Supabase has registered. Without it,
+  /// Supabase rejects the `signInWithIdToken` exchange with
+  /// "Unacceptable audience in id_token".
+  final String? googleWebClientId;
+
+  /// Google Cloud **iOS** OAuth client ID. Only used if/when iOS enables
+  /// native Google Sign-In. Left optional so web/Android keep working.
+  final String? googleIosClientId;
 
   bool get aiFeaturesEnabled => enableAiChat;
 
@@ -29,12 +44,22 @@ class AppConfig {
         environment['STORAGE_BUCKET']?.trim().isNotEmpty == true
         ? environment['STORAGE_BUCKET']!.trim()
         : 'xpbridge-assets';
+    final googleWebClientId =
+        environment['GOOGLE_WEB_CLIENT_ID']?.trim().isNotEmpty == true
+        ? environment['GOOGLE_WEB_CLIENT_ID']!.trim()
+        : null;
+    final googleIosClientId =
+        environment['GOOGLE_IOS_CLIENT_ID']?.trim().isNotEmpty == true
+        ? environment['GOOGLE_IOS_CLIENT_ID']!.trim()
+        : null;
 
     return AppConfig._(
       supabaseUrl: supabaseUrl,
       supabaseAnonKey: supabaseAnonKey,
       storageBucket: storageBucket,
       enableAiChat: _boolValue(environment, 'ENABLE_AI_CHAT'),
+      googleWebClientId: googleWebClientId,
+      googleIosClientId: googleIosClientId,
     );
   }
 

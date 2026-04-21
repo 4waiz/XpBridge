@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -261,11 +264,34 @@ class SupabaseService {
     }
   }
 
-  static Future<void> signInWithGoogle({String? role}) {
-    final String redirectTo = kIsWeb
-        ? webOAuthRedirectUrl()
-        : 'io.supabase.xpbridge://login-callback';
+  /// Signals that the user cancelled the native Google Sign-In sheet. UI
+  /// layers catch this specifically so they can silently reset their loading
+  /// state without showing an "error" snackbar.
+  static const XpServiceException googleSignInCancelled =
+      XpServiceException('Google sign-in was cancelled.');
 
+  /// Signs the user in with Google.
+  ///
+  /// Behaviour depends on the platform:
+  ///
+  /// * **Web** → keeps the existing Supabase PKCE/browser OAuth flow.
+  ///   Hash/query callback handling is wired through
+  ///   [capturePendingOAuthCallback] / [ensureSessionFromPendingCallback]
+  ///   in `main.dart`, so nothing else needs to change here.
+  /// * **Android** → uses the native Google Sign-In sheet via the
+  ///   `google_sign_in` plugin. No Chrome Custom Tab, no browser bounce.
+  ///   The resulting id_token is exchanged with Supabase through
+  ///   `auth.signInWithIdToken`, producing a normal Supabase session.
+  /// * **iOS** → currently falls back to the browser OAuth flow. Native
+  ///   Google Sign-In on iOS requires the GIDClientID in Info.plist and a
+  ///   reversed-client URL scheme — see the TODO below before flipping the
+  ///   switch for iOS.
+  ///
+  /// The `role` parameter (used only on first-time signups) is persisted
+  /// locally via [SharedPreferences] so [ensureProfileForCurrentUser] can
+  /// pick it up after the session is established — regardless of which
+  /// platform branch ran.
+  static Future<void> signInWithGoogle({String? role}) {
     return _run(() async {
       final prefs = await SharedPreferences.getInstance();
       if (role == null) {
@@ -274,25 +300,162 @@ class SupabaseService {
         await prefs.setString(_pendingOAuthRoleKey, role);
       }
 
-      // Force the system browser (Chrome Custom Tabs on Android) so the
-      // PKCE callback deep-links back into the app reliably. Google blocks
-      // OAuth inside embedded WebViews, so relying on platformDefault has
-      // been known to silently fail on some devices.
-      final launched = await client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: redirectTo,
-        authScreenLaunchMode: kIsWeb
-            ? LaunchMode.platformDefault
-            : LaunchMode.externalApplication,
-      );
-
-      if (!launched) {
-        throw const XpServiceException(
-          'Could not open Google sign-in. Make sure you have a browser '
-          'installed and try again.',
-        );
+      if (kIsWeb) {
+        await _signInWithGoogleWeb();
+        return;
       }
+
+      if (_isAndroid) {
+        await _signInWithGoogleNative();
+        return;
+      }
+
+      // iOS / desktop → keep the browser-based flow until native is wired up.
+      // TODO(ios-native-google): to enable native Google Sign-In on iOS:
+      //   1. Add `GOOGLE_IOS_CLIENT_ID` to `.env` (iOS OAuth client from
+      //      Google Cloud Console).
+      //   2. Add reversed-client URL scheme to `ios/Runner/Info.plist` under
+      //      `CFBundleURLTypes` (format:
+      //      `com.googleusercontent.apps.<client-id-prefix>`).
+      //   3. Set `GIDClientID` in Info.plist to the iOS client ID.
+      //   4. Replace this branch with a call to [_signInWithGoogleNative].
+      await _signInWithGoogleWeb();
     });
+  }
+
+  static bool get _isAndroid {
+    if (kIsWeb) return false;
+    try {
+      return Platform.isAndroid;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> _signInWithGoogleWeb() async {
+    final String redirectTo = kIsWeb
+        ? webOAuthRedirectUrl()
+        : 'io.supabase.xpbridge://login-callback';
+
+    // Force the system browser (Chrome Custom Tabs on Android) so the
+    // PKCE callback deep-links back into the app reliably. Google blocks
+    // OAuth inside embedded WebViews, so relying on platformDefault has
+    // been known to silently fail on some devices.
+    final launched = await client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: redirectTo,
+      authScreenLaunchMode: kIsWeb
+          ? LaunchMode.platformDefault
+          : LaunchMode.externalApplication,
+    );
+
+    if (!launched) {
+      throw const XpServiceException(
+        'Could not open Google sign-in. Make sure you have a browser '
+        'installed and try again.',
+      );
+    }
+  }
+
+  /// Native Google Sign-In (Android today, iOS once configured).
+  ///
+  /// Flow:
+  ///   1. Prompt the OS-level Google account picker via `google_sign_in`.
+  ///   2. Read the id_token + access_token from the returned auth object.
+  ///   3. Exchange them for a Supabase session via `signInWithIdToken`.
+  ///
+  /// The `serverClientId` we pass to `GoogleSignIn` MUST be the **Web**
+  /// OAuth client ID registered in Supabase (not the Android one). Supabase
+  /// validates the `aud` claim on the id_token against the web client, so
+  /// if we pass the Android client ID here Supabase rejects the exchange
+  /// with "Unacceptable audience in id_token". The Android OAuth client
+  /// still matters — Google uses package name + SHA-1 to decide whether
+  /// to sign the token at all — but it is not referenced by client code.
+  static Future<void> _signInWithGoogleNative() async {
+    final webClientId = AppConfig.instance.googleWebClientId;
+    if (webClientId == null || webClientId.isEmpty) {
+      throw const XpServiceException(
+        'Google sign-in is not configured for this build '
+        '(missing GOOGLE_WEB_CLIENT_ID).',
+      );
+    }
+
+    final iosClientId = AppConfig.instance.googleIosClientId;
+
+    final googleSignIn = GoogleSignIn(
+      // On Android: `serverClientId` triggers Google to mint an id_token
+      // whose audience is the web client — exactly what Supabase wants.
+      serverClientId: webClientId,
+      // On iOS (once wired up) we need to pass the iOS client ID here.
+      // On Android this is ignored.
+      clientId: iosClientId,
+      scopes: const ['email', 'profile', 'openid'],
+    );
+
+    // Make sure any previous session on the device doesn't short-circuit
+    // the account picker — we want the user to see the Google sheet every
+    // time they explicitly tap "Continue with Google".
+    try {
+      await googleSignIn.signOut();
+    } catch (_) {
+      // Non-fatal: a fresh install / first run has nothing to sign out of.
+    }
+
+    GoogleSignInAccount? account;
+    try {
+      account = await googleSignIn.signIn();
+    } on PlatformException catch (error) {
+      throw XpServiceException(_nativeGoogleErrorMessage(error));
+    }
+
+    if (account == null) {
+      // User dismissed the Google sheet. Propagate a sentinel so the UI
+      // resets cleanly without flashing a scary error.
+      throw googleSignInCancelled;
+    }
+
+    final auth = await account.authentication;
+    final idToken = auth.idToken;
+    final accessToken = auth.accessToken;
+
+    if (idToken == null || idToken.isEmpty) {
+      throw const XpServiceException(
+        'Google did not return an ID token. Check that the Android OAuth '
+        'client is registered with the correct SHA-1 and package name.',
+      );
+    }
+
+    try {
+      await client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+    } on AuthException catch (error) {
+      throw XpServiceException(
+        'Supabase rejected the Google session: ${error.message}',
+      );
+    }
+  }
+
+  static String _nativeGoogleErrorMessage(PlatformException error) {
+    final code = error.code;
+    if (code == 'network_error') {
+      return 'Network error signing in with Google. Check your connection '
+          'and try again.';
+    }
+    if (code == 'sign_in_failed' || code == '10') {
+      // DEVELOPER_ERROR = 10: usually a missing/incorrect SHA-1 in the
+      // Google Cloud Android OAuth client, or the wrong package name.
+      return 'Google sign-in is not set up correctly for this build '
+          '(code=$code). Verify the Android OAuth client SHA-1 + package '
+          'name in Google Cloud Console.';
+    }
+    final detail = error.message?.trim();
+    if (detail == null || detail.isEmpty) {
+      return 'Google sign-in failed (code=$code).';
+    }
+    return 'Google sign-in failed: $detail';
   }
 
   static Future<void> signOut() {

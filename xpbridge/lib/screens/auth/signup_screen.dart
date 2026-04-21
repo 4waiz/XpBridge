@@ -61,6 +61,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _signUpWithGoogle() async {
+    if (_isLoading) return; // prevent double taps
     if (_selectedRole == null) {
       setState(() => _submitError = 'Select a role to continue.');
       return;
@@ -74,10 +75,22 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       final role = _selectedRole == UserRole.student ? 'student' : 'startup';
       await SupabaseService.signInWithGoogle(role: role);
-      // Role handling will be needed in the post-login callback 
-      // or through standard profile syncing.
+      // On web, the future returns before the redirect completes, so
+      // post-auth work happens in the OAuth callback path. On Android the
+      // session is already live — drive straight into the authenticated
+      // flow so the user doesn't stare at a spinning sign-up screen.
+      if (!mounted) return;
+      final appState = AppStateScope.of(context);
+      await appState.refreshSession();
+      if (!mounted) return;
+      context.go(appState.defaultAuthenticatedLocation);
     } on XpServiceException catch (error) {
-      setState(() => _submitError = error.message);
+      if (!mounted) return;
+      if (identical(error, SupabaseService.googleSignInCancelled)) {
+        setState(() => _submitError = null);
+      } else {
+        setState(() => _submitError = error.message);
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
