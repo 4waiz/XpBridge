@@ -191,12 +191,27 @@ class AppState extends ChangeNotifier {
       _isAdmin = profileRecord['is_admin'] as bool? ?? false;
       debugPrint('[bootstrap] role=$_userRole, isAdmin=$_isAdmin');
 
-      _studentProfile = _userRole == UserRole.student
-          ? await SupabaseService.getStudentProfile(user.id)
-          : null;
-      _startupProfile = _userRole == UserRole.startup
-          ? await SupabaseService.getStartupProfile(user.id)
-          : null;
+      final Future<Object?> profileFuture = _userRole == UserRole.student
+          ? SupabaseService.getStudentProfile(user.id)
+          : _userRole == UserRole.startup
+              ? SupabaseService.getStartupProfile(user.id)
+              : Future<Object?>.value(null);
+
+      final results = await Future.wait<Object?>([
+        profileFuture,
+        SupabaseService.getStudents(),
+        SupabaseService.getStartups(),
+        SupabaseService.getMissions(),
+      ]);
+
+      if (_userRole == UserRole.student) {
+        _studentProfile = results[0] as StudentProfile?;
+      } else if (_userRole == UserRole.startup) {
+        _startupProfile = results[0] as StartupProfile?;
+      }
+      _students = results[1] as List<StudentProfile>;
+      _startups = results[2] as List<StartupProfile>;
+      _missions = results[3] as List<Mission>;
 
       await _refreshCollections();
       debugPrint('[bootstrap] complete: isLoggedIn=true');
@@ -227,28 +242,39 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> _refreshCollections() async {
-    _students = await SupabaseService.getStudents();
-    _startups = await SupabaseService.getStartups();
-    _missions = await SupabaseService.getMissions();
+  Future<void> _refreshCollections({bool skipBaseCollections = true}) async {
+    if (!skipBaseCollections) {
+      final baseResults = await Future.wait<Object?>([
+        SupabaseService.getStudents(),
+        SupabaseService.getStartups(),
+        SupabaseService.getMissions(),
+      ]);
+      _students = baseResults[0] as List<StudentProfile>;
+      _startups = baseResults[1] as List<StartupProfile>;
+      _missions = baseResults[2] as List<Mission>;
+    }
 
     if (_isAdmin) {
-      _applications = await SupabaseService.getAllApplications();
-      _aiInterviews = await SupabaseService.getAllAiInterviews();
+      final results = await Future.wait<Object?>([
+        SupabaseService.getAllApplications(),
+        SupabaseService.getAllAiInterviews(),
+      ]);
+      _applications = results[0] as List<Application>;
+      _aiInterviews = results[1] as List<AiInterview>;
     } else if (isStudent && _studentProfile != null) {
-      _applications = await SupabaseService.getApplicationsForStudent(
-        _studentProfile!.id,
-      );
-      _aiInterviews = await SupabaseService.getInterviewsForStudent(
-        _studentProfile!.id,
-      );
+      final results = await Future.wait<Object?>([
+        SupabaseService.getApplicationsForStudent(_studentProfile!.id),
+        SupabaseService.getInterviewsForStudent(_studentProfile!.id),
+      ]);
+      _applications = results[0] as List<Application>;
+      _aiInterviews = results[1] as List<AiInterview>;
     } else if (isStartup && _startupProfile != null) {
-      _applications = await SupabaseService.getApplicationsForStartup(
-        _startupProfile!.id,
-      );
-      _aiInterviews = await SupabaseService.getInterviewsForStartup(
-        _startupProfile!.id,
-      );
+      final results = await Future.wait<Object?>([
+        SupabaseService.getApplicationsForStartup(_startupProfile!.id),
+        SupabaseService.getInterviewsForStartup(_startupProfile!.id),
+      ]);
+      _applications = results[0] as List<Application>;
+      _aiInterviews = results[1] as List<AiInterview>;
       _startupProfile = _startupProfile!.copyWith(
         openRoles: _missions
             .where((mission) => mission.startupId == _startupProfile!.id)
@@ -417,7 +443,7 @@ class AppState extends ChangeNotifier {
     try {
       await SupabaseService.upsertStudentProfile(profile);
       _studentProfile = profile;
-      await _refreshCollections();
+      await _refreshCollections(skipBaseCollections: false);
     } finally {
       _isBusy = false;
       notifyListeners();
@@ -430,7 +456,7 @@ class AppState extends ChangeNotifier {
     try {
       await SupabaseService.upsertStartupProfile(profile);
       _startupProfile = profile;
-      await _refreshCollections();
+      await _refreshCollections(skipBaseCollections: false);
     } finally {
       _isBusy = false;
       notifyListeners();

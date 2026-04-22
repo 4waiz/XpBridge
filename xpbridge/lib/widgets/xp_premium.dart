@@ -91,12 +91,16 @@ class _GlowOrb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ImageFiltered(
-      imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
+    return RepaintBoundary(
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [color, color.withValues(alpha: 0)],
+            ),
+          ),
         ),
       ),
     );
@@ -115,7 +119,7 @@ class XPGlassPanel extends StatelessWidget {
     this.gradient,
     this.borderColor,
     this.shadow,
-    this.blurSigma = 22,
+    this.blurSigma = 8,
   });
 
   final Widget child;
@@ -264,7 +268,7 @@ class XPPremiumSheet extends StatelessWidget {
         padding: padding,
         backgroundColor: AppTheme.sheetBackground,
         borderRadius: 34,
-        blurSigma: 26,
+        blurSigma: 10,
         shadow: AppTheme.modalShadow,
         child: SafeArea(
           top: false,

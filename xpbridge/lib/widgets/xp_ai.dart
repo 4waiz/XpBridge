@@ -107,7 +107,7 @@ class _BlurOrb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ImageFiltered(
-      imageFilter: ImageFilter.blur(sigmaX: 42, sigmaY: 42),
+      imageFilter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
       child: Container(
         width: width,
         height: height,
@@ -141,7 +141,7 @@ class XPAiCircleActionButton extends StatelessWidget {
       onTap: onTap,
       child: ClipOval(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Container(
             width: size,
             height: size,
@@ -184,7 +184,7 @@ class XPAiQuickChip extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppTheme.pillRadius),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
             decoration: BoxDecoration(
@@ -251,6 +251,19 @@ class _XPAiVoiceStateState extends State<XPAiVoiceState>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ticking = TickerMode.of(context);
+    if (ticking) {
+      if (!_controller.isAnimating) {
+        _controller.repeat(reverse: true);
+      }
+    } else {
+      if (_controller.isAnimating) _controller.stop();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _controller,
@@ -262,7 +275,8 @@ class _XPAiVoiceStateState extends State<XPAiVoiceState>
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Transform.rotate(
+            RepaintBoundary(
+              child: Transform.rotate(
               angle: tilt,
               child: Transform.scale(
                 scale: scale,
@@ -274,14 +288,14 @@ class _XPAiVoiceStateState extends State<XPAiVoiceState>
                     children: [
                       _OrbLayer(
                         size: 150,
-                        blur: 34,
+                        blur: 14,
                         color: AppTheme.primary.withValues(alpha: 0.28),
                       ),
                       Transform.translate(
                         offset: Offset(-8 * value, -12 + (value * 10)),
                         child: _OrbLayer(
                           size: 118,
-                          blur: 18,
+                          blur: 8,
                           gradient: AppTheme.aiOrbGradient,
                         ),
                       ),
@@ -289,13 +303,14 @@ class _XPAiVoiceStateState extends State<XPAiVoiceState>
                         offset: Offset(18 - (value * 12), 12 * value),
                         child: _OrbLayer(
                           size: 72,
-                          blur: 24,
+                          blur: 10,
                           color: AppTheme.surface.withValues(alpha: 0.28),
                         ),
                       ),
                     ],
                   ),
                 ),
+              ),
               ),
             ),
             const SizedBox(height: 28),
@@ -379,7 +394,7 @@ class XPAiComposer extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           constraints: const BoxConstraints(minHeight: 116),
           padding: const EdgeInsets.fromLTRB(18, 16, 16, 14),
@@ -568,7 +583,7 @@ class XPAiTextBubble extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(22),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               decoration: BoxDecoration(
@@ -746,7 +761,7 @@ class _FloatingCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Container(
             width: 168,
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),

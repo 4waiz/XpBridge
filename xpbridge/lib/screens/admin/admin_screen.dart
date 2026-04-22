@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -26,19 +27,38 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen> {
   int _tabIndex = 0;
   final _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _searchDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      final next = _searchController.text.trim().toLowerCase();
+      if (next == _searchQuery) return;
+      setState(() => _searchQuery = next);
+    });
   }
 
   Future<void> _refresh() => AppStateScope.of(context).refreshSession();
 
   bool _matches(String value) {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) return true;
-    return value.toLowerCase().contains(query);
+    if (_searchQuery.isEmpty) return true;
+    return value.toLowerCase().contains(_searchQuery);
   }
 
   String _pseudoUuid() {
@@ -787,141 +807,157 @@ class _AdminScreenState extends State<AdminScreen> {
       );
     }
 
-    final profileTiles = [
-      ...appState.students.where((s) => _matches('${s.name} ${s.email}')).map(
-            (student) => _AdminTile(
-              title: student.name,
-              subtitle: 'Student - ${student.email}',
-              onView: () => _showJsonDialog('Student record', {
-                'id': student.id,
-                'role': 'student',
-                'name': student.name,
-                'email': student.email,
-                'bio': student.bio,
-                'education': student.education,
-                'skills': student.skills,
-                'portfolio_url': student.portfolioUrl,
-                'github_url': student.githubUrl,
-                'created_at': student.createdAt.toIso8601String(),
-              }),
-              onEdit: () => _showProfileEditor(student: student),
-              onDelete: () async {
-                final confirmed = await _confirmDelete(
-                  'Delete student',
-                  'Remove ${student.name}?',
-                );
-                if (!confirmed) return;
-                await SupabaseService.deleteProfile(student.id);
-                if (!mounted) return;
-                await _refresh();
-              },
-            ),
-          ),
-      ...appState.startups.where((s) => _matches('${s.companyName} ${s.email}')).map(
-            (startup) => _AdminTile(
-              title: startup.companyName,
-              subtitle: 'Startup - ${startup.email}',
-              onView: () => _showJsonDialog('Startup record', {
-                'id': startup.id,
-                'role': 'startup',
-                'company_name': startup.companyName,
-                'email': startup.email,
-                'description': startup.description,
-                'industry': startup.industry,
-                'required_skills': startup.requiredSkills,
-                'website_url': startup.websiteUrl,
-                'created_at': startup.createdAt.toIso8601String(),
-              }),
-              onEdit: () => _showProfileEditor(startup: startup),
-              onDelete: () async {
-                final confirmed = await _confirmDelete(
-                  'Delete startup',
-                  'Remove ${startup.companyName}?',
-                );
-                if (!confirmed) return;
-                await SupabaseService.deleteProfile(startup.id);
-                if (!mounted) return;
-                await _refresh();
-              },
-            ),
-          ),
-    ];
-
-    final missionTiles = appState.missions
+    final filteredStudents = appState.students
+        .where((s) => _matches('${s.name} ${s.email}'))
+        .toList();
+    final filteredStartups = appState.startups
+        .where((s) => _matches('${s.companyName} ${s.email}'))
+        .toList();
+    final filteredMissions = appState.missions
         .where((m) => _matches('${m.title} ${m.startupName} ${m.status}'))
-        .map(
-          (mission) => _AdminTile(
-            title: mission.title,
-            subtitle: '${mission.startupName} - ${mission.status}',
-            onView: () => _showJsonDialog('Mission record', mission.toMap()),
-            onEdit: () => _showMissionEditor(mission: mission),
-            onDelete: () async {
-              final confirmed = await _confirmDelete(
-                'Delete mission',
-                'Remove ${mission.title}?',
-              );
-              if (!confirmed) return;
-              await SupabaseService.deleteMission(mission.id);
-              if (!mounted) return;
-              await _refresh();
-            },
-          ),
-        )
         .toList();
-
-    final applicationTiles = appState.applications
-        .where((a) => _matches('${a.studentName} ${a.startupName} ${a.status.name}'))
-        .map(
-          (application) => _AdminTile(
-            title: application.studentName,
-            subtitle:
-                '${application.roleTitle ?? 'Application'} - ${application.status.name}',
-            onView: () =>
-                _showJsonDialog('Application record', application.toMap()),
-            onEdit: () => _showApplicationEditor(application: application),
-            onDelete: () async {
-              final confirmed = await _confirmDelete(
-                'Delete application',
-                'Remove this application?',
-              );
-              if (!confirmed) return;
-              await SupabaseService.deleteApplication(application.id);
-              if (!mounted) return;
-              await _refresh();
-            },
-          ),
-        )
+    final filteredApplications = appState.applications
+        .where((a) =>
+            _matches('${a.studentName} ${a.startupName} ${a.status.name}'))
         .toList();
-
-    final interviewTiles = appState.aiInterviews
+    final filteredInterviews = appState.aiInterviews
         .where((i) => _matches('${i.id} ${i.status.name} ${i.summary ?? ''}'))
-        .map(
-          (interview) => _AdminTile(
-            title: interview.id,
-            subtitle: 'Interview - ${interview.status.name}',
-            onView: () =>
-                _showJsonDialog('AI interview record', interview.toMap()),
-            onEdit: () => _showInterviewEditor(interview: interview),
-            onDelete: () async {
-              final confirmed = await _confirmDelete(
-                'Delete interview',
-                'Remove this AI interview record?',
-              );
-              if (!confirmed) return;
-              await SupabaseService.deleteAiInterview(interview.id);
-              if (!mounted) return;
-              await _refresh();
-            },
-          ),
-        )
         .toList();
 
-    final sections = [
-      profileTiles,
-      missionTiles,
-      applicationTiles,
-      interviewTiles,
-    ];
+    final profileCount = filteredStudents.length + filteredStartups.length;
+    final missionCount = filteredMissions.length;
+    final applicationCount = filteredApplications.length;
+    final interviewCount = filteredInterviews.length;
+
+    List<Widget> activeTiles() {
+      switch (_tabIndex) {
+        case 0:
+          return [
+            for (final student in filteredStudents)
+              _AdminTile(
+                title: student.name,
+                subtitle: 'Student - ${student.email}',
+                onView: () => _showJsonDialog('Student record', {
+                  'id': student.id,
+                  'role': 'student',
+                  'name': student.name,
+                  'email': student.email,
+                  'bio': student.bio,
+                  'education': student.education,
+                  'skills': student.skills,
+                  'portfolio_url': student.portfolioUrl,
+                  'github_url': student.githubUrl,
+                  'created_at': student.createdAt.toIso8601String(),
+                }),
+                onEdit: () => _showProfileEditor(student: student),
+                onDelete: () async {
+                  final confirmed = await _confirmDelete(
+                    'Delete student',
+                    'Remove ${student.name}?',
+                  );
+                  if (!confirmed) return;
+                  await SupabaseService.deleteProfile(student.id);
+                  if (!mounted) return;
+                  await _refresh();
+                },
+              ),
+            for (final startup in filteredStartups)
+              _AdminTile(
+                title: startup.companyName,
+                subtitle: 'Startup - ${startup.email}',
+                onView: () => _showJsonDialog('Startup record', {
+                  'id': startup.id,
+                  'role': 'startup',
+                  'company_name': startup.companyName,
+                  'email': startup.email,
+                  'description': startup.description,
+                  'industry': startup.industry,
+                  'required_skills': startup.requiredSkills,
+                  'website_url': startup.websiteUrl,
+                  'created_at': startup.createdAt.toIso8601String(),
+                }),
+                onEdit: () => _showProfileEditor(startup: startup),
+                onDelete: () async {
+                  final confirmed = await _confirmDelete(
+                    'Delete startup',
+                    'Remove ${startup.companyName}?',
+                  );
+                  if (!confirmed) return;
+                  await SupabaseService.deleteProfile(startup.id);
+                  if (!mounted) return;
+                  await _refresh();
+                },
+              ),
+          ];
+        case 1:
+          return [
+            for (final mission in filteredMissions)
+              _AdminTile(
+                title: mission.title,
+                subtitle: '${mission.startupName} - ${mission.status}',
+                onView: () =>
+                    _showJsonDialog('Mission record', mission.toMap()),
+                onEdit: () => _showMissionEditor(mission: mission),
+                onDelete: () async {
+                  final confirmed = await _confirmDelete(
+                    'Delete mission',
+                    'Remove ${mission.title}?',
+                  );
+                  if (!confirmed) return;
+                  await SupabaseService.deleteMission(mission.id);
+                  if (!mounted) return;
+                  await _refresh();
+                },
+              ),
+          ];
+        case 2:
+          return [
+            for (final application in filteredApplications)
+              _AdminTile(
+                title: application.studentName,
+                subtitle:
+                    '${application.roleTitle ?? 'Application'} - ${application.status.name}',
+                onView: () => _showJsonDialog(
+                    'Application record', application.toMap()),
+                onEdit: () =>
+                    _showApplicationEditor(application: application),
+                onDelete: () async {
+                  final confirmed = await _confirmDelete(
+                    'Delete application',
+                    'Remove this application?',
+                  );
+                  if (!confirmed) return;
+                  await SupabaseService.deleteApplication(application.id);
+                  if (!mounted) return;
+                  await _refresh();
+                },
+              ),
+          ];
+        default:
+          return [
+            for (final interview in filteredInterviews)
+              _AdminTile(
+                title: interview.id,
+                subtitle: 'Interview - ${interview.status.name}',
+                onView: () => _showJsonDialog(
+                    'AI interview record', interview.toMap()),
+                onEdit: () => _showInterviewEditor(interview: interview),
+                onDelete: () async {
+                  final confirmed = await _confirmDelete(
+                    'Delete interview',
+                    'Remove this AI interview record?',
+                  );
+                  if (!confirmed) return;
+                  await SupabaseService.deleteAiInterview(interview.id);
+                  if (!mounted) return;
+                  await _refresh();
+                },
+              ),
+          ];
+      }
+    }
+
+    final tiles = activeTiles();
     final addLabels = [
       'Add profile',
       'Add mission',
@@ -984,7 +1020,6 @@ class _AdminScreenState extends State<AdminScreen> {
                   const SizedBox(height: AppSpacing.lg),
                   TextField(
                     controller: _searchController,
-                    onChanged: (_) => setState(() {}),
                     decoration: const InputDecoration(
                       labelText: 'Search',
                       hintText: 'Filter current tab',
@@ -1012,24 +1047,27 @@ class _AdminScreenState extends State<AdminScreen> {
                     spacing: AppSpacing.md,
                     runSpacing: AppSpacing.md,
                     children: [
-                      _CountChip(label: 'Profiles', value: '${profileTiles.length}'),
-                      _CountChip(label: 'Missions', value: '${missionTiles.length}'),
-                      _CountChip(label: 'Applications', value: '${applicationTiles.length}'),
-                      _CountChip(label: 'Interviews', value: '${interviewTiles.length}'),
+                      _CountChip(label: 'Profiles', value: '$profileCount'),
+                      _CountChip(label: 'Missions', value: '$missionCount'),
+                      _CountChip(
+                          label: 'Applications',
+                          value: '$applicationCount'),
+                      _CountChip(
+                          label: 'Interviews', value: '$interviewCount'),
                     ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-            if (sections[_tabIndex].isEmpty)
+            if (tiles.isEmpty)
               const XPEmptyState(
                 icon: Icons.inbox_outlined,
                 title: 'No records found',
                 message: 'Nothing matches the current filter.',
               )
             else
-              Column(children: sections[_tabIndex]),
+              Column(children: tiles),
           ],
         ),
       ),
@@ -1083,7 +1121,8 @@ class _AdminTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isNarrow = MediaQuery.of(context).size.width < 420;
-    return Padding(
+    return RepaintBoundary(
+      child: Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: XPCard(
         elevated: true,
@@ -1130,6 +1169,7 @@ class _AdminTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

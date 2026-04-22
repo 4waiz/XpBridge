@@ -336,6 +336,8 @@ class _IntroScreenState extends State<IntroScreen> {
                                           child: Image.asset(
                                             page.imagePath,
                                             fit: BoxFit.contain,
+                                            cacheWidth: 1080,
+                                            filterQuality: FilterQuality.low,
                                           ),
                                         ),
                                       ],

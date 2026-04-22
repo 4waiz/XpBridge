@@ -127,6 +127,8 @@ class StudentDetailScreen extends StatelessWidget {
                         child: Image.network(
                           student.resumeUrl!,
                           fit: BoxFit.cover,
+                          cacheWidth: 1080,
+                          filterQuality: FilterQuality.low,
                           errorBuilder: (context, error, stackTrace) {
                             return XPBadge(
                               label: student.resumeFileName ?? 'Resume image',

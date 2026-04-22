@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -24,11 +26,49 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   final _searchController = TextEditingController();
   String? _industryFilter;
   String? _skillFilter;
+  String _searchQuery = '';
+  Timer? _searchDebounce;
+
+  List<Mission>? _cachedMissionsRef;
+  List<String> _cachedIndustries = const [];
+  List<String> _cachedSkills = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      final next = _searchController.text.trim().toLowerCase();
+      if (next == _searchQuery) return;
+      setState(() => _searchQuery = next);
+    });
+  }
+
+  void _ensureFilterCaches(List<Mission> missions) {
+    if (identical(_cachedMissionsRef, missions)) return;
+    _cachedMissionsRef = missions;
+    final industries = <String>{};
+    final skills = <String>{};
+    for (final mission in missions) {
+      final industry = mission.industry;
+      if (industry != null) industries.add(industry);
+      skills.addAll(mission.requiredSkills);
+    }
+    _cachedIndustries = industries.toList()..sort();
+    _cachedSkills = skills.toList()..sort();
   }
 
   Future<void> _showApplySheet(Mission mission) async {
@@ -42,7 +82,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     final controller = TextEditingController();
     String? errorText;
 
-    await showModalBottomSheet<void>(
+    try {
+      await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -158,6 +199,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         );
       },
     );
+    } finally {
+      controller.dispose();
+    }
   }
 
   Future<void> _openLink(String? link) async {
@@ -197,17 +241,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       );
     }
 
-    final industries = appState.missions
-        .map((mission) => mission.industry)
-        .whereType<String>()
-        .toSet()
-        .toList()
-      ..sort();
-    final skills = appState.missions
-        .expand((mission) => mission.requiredSkills)
-        .toSet()
-        .toList()
-      ..sort();
+    _ensureFilterCaches(appState.missions);
+    final industries = _cachedIndustries;
+    final skills = _cachedSkills;
 
     final applications = appState.getApplicationsForStudent(student.id);
     final appliedMissionIds = applications
@@ -215,6 +251,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         .whereType<String>()
         .toSet();
 
+    final query = _searchQuery;
     final filteredMissions = appState.missions.where((mission) {
       if (!mission.isOpen) return false;
       if (_industryFilter != null && mission.industry != _industryFilter) {
@@ -224,16 +261,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           !mission.requiredSkills.contains(_skillFilter)) {
         return false;
       }
-      final query = _searchController.text.trim().toLowerCase();
       if (query.isEmpty) return true;
-      final haystack = [
-        mission.title,
-        mission.startupName,
-        mission.description,
-        mission.industry ?? '',
-        ...mission.requiredSkills,
-      ].join(' ').toLowerCase();
-      return haystack.contains(query);
+      if (mission.title.toLowerCase().contains(query)) return true;
+      if (mission.startupName.toLowerCase().contains(query)) return true;
+      if (mission.description.toLowerCase().contains(query)) return true;
+      final industry = mission.industry;
+      if (industry != null && industry.toLowerCase().contains(query)) {
+        return true;
+      }
+      for (final skill in mission.requiredSkills) {
+        if (skill.toLowerCase().contains(query)) return true;
+      }
+      return false;
     }).toList();
 
     return XPPageScaffold(
@@ -268,7 +307,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       Expanded(
                         child: TextField(
                           controller: _searchController,
-                          onChanged: (_) => setState(() {}),
                           decoration: const InputDecoration(
                             labelText: 'Search missions',
                             hintText: 'Role, company, or skill',
@@ -380,7 +418,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     runSpacing: AppSpacing.lg,
                     children: filteredMissions.map((mission) {
                       final applied = appliedMissionIds.contains(mission.id);
-                      return SizedBox(
+                      return RepaintBoundary(
+                        child: SizedBox(
                         width: itemWidth,
                         child: XPCard(
                           elevated: true,
@@ -503,6 +542,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                               ],
                             ],
                           ),
+                        ),
                         ),
                       );
                     }).toList(),

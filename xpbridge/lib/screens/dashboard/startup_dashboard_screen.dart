@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -25,11 +27,44 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
   final _searchController = TextEditingController();
   int _segment = 0;
   String? _skillFilter;
+  String _searchQuery = '';
+  Timer? _searchDebounce;
+
+  List<StudentProfile>? _cachedStudentsRef;
+  List<String> _cachedAvailableSkills = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      final next = _searchController.text.trim().toLowerCase();
+      if (next == _searchQuery) return;
+      setState(() => _searchQuery = next);
+    });
+  }
+
+  void _ensureSkillsCache(List<StudentProfile> students) {
+    if (identical(_cachedStudentsRef, students)) return;
+    _cachedStudentsRef = students;
+    final skills = <String>{};
+    for (final student in students) {
+      skills.addAll(student.skills);
+    }
+    _cachedAvailableSkills = skills.toList()..sort();
   }
 
   Future<void> _showReachOutSheet(StudentProfile student) async {
@@ -191,7 +226,8 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
       'Scope management',
     ];
 
-    await showModalBottomSheet<void>(
+    try {
+      await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -391,6 +427,9 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
         );
       },
     );
+    } finally {
+      feedbackController.dispose();
+    }
   }
 
   Future<void> _requestInterview(Application application) async {
@@ -448,27 +487,28 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
       );
     }
 
+    _ensureSkillsCache(appState.students);
+    final availableSkills = _cachedAvailableSkills;
+
     final applications = appState.getApplicationsForStartup(startup.id);
+    final query = _searchQuery;
     final students = appState.students.where((student) {
       if (_skillFilter != null && !student.skills.contains(_skillFilter)) {
         return false;
       }
-      final query = _searchController.text.trim().toLowerCase();
       if (query.isEmpty) return true;
-      final haystack = [
-        student.name,
-        student.education ?? '',
-        student.bio ?? '',
-        ...student.skills,
-      ].join(' ').toLowerCase();
-      return haystack.contains(query);
+      if (student.name.toLowerCase().contains(query)) return true;
+      final education = student.education;
+      if (education != null && education.toLowerCase().contains(query)) {
+        return true;
+      }
+      final bio = student.bio;
+      if (bio != null && bio.toLowerCase().contains(query)) return true;
+      for (final skill in student.skills) {
+        if (skill.toLowerCase().contains(query)) return true;
+      }
+      return false;
     }).toList();
-
-    final availableSkills = appState.students
-        .expand((student) => student.skills)
-        .toSet()
-        .toList()
-      ..sort();
 
     return XPPageScaffold(
       title: startup.companyName,
@@ -529,7 +569,6 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                   const SizedBox(height: AppSpacing.lg),
                   TextField(
                     controller: _searchController,
-                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: _segment == 0
                           ? 'Search applicants'
@@ -565,7 +604,6 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
             if (_segment == 0)
               _ApplicantsView(
                 applications: applications.where((application) {
-                  final query = _searchController.text.trim().toLowerCase();
                   final skillPass = _skillFilter == null ||
                       (appState
                               .getStudentById(application.studentId)
@@ -574,12 +612,22 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                           false);
                   if (!skillPass) return false;
                   if (query.isEmpty) return true;
-                  final haystack = [
-                    application.studentName,
-                    application.roleTitle ?? '',
-                    application.startupName,
-                  ].join(' ').toLowerCase();
-                  return haystack.contains(query);
+                  if (application.studentName
+                      .toLowerCase()
+                      .contains(query)) {
+                    return true;
+                  }
+                  final roleTitle = application.roleTitle;
+                  if (roleTitle != null &&
+                      roleTitle.toLowerCase().contains(query)) {
+                    return true;
+                  }
+                  if (application.startupName
+                      .toLowerCase()
+                      .contains(query)) {
+                    return true;
+                  }
+                  return false;
                 }).toList(),
                 statusText: _statusText,
                 statusColor: _statusColor,
@@ -629,7 +677,8 @@ class _ApplicantsView extends StatelessWidget {
 
     return Column(
       children: applications.map((application) {
-        return Padding(
+        return RepaintBoundary(
+          child: Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.md),
           child: XPCard(
             elevated: true,
@@ -723,6 +772,7 @@ class _ApplicantsView extends StatelessWidget {
               ],
             ),
           ),
+          ),
         );
       }).toList(),
     );
@@ -759,7 +809,8 @@ class _TalentView extends StatelessWidget {
           spacing: AppSpacing.lg,
           runSpacing: AppSpacing.lg,
           children: students.map((student) {
-            return SizedBox(
+            return RepaintBoundary(
+              child: SizedBox(
               width: itemWidth,
               child: XPCard(
                 elevated: true,
@@ -816,6 +867,7 @@ class _TalentView extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
               ),
             );
           }).toList(),
