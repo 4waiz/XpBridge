@@ -409,11 +409,16 @@ class StudentApplicationsScreen extends StatelessWidget {
                                     label: 'Reflection',
                                     size: XPButtonSize.small,
                                     expand: false,
-                                    onPressed: () => _showReflectionSheet(
-                                      context,
-                                      application,
-                                      appState,
-                                    ),
+                                    onPressed: () {
+                                      if (!appState.requireAuthOr(context)) {
+                                        return;
+                                      }
+                                      _showReflectionSheet(
+                                        context,
+                                        application,
+                                        appState,
+                                      );
+                                    },
                                   ),
                               ],
                             ),

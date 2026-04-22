@@ -78,10 +78,24 @@ class AppRouter {
       }
 
       if (!appState.isLoggedIn) {
+        // Logged-out users who have finished onboarding enter guest preview
+        // mode, which grants read-only access to the student scaffold. Any
+        // write action inside those screens calls `appState.requireAuthOr(ctx)`
+        // which redirects them to `/login`.
+        final guestAllowed = appState.isGuestPreview &&
+            (path == '/student/dashboard' ||
+                path == '/student/applications' ||
+                path == '/student/profile' ||
+                path == '/student/chat' ||
+                path.startsWith('/student/startup/'));
+
         if (path == '/') {
+          if (appState.isGuestPreview) return '/student/dashboard';
           return appState.onboardingComplete ? '/login' : '/intro';
         }
+        if (guestAllowed) return null;
         if (!isPublic) {
+          if (appState.isGuestPreview) return '/student/dashboard';
           return appState.onboardingComplete ? '/login' : '/intro';
         }
         return null;

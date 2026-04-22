@@ -49,7 +49,7 @@ class _IntroScreenState extends State<IntroScreen> {
   Future<void> _completeOnboarding() async {
     await AppStateScope.of(context).completeOnboarding();
     if (mounted) {
-      context.goNamed('login');
+      context.go('/student/dashboard');
     }
   }
 

@@ -33,6 +33,7 @@ class AppState extends ChangeNotifier {
   bool _isLoggedIn = false;
   bool _isAdmin = false;
   UserRole? _adminPreviewRole;
+  bool _isGuestPreview = false;
   bool _requiresAccountCompletion = false;
   bool _xpFeedOptOut = false;
   String? _errorMessage;
@@ -63,26 +64,31 @@ class AppState extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   UserRole? get userRole => _userRole;
   bool get isPreviewingAsAdmin => _isAdmin && _adminPreviewRole != null;
-  UserRole? get activeRole => _adminPreviewRole ?? _userRole;
+  bool get isGuestPreview => _isGuestPreview;
+  bool get _useDummyData => isPreviewingAsAdmin || _isGuestPreview;
+  UserRole? get activeRole =>
+      _adminPreviewRole ?? (_isGuestPreview ? UserRole.student : _userRole);
   bool get isStudent => activeRole == UserRole.student;
   bool get isStartup => activeRole == UserRole.startup;
 
-  StudentProfile? get studentProfile => isPreviewingAsAdmin && isStudent
-      ? _previewStudentProfile
-      : _studentProfile;
+  StudentProfile? get studentProfile {
+    if (_isGuestPreview) return _guestStudentProfile;
+    if (isPreviewingAsAdmin && isStudent) return _previewStudentProfile;
+    return _studentProfile;
+  }
   StartupProfile? get startupProfile => isPreviewingAsAdmin && isStartup
       ? _previewStartupProfile
       : _startupProfile;
   List<StudentProfile> get students =>
-      isPreviewingAsAdmin ? _previewStudents : _students;
+      _useDummyData ? _previewStudents : _students;
   List<StartupProfile> get startups =>
-      isPreviewingAsAdmin ? _previewStartups : _startups;
+      _useDummyData ? _previewStartups : _startups;
   List<Mission> get missions =>
-      isPreviewingAsAdmin ? _previewMissions : _missions;
+      _useDummyData ? _previewMissions : _missions;
   List<Application> get applications =>
-      isPreviewingAsAdmin ? _previewApplications : _applications;
+      _useDummyData ? _previewApplications : _applications;
   List<AiInterview> get aiInterviews =>
-      isPreviewingAsAdmin ? _previewAiInterviews : _aiInterviews;
+      _useDummyData ? _previewAiInterviews : _aiInterviews;
   List<Guild> get guilds => _guilds;
   List<GuildApplication> get guildApplications => _guildApplications;
   List<SkillBadge> get skillBadges => _skillBadges;
@@ -117,12 +123,22 @@ class AppState extends ChangeNotifier {
   Future<void> _loadOnboardingPreference() async {
     final prefs = await SharedPreferences.getInstance();
     _onboardingComplete = prefs.getBool('onboarding_complete') ?? false;
+    // If a returning user already completed onboarding but isn't logged in,
+    // drop them into guest preview so they land on the demo dashboard instead
+    // of the login wall. `refreshSession` will clear this flag if a live
+    // Supabase session is found.
+    if (_onboardingComplete) {
+      _isGuestPreview = true;
+    }
   }
 
   Future<void> completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_complete', true);
     _onboardingComplete = true;
+    if (!_isLoggedIn) {
+      _isGuestPreview = true;
+    }
     notifyListeners();
   }
 
@@ -186,6 +202,7 @@ class AppState extends ChangeNotifier {
       _requiresAccountCompletion = false;
       _isLoggedIn = true;
       _adminPreviewRole = null;
+      _isGuestPreview = false;
       final roleString = profileRecord['role'] as String? ?? 'student';
       _userRole = roleString == 'startup' ? UserRole.startup : UserRole.student;
       _isAdmin = profileRecord['is_admin'] as bool? ?? false;
@@ -320,6 +337,9 @@ class AppState extends ChangeNotifier {
     await SupabaseService.signOut();
     _requiresAccountCompletion = false;
     _resetSessionState();
+    if (_onboardingComplete) {
+      _isGuestPreview = true;
+    }
     notifyListeners();
   }
 
@@ -438,6 +458,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> persistStudentProfile(StudentProfile profile) async {
+    if (_isGuestPreview) return;
     _isBusy = true;
     notifyListeners();
     try {
@@ -498,6 +519,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> addApplication(Application application) async {
+    if (_isGuestPreview) return;
     final duplicate = _applications.any(
       (existing) =>
           existing.studentId == application.studentId &&
@@ -518,6 +540,7 @@ class AppState extends ChangeNotifier {
     String applicationId,
     ApplicationStatus status,
   ) async {
+    if (_isGuestPreview) return;
     await SupabaseService.updateApplicationStatus(applicationId, status.name);
     _applications = _applications.map((application) {
       if (application.id != applicationId) return application;
@@ -545,6 +568,7 @@ class AppState extends ChangeNotifier {
     String? deliverableUrl,
     String? deliverableType,
   }) async {
+    if (_isGuestPreview) return;
     await SupabaseService.updateApplicationReflection(applicationId, {
       'reflection_did': did,
       'reflection_learned': learned,
@@ -790,6 +814,21 @@ class AppState extends ChangeNotifier {
   StartupProfile get _previewStartupProfile => _previewStartups.first;
   List<StudentProfile> get _previewStudents => DummyData.students;
   List<StartupProfile> get _previewStartups => DummyData.startups;
+
+  static final StudentProfile _guestStudentProfile = StudentProfile(
+    id: 'guest',
+    name: 'Welcome to XPBridge!',
+    email: 'guest@xpbridge.app',
+    bio:
+        'This is a read-only preview. Sign up to apply to missions, track applications, and chat with XPBridge AI.',
+    education: 'Sign up to add your education',
+    skills: const ['Flutter', 'React', 'Figma', 'Python'],
+    availabilityHours: 10,
+    createdAt: DateTime(2024, 1, 1),
+    xpPoints: 1200,
+    level: 4,
+    missionsCompletedCount: 4,
+  );
   List<Mission> get _previewMissions => [
     for (final startup in DummyData.startups)
       for (var i = 0; i < startup.openRoles.length; i++)
@@ -827,6 +866,30 @@ class AppState extends ChangeNotifier {
     if (_adminPreviewRole == null) return;
     _adminPreviewRole = null;
     notifyListeners();
+  }
+
+  void enterGuestPreview() {
+    if (_isLoggedIn) return;
+    if (_isGuestPreview) return;
+    _isGuestPreview = true;
+    notifyListeners();
+  }
+
+  void exitGuestPreview() {
+    if (!_isGuestPreview) return;
+    _isGuestPreview = false;
+    notifyListeners();
+  }
+
+  /// Returns true if the caller may proceed with a write action. If the user
+  /// is in guest preview, redirects them to `/login` and returns false so the
+  /// caller can early-return.
+  bool requireAuthOr(BuildContext context) {
+    if (_isGuestPreview) {
+      context.go('/login');
+      return false;
+    }
+    return true;
   }
 
   @visibleForTesting

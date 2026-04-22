@@ -1,0 +1,7 @@
+project_id = "lhcsedsqtgeuundlyfwm"
+
+[functions.ai-chat]
+verify_jwt = false
+
+[functions.account-deletion]
+verify_jwt = true

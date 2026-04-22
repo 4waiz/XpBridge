@@ -73,6 +73,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   Future<void> _showApplySheet(Mission mission) async {
     final appState = AppStateScope.of(context);
+    if (!appState.requireAuthOr(context)) return;
     final student = appState.studentProfile;
     if (student == null) {
       context.goNamed('studentSetup');
@@ -293,12 +294,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome back, ${student.name.split(' ').first}',
+                    appState.isGuestPreview
+                        ? 'Welcome to XPBridge!'
+                        : 'Welcome back, ${student.name.split(' ').first}',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    '${applications.length} applications tracked, ${student.missionsCompletedCount} missions completed, ${student.xpPoints} XP.',
+                    appState.isGuestPreview
+                        ? 'You\'re browsing a demo. Sign up to apply to missions and track your progress.'
+                        : '${applications.length} applications tracked, ${student.missionsCompletedCount} missions completed, ${student.xpPoints} XP.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: AppSpacing.lg),

@@ -79,6 +79,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   }
 
   Future<void> _pickResume() async {
+    if (!AppStateScope.of(context).requireAuthOr(context)) return;
     final user = SupabaseService.currentUser;
     if (user == null) return;
 
@@ -128,6 +129,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   }
 
   Future<void> _pickProfileImage() async {
+    if (!AppStateScope.of(context).requireAuthOr(context)) return;
     final user = SupabaseService.currentUser;
     if (user == null) return;
 
@@ -170,6 +172,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   Future<void> _save() async {
     final appState = AppStateScope.of(context);
+    if (!appState.requireAuthOr(context)) return;
     final current = appState.studentProfile;
     final user = SupabaseService.currentUser;
     if (current == null || user == null) return;
@@ -220,6 +223,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   Future<void> _logout() async {
     final appState = AppStateScope.of(context);
+    if (appState.isGuestPreview) {
+      context.goNamed('login');
+      return;
+    }
     await appState.logout();
     if (!mounted) return;
     context.goNamed('login');
@@ -236,7 +243,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     }
   }
 
-  Future<void> _showDeleteDialog() => showDeleteAccountDialog(context);
+  Future<void> _showDeleteDialog() async {
+    if (!AppStateScope.of(context).requireAuthOr(context)) return;
+    await showDeleteAccountDialog(context);
+  }
 
   @override
   Widget build(BuildContext context) {

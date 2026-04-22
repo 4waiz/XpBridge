@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xpbridge/app.dart';
 import 'package:xpbridge/config/env_loader.dart';
@@ -6,6 +7,21 @@ import 'package:xpbridge/services/supabase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Android 15 (SDK 35) defaults apps to edge-to-edge. Opt in explicitly so
+  // system bars render as transparent overlays and our Flutter UI can paint
+  // behind them. `SafeArea` in each screen keeps content clear of the insets.
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
   final config = await EnvLoader.load();
 
   // Snapshot the OAuth callback URL BEFORE Supabase.initialize runs.

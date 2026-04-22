@@ -8,6 +8,7 @@ import '../../services/job_matcher_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/chat_bubble.dart';
 import '../../widgets/xp_ai.dart';
+import '../../widgets/xp_button.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -223,6 +224,55 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = AppStateScope.of(context);
+
+    if (appState.isGuestPreview) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: XPAiShell(
+          child: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageWide),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.lock_outline_rounded,
+                      size: 64,
+                      color: AppTheme.surface.withValues(alpha: 0.7),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'Sign up to chat with XPBridge AI',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: AppTheme.surface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Create an account to get personalized role recommendations and career advice from XPBridge AI.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.surface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    XPButton(
+                      label: 'Sign up',
+                      onPressed: () => context.go('/login'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (!_aiEnabled) {
       return Scaffold(
         backgroundColor: Colors.transparent,
