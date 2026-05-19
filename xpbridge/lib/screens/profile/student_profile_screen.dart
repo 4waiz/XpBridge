@@ -16,6 +16,7 @@ import '../../widgets/xp_app_bar.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
 import '../../widgets/xp_empty_state.dart';
+import '../../widgets/social_links_row.dart';
 import '../../widgets/xp_page_scaffold.dart';
 import '../../widgets/xp_selectors.dart';
 
@@ -389,6 +390,47 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
+              XPCard(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                onTap: () => context.pushNamed('myApplications'),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primarySoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.description_rounded,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'My applications',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Track the missions you’ve applied to.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
               XPMultiSelectField(
                 label: 'Skills',
                 hint: 'Select 2-4 skills',
@@ -541,6 +583,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: AppSpacing.lg),
+              const Center(child: SocialLinksRow()),
               const SizedBox(height: AppSpacing.lg),
               Center(
                 child: Opacity(

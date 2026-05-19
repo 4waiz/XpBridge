@@ -45,14 +45,14 @@ class StudentScaffold extends StatelessWidget {
               label: 'Missions',
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.description_outlined),
+              activeIcon: Icon(Icons.description_rounded),
+              label: 'CV Builder',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.chat_bubble_outline_rounded),
               activeIcon: Icon(Icons.chat_bubble_rounded),
               label: 'AI Chat',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.description_outlined),
-              activeIcon: Icon(Icons.description_rounded),
-              label: 'Apps',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline_rounded),
@@ -68,9 +68,14 @@ class StudentScaffold extends StatelessWidget {
 
   int _calculateIndex(String location) {
     if (location.startsWith('/student/dashboard')) return 0;
-    if (location.startsWith('/student/chat')) return 1;
-    if (location.startsWith('/student/applications')) return 2;
-    if (location.startsWith('/student/profile')) return 3;
+    if (location.startsWith('/student/cv-builder')) return 1;
+    if (location.startsWith('/student/chat')) return 2;
+    // Applications is reached from inside Profile, so keep the Profile tab
+    // highlighted while viewing it.
+    if (location.startsWith('/student/profile') ||
+        location.startsWith('/student/applications')) {
+      return 3;
+    }
     return 0;
   }
 
@@ -80,10 +85,10 @@ class StudentScaffold extends StatelessWidget {
         context.goNamed('studentDashboard');
         break;
       case 1:
-        context.goNamed('atChat');
+        context.goNamed('cvBuilder');
         break;
       case 2:
-        context.goNamed('myApplications');
+        context.goNamed('atChat');
         break;
       case 3:
         context.goNamed('studentProfile');

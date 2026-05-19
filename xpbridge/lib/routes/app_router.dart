@@ -5,6 +5,7 @@ import '../app.dart';
 import '../screens/admin/admin_preview_screen.dart';
 import '../screens/admin/admin_screen.dart';
 import '../screens/chat/ai_chat_screen.dart';
+import '../screens/cv/cv_builder_screen.dart';
 import '../screens/applications/student_applications_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
@@ -87,6 +88,7 @@ class AppRouter {
                 path == '/student/applications' ||
                 path == '/student/profile' ||
                 path == '/student/chat' ||
+                path == '/student/cv-builder' ||
                 path.startsWith('/student/startup/'));
 
         if (path == '/') {
@@ -187,6 +189,11 @@ class AppRouter {
             path: '/student/dashboard',
             pageBuilder: (context, state) =>
                 _fade(const StudentDashboardScreen()),
+          ),
+          GoRoute(
+            name: 'cvBuilder',
+            path: '/student/cv-builder',
+            pageBuilder: (context, state) => _slide(const CvBuilderScreen()),
           ),
           GoRoute(
             name: 'atChat',

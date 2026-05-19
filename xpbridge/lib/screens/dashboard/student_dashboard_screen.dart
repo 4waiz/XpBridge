@@ -326,7 +326,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     builder: (context, constraints) {
                       final stackFilters = constraints.maxWidth < 520;
                       final industryField = DropdownButtonFormField<String?>(
-                        initialValue: _industryFilter,
+                        value: _industryFilter,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Industry',
@@ -350,7 +350,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                             setState(() => _industryFilter = value),
                       );
                       final skillField = DropdownButtonFormField<String?>(
-                        initialValue: _skillFilter,
+                        value: _skillFilter,
                         isExpanded: true,
                         decoration: const InputDecoration(labelText: 'Skill'),
                         items: [

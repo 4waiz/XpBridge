@@ -7,6 +7,7 @@ import '../../app.dart';
 import '../../config/legal_urls.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/social_links_row.dart';
 import '../../widgets/xp_button.dart';
 import '../../widgets/xp_card.dart';
 
@@ -317,6 +318,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                       ),
+                      SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
+                      const Center(child: SocialLinksRow()),
                       const SizedBox(height: AppSpacing.md),
                     ],
                   ),
