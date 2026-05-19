@@ -42,26 +42,31 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
   @override
   void initState() {
     super.initState();
-    CvAiService.reset();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _seedWelcome());
+    if (CvAiService.hasSession) {
+      _messages.addAll(CvAiService.uiMessages);
+      _cv = CvAiService.currentCv;
+      _initialized = true;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _seedWelcome());
+    }
   }
 
   void _seedWelcome() {
     final profile = AppStateScope.of(context).studentProfile;
     final firstName =
         profile != null ? ' ${profile.name.split(' ').first}' : '';
+    final msg = AiChatMessage(
+      id: 'welcome',
+      content:
+          "Hi$firstName! I'll build your CV from plain English — no formatting needed. "
+          "Tell me about yourself: your education, any experience or projects, "
+          "skills, and what roles you're targeting. I'll turn it into a polished CV on the right.",
+      sender: MessageSender.ai,
+      timestamp: DateTime.now(),
+    );
+    CvAiService.addUiMessage(msg);
     setState(() {
-      _messages.add(
-        AiChatMessage(
-          id: 'welcome',
-          content:
-              "Hi$firstName! I'll build your CV from plain English — no formatting needed. "
-              "Tell me about yourself: your education, any experience or projects, "
-              "skills, and what roles you're targeting. I'll turn it into a polished CV on the right.",
-          sender: MessageSender.ai,
-          timestamp: DateTime.now(),
-        ),
-      );
+      _messages.add(msg);
       _initialized = true;
     });
   }
@@ -93,15 +98,15 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
     if (!appState.requireAuthOr(context)) return;
     final profile = appState.studentProfile;
 
+    final userMsg = AiChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: text,
+      sender: MessageSender.user,
+      timestamp: DateTime.now(),
+    );
+    CvAiService.addUiMessage(userMsg);
     setState(() {
-      _messages.add(
-        AiChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          content: text,
-          sender: MessageSender.user,
-          timestamp: DateTime.now(),
-        ),
-      );
+      _messages.add(userMsg);
       _isLoading = true;
     });
     _controller.clear();
@@ -123,16 +128,17 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
     try {
       final turn = await CvAiService.send(text, profile);
       if (!mounted) return;
+      final aiMsg = AiChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: turn.reply,
+        sender: MessageSender.ai,
+        timestamp: DateTime.now(),
+      );
+      CvAiService.removeUiMessage(loadingId);
+      CvAiService.addUiMessage(aiMsg);
       setState(() {
         _messages.removeWhere((m) => m.id == loadingId);
-        _messages.add(
-          AiChatMessage(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            content: turn.reply,
-            sender: MessageSender.ai,
-            timestamp: DateTime.now(),
-          ),
-        );
+        _messages.add(aiMsg);
         _cv = turn.cv;
         _isLoading = false;
       });
@@ -147,16 +153,17 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
               : lower.contains('unauthorized') || lower.contains('session')
                   ? 'Your session expired. Please log in again.'
                   : 'Something went wrong: ${error.toString()}';
+      final errMsg = AiChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: friendly,
+        sender: MessageSender.ai,
+        timestamp: DateTime.now(),
+      );
+      CvAiService.removeUiMessage(loadingId);
+      CvAiService.addUiMessage(errMsg);
       setState(() {
         _messages.removeWhere((m) => m.id == loadingId);
-        _messages.add(
-          AiChatMessage(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            content: friendly,
-            sender: MessageSender.ai,
-            timestamp: DateTime.now(),
-          ),
-        );
+        _messages.add(errMsg);
         _isLoading = false;
       });
     }
@@ -164,7 +171,7 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
   }
 
   void _reset() {
-    CvAiService.reset();
+    CvAiService.reset(); // clears history + uiMessages
     setState(() {
       _messages.clear();
       _cv = CvData.empty;

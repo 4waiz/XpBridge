@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../models/ai_chat_message.dart';
 import '../models/cv_data.dart';
 import '../models/student_profile.dart';
 import 'supabase_service.dart';
@@ -25,9 +26,7 @@ class CvAiService {
   CvAiService._();
 
   static final List<Map<String, dynamic>> _history = [];
-
-  /// Last CV the model produced — kept so a turn that doesn't change the CV
-  /// (e.g. the user just asks a question) still returns the latest version.
+  static final List<AiChatMessage> _uiMessages = [];
   static CvData _lastCv = CvData.empty;
 
   static const String _systemPrompt = '''
@@ -107,10 +106,17 @@ RULES:
 
   static void reset() {
     _history.clear();
+    _uiMessages.clear();
     _lastCv = CvData.empty;
   }
 
+  static bool get hasSession => _history.isNotEmpty;
   static CvData get currentCv => _lastCv;
+  static List<AiChatMessage> get uiMessages => List.unmodifiable(_uiMessages);
+
+  static void addUiMessage(AiChatMessage msg) => _uiMessages.add(msg);
+  static void removeUiMessage(String id) =>
+      _uiMessages.removeWhere((m) => m.id == id);
 
   /// Sends [message] to the model and returns the chat reply plus the freshly
   /// rebuilt CV. On the first turn we prepend the student's profile (if any)
