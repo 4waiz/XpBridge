@@ -1,8 +1,3 @@
-/// Structured CV produced by the AI from the user's plain-English chat.
-///
-/// The AI returns this shape as JSON; we render it natively in Flutter for the
-/// live preview and feed it into the PDF exporter. Every field is optional so a
-/// partially-built CV still renders cleanly while the conversation is ongoing.
 class CvData {
   const CvData({
     this.fullName,
@@ -11,12 +6,12 @@ class CvData {
     this.phone,
     this.location,
     this.links = const [],
-    this.summary,
+    this.objective,
     this.experience = const [],
     this.education = const [],
     this.projects = const [],
-    this.skills = const [],
-    this.certifications = const [],
+    this.skillCategories = const [],
+    this.achievements = const [],
   });
 
   final String? fullName;
@@ -25,23 +20,22 @@ class CvData {
   final String? phone;
   final String? location;
   final List<CvLink> links;
-  final String? summary;
+  final String? objective;
   final List<CvExperience> experience;
   final List<CvEducation> education;
   final List<CvProject> projects;
-  final List<String> skills;
-  final List<String> certifications;
+  final List<CvSkillCategory> skillCategories;
+  final List<String> achievements;
 
   static const CvData empty = CvData();
 
-  /// True when the AI hasn't produced anything renderable yet.
   bool get isEmpty =>
       (fullName == null || fullName!.trim().isEmpty) &&
-      (summary == null || summary!.trim().isEmpty) &&
+      (objective == null || objective!.trim().isEmpty) &&
       experience.isEmpty &&
       education.isEmpty &&
       projects.isEmpty &&
-      skills.isEmpty;
+      skillCategories.isEmpty;
 
   factory CvData.fromJson(Map<String, dynamic> json) {
     String? str(dynamic v) {
@@ -74,14 +68,15 @@ class CvData {
       phone: str(json['phone']),
       location: str(json['location']),
       links: mapList(json['links']).map(CvLink.fromJson).toList(),
-      summary: str(json['summary'] ?? json['about']),
+      objective: str(json['objective'] ?? json['summary'] ?? json['about']),
       experience:
           mapList(json['experience']).map(CvExperience.fromJson).toList(),
       education:
           mapList(json['education']).map(CvEducation.fromJson).toList(),
       projects: mapList(json['projects']).map(CvProject.fromJson).toList(),
-      skills: strList(json['skills']),
-      certifications: strList(json['certifications']),
+      skillCategories:
+          mapList(json['skillCategories']).map(CvSkillCategory.fromJson).toList(),
+      achievements: strList(json['achievements'] ?? json['certifications']),
     );
   }
 }
@@ -98,6 +93,27 @@ class CvLink {
             .trim(),
         url: (json['url'] ?? json['href'] ?? '').toString().trim(),
       );
+}
+
+class CvSkillCategory {
+  const CvSkillCategory({required this.category, required this.items});
+
+  final String category;
+  final List<String> items;
+
+  factory CvSkillCategory.fromJson(Map<String, dynamic> json) {
+    final raw = json['items'] ?? json['skills'] ?? json['values'];
+    final items = raw is List
+        ? raw
+            .map((e) => e?.toString().trim() ?? '')
+            .where((e) => e.isNotEmpty)
+            .toList()
+        : <String>[];
+    return CvSkillCategory(
+      category: (json['category'] ?? json['name'] ?? '').toString().trim(),
+      items: items,
+    );
+  }
 }
 
 class CvExperience {
@@ -160,24 +176,35 @@ class CvEducation {
 }
 
 class CvProject {
-  const CvProject({this.name, this.description, this.tech = const []});
+  const CvProject({
+    this.name,
+    this.link,
+    this.highlights = const [],
+    this.tech = const [],
+  });
 
   final String? name;
-  final String? description;
+  final String? link;
+  final List<String> highlights;
   final List<String> tech;
 
   factory CvProject.fromJson(Map<String, dynamic> json) {
-    final raw = json['tech'] ?? json['technologies'] ?? json['stack'];
-    final tech = raw is List
-        ? raw
+    List<String> asList(dynamic v) {
+      if (v is List) {
+        return v
             .map((e) => e?.toString().trim() ?? '')
             .where((e) => e.isNotEmpty)
-            .toList()
-        : <String>[];
+            .toList();
+      }
+      if (v is String && v.trim().isNotEmpty) return [v.trim()];
+      return <String>[];
+    }
+
     return CvProject(
       name: (json['name'] ?? json['title'])?.toString(),
-      description: (json['description'] ?? json['summary'])?.toString(),
-      tech: tech,
+      link: (json['link'] ?? json['url'] ?? json['href'])?.toString(),
+      highlights: asList(json['highlights'] ?? json['bullets'] ?? json['description']),
+      tech: asList(json['tech'] ?? json['technologies'] ?? json['stack']),
     );
   }
 }

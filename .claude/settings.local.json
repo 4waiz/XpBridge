@@ -10,7 +10,10 @@
       "mcp__claude_ai_Supabase__get_publishable_keys",
       "mcp__claude_ai_Supabase__apply_migration",
       "mcp__claude_ai_Supabase__list_organizations",
-      "mcp__claude_ai_Supabase__pause_project"
+      "mcp__claude_ai_Supabase__pause_project",
+      "mcp__claude_ai_Supabase__get_logs",
+      "Bash(supabase --version)",
+      "Bash(node_modules\\\\.bin\\\\supabase --version)"
     ]
   }
 }

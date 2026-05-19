@@ -44,15 +44,20 @@ serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { contents, tools, generationConfig } = body;
+    const { contents, tools, generationConfig, systemPrompt } = body;
 
     if (!contents || !Array.isArray(contents)) {
       return json({ error: "Invalid request: contents array is required." }, 400);
     }
 
+    const messages = [
+      ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+      ...geminiContentsToOpenAiMessages(contents),
+    ];
+
     const groqBody: Record<string, unknown> = {
       model: GROQ_MODEL,
-      messages: geminiContentsToOpenAiMessages(contents),
+      messages,
       temperature: generationConfig?.temperature ?? 0.7,
       max_tokens: generationConfig?.maxOutputTokens ?? 800,
     };
