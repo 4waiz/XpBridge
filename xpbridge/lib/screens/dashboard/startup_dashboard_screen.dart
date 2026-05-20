@@ -579,7 +579,7 @@ class _StartupDashboardScreenState extends State<StartupDashboardScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   DropdownButtonFormField<String?>(
-                    value: _skillFilter,
+                    initialValue: _skillFilter,
                     decoration: const InputDecoration(
                       labelText: 'Filter by skill',
                     ),

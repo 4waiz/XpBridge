@@ -128,7 +128,7 @@ class StudentApplicationsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: AppSpacing.md),
                           DropdownButtonFormField<String>(
-                            value: deliverableType,
+                            initialValue: deliverableType,
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Deliverable type',
@@ -161,7 +161,7 @@ class StudentApplicationsScreen extends StatelessWidget {
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: deliverableType,
+                              initialValue: deliverableType,
                               isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Deliverable type',

@@ -538,37 +538,66 @@ class XPAiTextBubble extends StatelessWidget {
     required this.text,
     required this.isUser,
     this.isLoading = false,
+    this.aiInBubble = false,
   });
 
   final String text;
   final bool isUser;
   final bool isLoading;
+  final bool aiInBubble;
 
   @override
   Widget build(BuildContext context) {
     if (!isUser) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isLoading)
-              Text(
-                'Thinking Please Wait ...',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.text.withValues(alpha: 0.78),
-                  fontStyle: FontStyle.italic,
-                ),
-              )
-            else
-              Text(
-                text,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.text,
-                  height: 1.56,
-                ),
+      final aiTextStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
+        color: AppTheme.text,
+        height: 1.5,
+      );
+      final aiContent = isLoading
+          ? Text(
+              'Thinking Please Wait ...',
+              style: aiTextStyle?.copyWith(
+                color: AppTheme.text.withValues(alpha: 0.78),
+                fontStyle: FontStyle.italic,
               ),
-          ],
+            )
+          : Text(text, style: aiTextStyle);
+
+      if (!aiInBubble) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [aiContent],
+          ),
+        );
+      }
+
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.82,
+          ),
+          margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiBubbleFill,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: AppTheme.primary.withValues(alpha: 0.14),
+                  ),
+                ),
+                child: aiContent,
+              ),
+            ),
+          ),
         ),
       );
     }

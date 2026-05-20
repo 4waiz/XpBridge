@@ -230,7 +230,7 @@ class _AdminScreenState extends State<AdminScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: currentRole,
+                  initialValue: currentRole,
                   isExpanded: true,
                   menuMaxHeight: 260,
                   borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
@@ -387,7 +387,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     .map((item) => MapEntry(item.id, item.companyName))
                     .toList();
                 return DropdownButtonFormField<String>(
-                  value: currentStartup,
+                  initialValue: currentStartup,
                   isExpanded: true,
                   menuMaxHeight: 320,
                   borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
@@ -444,7 +444,7 @@ class _AdminScreenState extends State<AdminScreen> {
                   MapEntry('closed', 'Closed'),
                 ];
                 return DropdownButtonFormField<String>(
-                  value: currentStatus,
+                  initialValue: currentStatus,
                   isExpanded: true,
                   menuMaxHeight: 260,
                   borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
@@ -527,7 +527,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     .map((item) => MapEntry(item.id, item.name))
                     .toList();
                 return DropdownButtonFormField<String>(
-                  value: currentStudent,
+                  initialValue: currentStudent,
                   isExpanded: true,
                   menuMaxHeight: 320,
                   borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
@@ -558,7 +558,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     )
                     .toList();
                 return DropdownButtonFormField<String>(
-                  value: currentMission,
+                  initialValue: currentMission,
                   isExpanded: true,
                   menuMaxHeight: 320,
                   borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
@@ -584,7 +584,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     .map((item) => MapEntry(item.name, item.name))
                     .toList();
                 return DropdownButtonFormField<String>(
-                  value: currentStatus,
+                  initialValue: currentStatus,
                   isExpanded: true,
                   menuMaxHeight: 320,
                   borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
@@ -680,7 +680,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     )
                     .toList();
                 return DropdownButtonFormField<String>(
-                  value: currentApplication,
+                  initialValue: currentApplication,
                   isExpanded: true,
                   menuMaxHeight: 320,
                   borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),
@@ -707,7 +707,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     .map((item) => MapEntry(item.name, item.name))
                     .toList();
                 return DropdownButtonFormField<String>(
-                  value: currentStatus,
+                  initialValue: currentStatus,
                   isExpanded: true,
                   menuMaxHeight: 260,
                   borderRadius: BorderRadius.circular(AppTheme.cornerRadiusSmall),

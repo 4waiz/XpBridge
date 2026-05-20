@@ -14,6 +14,7 @@ class ChatBubble extends StatelessWidget {
       text: message.content,
       isUser: message.isUser,
       isLoading: message.isLoading,
+      aiInBubble: true,
     );
   }
 }
